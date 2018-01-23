@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 
+import org.joda.time.DateTime;
+
 import com.sforce.soap.enterprise.Connector;
 import com.sforce.soap.enterprise.EnterpriseConnection;
 import com.sforce.soap.enterprise.Error;
@@ -17,8 +19,10 @@ import com.sforce.ws.ConnectionException;
 import com.sforce.ws.ConnectorConfig;
 
 import controller.Pike13Api;
+import model.LogDataModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
+import model.StudentNameModel;
 
 public class SalesForceApi {
 
@@ -28,16 +32,22 @@ public class SalesForceApi {
 	private static final int MAX_NUM_UPSERT_RECORDS = 200;
 
 	private static EnterpriseConnection connection;
+	private static MySqlDatabase sqlDb;
 	private static int upsertCount = 0;
 
 	public static void main(String[] args) {
 		// Connect to MySql database for logging status/errors
-		MySqlDatabase sqlDb = new MySqlDatabase(AWS_PASSWORD, MySqlDatabase.STUDENT_IMPORT_SSH_PORT);
+		sqlDb = new MySqlDatabase(AWS_PASSWORD, MySqlDatabase.STUDENT_IMPORT_SSH_PORT);
 		if (!sqlDb.connectDatabase()) {
 			// TODO: Handle this error
-			System.out.println("Failed to connect to MySql database: " + AWS_PASSWORD);
+			System.out.println("Failed to connect to MySql database");
 			System.exit(0);
 		}
+
+		// Set start date to 1 week ago
+		String startDate = new DateTime().minusDays(7).toString("yyyy-MM-dd").substring(0, 10);
+		sqlDb.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
+				" as of " + startDate + " ***");
 
 		// Connect to Pike13
 		String pike13Token = readFile("./pike13Token.txt");
@@ -53,7 +63,8 @@ public class SalesForceApi {
 			connection = Connector.newConnection(config);
 
 		} catch (ConnectionException e1) {
-			System.out.println("Failed to connect to Sales Force: " + e1.getMessage());
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CONNECTION_ERROR, new StudentNameModel("", "", false), 0,
+					": " + e1.getMessage());
 			sqlDb.disconnectDatabase();
 			System.exit(0);
 		}
@@ -62,9 +73,11 @@ public class SalesForceApi {
 		ArrayList<Contact> contactList = getContacts();
 
 		// Update attendance records
-		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance("2018-01-01");
+		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate);
 		updateAttendance(sfAttendance, contactList);
-
+		
+		sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_COMPLETE, new StudentNameModel("", "", false), 0,
+				" as of " + startDate + " ***");
 		sqlDb.disconnectDatabase();
 		System.exit(0);
 	}
@@ -83,7 +96,8 @@ public class SalesForceApi {
 			}
 
 		} catch (Exception e) {
-			System.out.println("Failed to get Contacts from Sales Force: " + e.getMessage());
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CONTACTS_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+					": " + e.getMessage());
 		}
 
 		System.out.println("Added " + contactsList.size() + " contacts to list.");
@@ -147,7 +161,6 @@ public class SalesForceApi {
 						recordArray = new Student_Attendance__c[MAX_NUM_UPSERT_RECORDS];
 					else if (remainingRecords > 0)
 						recordArray = new Student_Attendance__c[remainingRecords];
-					System.out.println("Reset remaining records: " + remainingRecords);
 				}
 			}
 
@@ -159,7 +172,8 @@ public class SalesForceApi {
 			e.printStackTrace();
 		}
 
-		System.out.println("Upsert count: " + upsertCount);
+		sqlDb.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false), 0,
+				", " + upsertCount + " records processed");
 	}
 
 	private static void upsertAttendanceRecords(Student_Attendance__c[] records) {
@@ -171,7 +185,8 @@ public class SalesForceApi {
 			upsertCount += records.length;
 
 		} catch (ConnectionException e) {
-			System.out.println("Failure with upsert of Sales Force attendance: " + e.getMessage());
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false), 0,
+					": " + e.getMessage());
 		}
 
 		// check the returned results for any errors
@@ -179,7 +194,8 @@ public class SalesForceApi {
 			if (!upsertResults[i].isSuccess()) {
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
-					System.out.println("ERROR updating record: " + errors[j].getMessage());
+					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false), 0,
+							": " + errors[j].getMessage());
 				}
 			}
 		}
@@ -191,7 +207,8 @@ public class SalesForceApi {
 				return c;
 			}
 		}
-		System.out.println("Failed to find Client ID " + clientID + " in contacts list");
+		sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false), 0,
+				" for ClientID " + clientID);
 		return null;
 	}
 
