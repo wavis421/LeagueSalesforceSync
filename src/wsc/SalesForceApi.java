@@ -3,9 +3,8 @@ package wsc;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
-
-import org.joda.time.DateTime;
 
 import com.sforce.soap.enterprise.Connector;
 import com.sforce.soap.enterprise.EnterpriseConnection;
@@ -13,144 +12,187 @@ import com.sforce.soap.enterprise.Error;
 import com.sforce.soap.enterprise.QueryResult;
 import com.sforce.soap.enterprise.UpsertResult;
 import com.sforce.soap.enterprise.sobject.Contact;
-import com.sforce.soap.enterprise.sobject.SObject;
 import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
 import com.sforce.ws.ConnectionException;
 import com.sforce.ws.ConnectorConfig;
 
+import controller.Pike13Api;
+import model.MySqlDatabase;
+import model.SalesForceAttendanceModel;
+
 public class SalesForceApi {
 
-	static final String USERNAME = "wendy.avis@jointheleague.org";
-	static final String PASSWORD = readFile("./sfPassword.txt");
-	static EnterpriseConnection connection;
+	private static final String SALES_FORCE_USERNAME = "wendy.avis@jointheleague.org";
+	private static final String SALES_FORCE_PASSWORD = readFile("./sfPassword.txt");
+	private static final String AWS_PASSWORD = readFile("./awsPassword.txt");
+	private static final int MAX_NUM_UPSERT_RECORDS = 200;
+
+	private static EnterpriseConnection connection;
+	private static int upsertCount = 0;
 
 	public static void main(String[] args) {
+		// Connect to MySql database for logging status/errors
+		MySqlDatabase sqlDb = new MySqlDatabase(AWS_PASSWORD, MySqlDatabase.STUDENT_IMPORT_SSH_PORT);
+		if (!sqlDb.connectDatabase()) {
+			// TODO: Handle this error
+			System.out.println("Failed to connect to MySql database: " + AWS_PASSWORD);
+			System.exit(0);
+		}
+
+		// Connect to Pike13
+		String pike13Token = readFile("./pike13Token.txt");
+		Pike13Api pike13Api = new Pike13Api(sqlDb, pike13Token);
+
+		// Connect to Sales Force
 		ConnectorConfig config = new ConnectorConfig();
-		config.setUsername(USERNAME);
-		config.setPassword(PASSWORD);
+		config.setUsername(SALES_FORCE_USERNAME);
+		config.setPassword(SALES_FORCE_PASSWORD);
 		config.setTraceMessage(false);
 
 		try {
-
 			connection = Connector.newConnection(config);
 
-			System.out.println("Auth EndPoint: " + config.getAuthEndpoint());
-			System.out.println("Service EndPoint: " + config.getServiceEndpoint());
-			System.out.println("Username: " + config.getUsername());
-			System.out.println("SessionId: " + config.getSessionId());
-
-			// run the different test cases
-			getAttendance();
-			updateAttendance();
-
 		} catch (ConnectionException e1) {
-			e1.printStackTrace();
+			System.out.println("Failed to connect to Sales Force: " + e1.getMessage());
+			sqlDb.disconnectDatabase();
+			System.exit(0);
 		}
 
+		// Get contacts and store in list
+		ArrayList<Contact> contactList = getContacts();
+
+		// Update attendance records
+		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance("2018-01-01");
+		updateAttendance(sfAttendance, contactList);
+
+		sqlDb.disconnectDatabase();
 		System.exit(0);
 	}
 
-	private static void getAttendance() {
-
-		System.out.println("Querying for Attendance...");
-		String serviceDate;
-		boolean done = false;
-		QueryResult queryResult;
-
-		try {
-			// query for the newest
-			queryResult = connection.query("SELECT Id, Name, Service_Date__c, Service_TIme__c, Event_Name__c,"
-					+ "Event_Type__c, Front_Desk_ID__c, Location__c, Location_Code1__c, Service_Name__c, Status__c "
-					+ "FROM Student_Attendance__c WHERE Front_Desk_ID__c = '2550878' AND Service_Date__c >= 2018-01-01 "
-					+ "ORDER BY Front_Desk_ID__c ASC, Service_Date__c DESC");
-
-			if (queryResult.getSize() > 0) {
-				System.out.println("Total of " + queryResult.getSize() + " records.");
-				while (!done) {
-					SObject[] records = queryResult.getRecords();
-					for (int i = 0; i < records.length; i++) {
-						// cast the SObject to a strongly-typed class
-						Student_Attendance__c a = (Student_Attendance__c) records[i];
-						serviceDate = (new DateTime(a.getService_Date__c().getTimeInMillis())).toString("yyyy-MM-dd");
-						System.out.println("ClientID: " + a.getFront_Desk_ID__c() + " - Date: " + serviceDate + " "	+ a.getService_TIme__c() 
-								+ " - EventType: " + a.getEvent_Type__c() 
-								+ " - EventName: " + a.getEvent_Name__c() 
-								+ " - Location: " + a.getLocation__c() 
-								+ " - LocCode: " + a.getLocation_Code1__c() 
-								+ " - ServiceName: " + a.getService_Name__c() 
-								+ " - Status: " + a.getStatus__c());
-					}
-					if (queryResult.isDone())
-						done = true;
-					else
-						queryResult = connection.queryMore(queryResult.getQueryLocator());
-				}
-			} else
-				System.out.println("No records found!");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private static void updateAttendance() {
-		System.out.println("\n******** Update attendance ********\n");
-		Student_Attendance__c[] records = new Student_Attendance__c[1];
-
-		try {
-			Student_Attendance__c a = new Student_Attendance__c();
-
-			a.setContact__r(getContact());
-			a.setEvent_Name__c("8@CV Mammoth");
-			a.setService_Name__c("[Level 8] @ CV");
-			Calendar cal = Calendar.getInstance();
-			cal.set(Calendar.DAY_OF_MONTH, 14);
-			a.setService_Date__c(cal);
-			a.setService_TIme__c("17:30");
-			a.setStatus__c("Completed");
-			a.setSchedule_id__c("68092299");
-			a.setVisit_Id__c("114532187");
-			a.setSchedule_id__c("68092299");
-			a.setLocation__c("Carmel Valley Classroom (Suite #113)");
-			a.setStaff__c("Dave Dunn");
-			records[0] = a;
-
-			// update the records in Salesforce.com
-			UpsertResult[] upsertResults = connection.upsert("Visit_Id__c", records);
-
-			// check the returned results for any errors
-			for (int i = 0; i < upsertResults.length; i++) {
-				if (upsertResults[i].isSuccess()) {
-					System.out.println(i + ". Successfully updated record - Id: " + upsertResults[i].getId());
-				} else {
-					Error[] errors = upsertResults[i].getErrors();
-					for (int j = 0; j < errors.length; j++) {
-						System.out.println("ERROR updating record: " + errors[j].getMessage());
-					}
-				}
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private static Contact getContact() {
-		Contact c = null;
+	private static ArrayList<Contact> getContacts() {
+		ArrayList<Contact> contactsList = new ArrayList<Contact>();
 
 		try {
 			QueryResult queryResults = connection
-					.query("SELECT Front_Desk_ID__c " + "FROM Contact WHERE Front_Desk_ID__c = '2550878'");
+					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null");
 			if (queryResults.getSize() > 0) {
-				c = (Contact) queryResults.getRecords()[0];
-				System.out.println("# records: " + queryResults.getSize() + ", " + c.getFront_Desk_Id__c());
+				for (int i = 0; i < queryResults.getRecords().length; i++) {
+					// Add contact to list
+					contactsList.add((Contact) queryResults.getRecords()[i]);
+				}
 			}
-			return c;
+
+		} catch (Exception e) {
+			System.out.println("Failed to get Contacts from Sales Force: " + e.getMessage());
+		}
+
+		System.out.println("Added " + contactsList.size() + " contacts to list.");
+		return contactsList;
+	}
+
+	private static void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
+			ArrayList<Contact> contacts) {
+		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
+
+		try {
+			for (int i = 0; i < pike13Attendance.size(); i++) {
+				// Add each Pike13 attendance record to Sales Force list
+				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
+
+				Contact c = findContactInList(inputModel.getClientID(), contacts);
+				if (c == null)
+					continue;
+
+				Student_Attendance__c a = new Student_Attendance__c();
+				a.setContact__r(c);
+				a.setEvent_Name__c(stripQuotes(inputModel.getEventName()));
+				a.setService_Name__c(stripQuotes(inputModel.getServiceName()));
+				Calendar cal = Calendar.getInstance();
+				String date = stripQuotes(inputModel.getServiceDate());
+				cal.set(Calendar.YEAR, Integer.parseInt(date.substring(0, 4)));
+				cal.set(Calendar.MONTH, Integer.parseInt(date.substring(5, 7)) - 1);
+				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)));
+				a.setService_Date__c(cal);
+				a.setService_TIme__c(stripQuotes(inputModel.getServiceTime()));
+				a.setStatus__c(stripQuotes(inputModel.getStatus()));
+				a.setSchedule_id__c(inputModel.getScheduleID());
+				a.setVisit_Id__c(inputModel.getVisitID());
+				a.setLocation__c(stripQuotes(inputModel.getLocation()));
+				a.setStaff__c(stripQuotes(inputModel.getStaff()));
+				recordList.add(a);
+			}
+
+			// Copy up to 200 records to array (.toArray does not seem to work)
+			Student_Attendance__c[] recordArray;
+			int numRecords = recordList.size();
+			int remainingRecords = numRecords;
+			int arrayIdx = 0;
+
+			System.out.println(numRecords + " attendance records");
+			if (numRecords > MAX_NUM_UPSERT_RECORDS)
+				recordArray = new Student_Attendance__c[MAX_NUM_UPSERT_RECORDS];
+			else
+				recordArray = new Student_Attendance__c[numRecords];
+
+			for (int i = 0; i < numRecords; i++) {
+				recordArray[arrayIdx] = recordList.get(i);
+
+				arrayIdx++;
+				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
+					upsertAttendanceRecords(recordArray);
+					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
+					arrayIdx = 0;
+
+					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
+						recordArray = new Student_Attendance__c[MAX_NUM_UPSERT_RECORDS];
+					else if (remainingRecords > 0)
+						recordArray = new Student_Attendance__c[remainingRecords];
+					System.out.println("Reset remaining records: " + remainingRecords);
+				}
+			}
+
+			// Update remaining records in Salesforce.com
+			if (arrayIdx > 0)
+				upsertAttendanceRecords(recordArray);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return c;
+
+		System.out.println("Upsert count: " + upsertCount);
+	}
+
+	private static void upsertAttendanceRecords(Student_Attendance__c[] records) {
+		UpsertResult[] upsertResults = null;
+
+		try {
+			// Update the records in Salesforce.com
+			upsertResults = connection.upsert("Visit_Id__c", records);
+			upsertCount += records.length;
+
+		} catch (ConnectionException e) {
+			System.out.println("Failure with upsert of Sales Force attendance: " + e.getMessage());
+		}
+
+		// check the returned results for any errors
+		for (int i = 0; i < upsertResults.length; i++) {
+			if (!upsertResults[i].isSuccess()) {
+				Error[] errors = upsertResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					System.out.println("ERROR updating record: " + errors[j].getMessage());
+				}
+			}
+		}
+	}
+
+	private static Contact findContactInList(String clientID, ArrayList<Contact> contactList) {
+		for (Contact c : contactList) {
+			if (c.getFront_Desk_Id__c().equals(clientID)) {
+				return c;
+			}
+		}
+		System.out.println("Failed to find Client ID " + clientID + " in contacts list");
+		return null;
 	}
 
 	private static String readFile(String filename) {
@@ -168,5 +210,13 @@ public class SalesForceApi {
 			// Do nothing if file is not there
 		}
 		return "";
+	}
+
+	private static String stripQuotes(String fieldData) {
+		// Strip off quotes around field string
+		if (fieldData.equals("\"\"") || fieldData.startsWith("null"))
+			return "";
+		else
+			return fieldData.substring(1, fieldData.length() - 1);
 	}
 }
