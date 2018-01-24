@@ -9,11 +9,13 @@ import java.util.Calendar;
 import org.joda.time.DateTime;
 
 import com.sforce.soap.enterprise.Connector;
+import com.sforce.soap.enterprise.DeleteResult;
 import com.sforce.soap.enterprise.EnterpriseConnection;
 import com.sforce.soap.enterprise.Error;
 import com.sforce.soap.enterprise.QueryResult;
 import com.sforce.soap.enterprise.UpsertResult;
 import com.sforce.soap.enterprise.sobject.Contact;
+import com.sforce.soap.enterprise.sobject.SObject;
 import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
 import com.sforce.ws.ConnectionException;
 import com.sforce.ws.ConnectorConfig;
@@ -79,6 +81,9 @@ public class SalesForceApi {
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 		updateAttendance(sfAttendance, contactList);
 
+		// Delete future cancelled attendance records
+		removeExtraAttendanceRecords(sfAttendance, today.toString("yyyy-MM-dd"), endDate);
+
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_COMPLETE, new StudentNameModel("", "", false), 0,
 				" from " + startDate + " to " + endDate + " ***");
 		sqlDb.disconnectDatabase();
@@ -104,7 +109,6 @@ public class SalesForceApi {
 					": " + e.getMessage());
 		}
 
-		System.out.println("Added " + contactsList.size() + " contacts to list.");
 		return contactsList;
 	}
 
@@ -123,24 +127,24 @@ public class SalesForceApi {
 
 				Student_Attendance__c a = new Student_Attendance__c();
 				a.setContact__r(c);
-				a.setEvent_Name__c(stripQuotes(inputModel.getEventName()));
-				a.setService_Name__c(stripQuotes(inputModel.getServiceName()));
+				a.setEvent_Name__c(inputModel.getEventName());
+				a.setService_Name__c(inputModel.getServiceName());
 				Calendar cal = Calendar.getInstance();
-				String date = stripQuotes(inputModel.getServiceDate());
+				String date = inputModel.getServiceDate();
 				cal.set(Calendar.YEAR, Integer.parseInt(date.substring(0, 4)));
 				cal.set(Calendar.MONTH, Integer.parseInt(date.substring(5, 7)) - 1);
-				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)) - 1);
+				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)));
 				a.setService_Date__c(cal);
-				a.setService_TIme__c(stripQuotes(inputModel.getServiceTime()));
-				a.setStatus__c(stripQuotes(inputModel.getStatus()));
+				a.setService_TIme__c(inputModel.getServiceTime());
+				a.setStatus__c(inputModel.getStatus());
 				a.setSchedule_id__c(inputModel.getScheduleID());
 				a.setVisit_Id__c(inputModel.getVisitID());
-				a.setLocation__c(stripQuotes(inputModel.getLocation()));
-				a.setStaff__c(stripQuotes(inputModel.getStaff()));
+				a.setLocation__c(inputModel.getLocation());
+				a.setStaff__c(inputModel.getStaff());
 				recordList.add(a);
 			}
 
-			// Copy up to 200 records to array (.toArray does not seem to work)
+			// Copy up to 200 records to array at a time (max allowed)
 			Student_Attendance__c[] recordArray;
 			int numRecords = recordList.size();
 			int remainingRecords = numRecords;
@@ -180,6 +184,58 @@ public class SalesForceApi {
 				", " + upsertCount + " records processed");
 	}
 
+	private static void removeExtraAttendanceRecords(ArrayList<SalesForceAttendanceModel> pike13Attendance,
+			String startDate, String endDate) {
+		String serviceDate;
+		boolean done = false;
+		QueryResult queryResult;
+		ArrayList<String> deleteList = new ArrayList<String>();
+
+		try {
+			queryResult = connection.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c "
+					+ "FROM Student_Attendance__c WHERE Status__c = 'Enrolled' AND Service_Date__c > " + startDate
+					+ " AND Service_Date__c <= " + endDate + " ORDER BY Visit_Id__c ASC");
+			System.out.println(queryResult.getSize() + " future attendance records.");
+
+			if (queryResult.getSize() > 0) {
+				while (!done) {
+					SObject[] records = queryResult.getRecords();
+					for (int i = 0; i < records.length; i++) {
+						// Check whether attendance record exists in Pike13
+						Student_Attendance__c a = (Student_Attendance__c) records[i];
+						if (!findVisitIdInList(a.getVisit_Id__c(), pike13Attendance)) {
+							// Record not found, so delete
+							serviceDate = (new DateTime(a.getService_Date__c().getTimeInMillis()))
+									.toString("yyyy-MM-dd");
+							deleteList.add(a.getId());
+
+							sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
+									new StudentNameModel("", "", false), Integer.parseInt(a.getFront_Desk_ID__c()),
+									" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate
+											+ " for ClientID " + a.getFront_Desk_ID__c());
+						}
+					}
+					if (queryResult.isDone())
+						done = true;
+					else
+						queryResult = connection.queryMore(queryResult.getQueryLocator());
+				}
+
+				// Delete obsolete attendance records
+				if (deleteList.size() > 0)
+					deleteAttendanceRecords((String[]) deleteList.toArray(new String[0]));
+
+			} else
+				System.out.println("No future attendance records found!");
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		sqlDb.insertLogData(LogDataModel.SALES_FORCE_FUTURE_ATTEND_CLEANUP, new StudentNameModel("", "", false), 0,
+				", " + deleteList.size() + " records deleted");
+	}
+
 	private static void upsertAttendanceRecords(Student_Attendance__c[] records) {
 		UpsertResult[] upsertResults = null;
 
@@ -205,15 +261,48 @@ public class SalesForceApi {
 		}
 	}
 
+	private static void deleteAttendanceRecords(String[] records) {
+		DeleteResult[] deleteResults = null;
+
+		try {
+			// Update the records in Salesforce.com
+			deleteResults = connection.delete(records);
+
+		} catch (ConnectionException e) {
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
+					0, ": " + e.getMessage());
+		}
+
+		// check the returned results for any errors
+		for (int i = 0; i < deleteResults.length; i++) {
+			if (!deleteResults[i].isSuccess()) {
+				Error[] errors = deleteResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
+				}
+			}
+		}
+	}
+
 	private static Contact findContactInList(String clientID, ArrayList<Contact> contactList) {
 		for (Contact c : contactList) {
 			if (c.getFront_Desk_Id__c().equals(clientID)) {
 				return c;
 			}
 		}
-		sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false), 
+		sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false),
 				Integer.parseInt(clientID), " for ClientID " + clientID);
 		return null;
+	}
+
+	private static boolean findVisitIdInList(String visitID, ArrayList<SalesForceAttendanceModel> attendanceList) {
+		for (SalesForceAttendanceModel a : attendanceList) {
+			if (a.getVisitID().equals(visitID)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static String readFile(String filename) {
@@ -231,13 +320,5 @@ public class SalesForceApi {
 			// Do nothing if file is not there
 		}
 		return "";
-	}
-
-	private static String stripQuotes(String fieldData) {
-		// Strip off quotes around field string
-		if (fieldData.equals("\"\"") || fieldData.startsWith("null"))
-			return "";
-		else
-			return fieldData.substring(1, fieldData.length() - 1);
 	}
 }
