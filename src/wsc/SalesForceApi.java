@@ -30,6 +30,7 @@ public class SalesForceApi {
 	private static final String SALES_FORCE_PASSWORD = readFile("./sfPassword.txt");
 	private static final String AWS_PASSWORD = readFile("./awsPassword.txt");
 	private static final int MAX_NUM_UPSERT_RECORDS = 200;
+	private static final int DATE_RANGE_INTERVAL_IN_DAYS = 30;
 
 	private static EnterpriseConnection connection;
 	private static MySqlDatabase sqlDb;
@@ -44,10 +45,12 @@ public class SalesForceApi {
 			System.exit(0);
 		}
 
-		// Set start date to 1 week ago
-		String startDate = new DateTime().minusDays(7).toString("yyyy-MM-dd").substring(0, 10);
+		// Set start/end date to +/- 30 days
+		DateTime today = new DateTime();
+		String startDate = today.minusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
+		String endDate = today.plusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
 		sqlDb.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
-				" as of " + startDate + " ***");
+				" from " + startDate + " to " + endDate + " ***");
 
 		// Connect to Pike13
 		String pike13Token = readFile("./pike13Token.txt");
@@ -73,11 +76,11 @@ public class SalesForceApi {
 		ArrayList<Contact> contactList = getContacts();
 
 		// Update attendance records
-		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate);
+		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 		updateAttendance(sfAttendance, contactList);
-		
+
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_COMPLETE, new StudentNameModel("", "", false), 0,
-				" as of " + startDate + " ***");
+				" from " + startDate + " to " + endDate + " ***");
 		sqlDb.disconnectDatabase();
 		System.exit(0);
 	}
@@ -87,7 +90,8 @@ public class SalesForceApi {
 
 		try {
 			QueryResult queryResults = connection
-					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null");
+					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null "
+							+ "AND Record_Type__c = 'Student'");
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
 					// Add contact to list
@@ -125,7 +129,7 @@ public class SalesForceApi {
 				String date = stripQuotes(inputModel.getServiceDate());
 				cal.set(Calendar.YEAR, Integer.parseInt(date.substring(0, 4)));
 				cal.set(Calendar.MONTH, Integer.parseInt(date.substring(5, 7)) - 1);
-				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)));
+				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)) - 1);
 				a.setService_Date__c(cal);
 				a.setService_TIme__c(stripQuotes(inputModel.getServiceTime()));
 				a.setStatus__c(stripQuotes(inputModel.getStatus()));
@@ -185,8 +189,8 @@ public class SalesForceApi {
 			upsertCount += records.length;
 
 		} catch (ConnectionException e) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false), 0,
-					": " + e.getMessage());
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
+					0, ": " + e.getMessage());
 		}
 
 		// check the returned results for any errors
@@ -194,8 +198,8 @@ public class SalesForceApi {
 			if (!upsertResults[i].isSuccess()) {
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
-					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false), 0,
-							": " + errors[j].getMessage());
+					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
 				}
 			}
 		}
@@ -207,8 +211,8 @@ public class SalesForceApi {
 				return c;
 			}
 		}
-		sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false), 0,
-				" for ClientID " + clientID);
+		sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false), 
+				Integer.parseInt(clientID), " for ClientID " + clientID);
 		return null;
 	}
 
