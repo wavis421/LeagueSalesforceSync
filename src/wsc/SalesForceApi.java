@@ -28,7 +28,7 @@ import model.StudentNameModel;
 
 public class SalesForceApi {
 
-	private static final String SALES_FORCE_USERNAME = "wendy.avis@jointheleague.org";
+	private static final String SALES_FORCE_USERNAME = "leaguebot@jointheleague.org";
 	private static final String SALES_FORCE_PASSWORD = readFile("./sfPassword.txt");
 	private static final String AWS_PASSWORD = readFile("./awsPassword.txt");
 	private static final int MAX_NUM_UPSERT_RECORDS = 200;
@@ -37,10 +37,11 @@ public class SalesForceApi {
 	private static EnterpriseConnection connection;
 	private static MySqlDatabase sqlDb;
 	private static int upsertCount = 0;
+	private static String startDate, endDate;
 
 	public static void main(String[] args) {
 		// Connect to MySql database for logging status/errors
-		sqlDb = new MySqlDatabase(AWS_PASSWORD, MySqlDatabase.STUDENT_IMPORT_SSH_PORT);
+		sqlDb = new MySqlDatabase(AWS_PASSWORD, MySqlDatabase.SALES_FORCE_SYNC_SSH_PORT);
 		if (!sqlDb.connectDatabase()) {
 			// TODO: Handle this error
 			System.out.println("Failed to connect to MySql database");
@@ -49,8 +50,8 @@ public class SalesForceApi {
 
 		// Set start/end date to +/- 30 days
 		DateTime today = new DateTime();
-		String startDate = today.minusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
-		String endDate = today.plusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
+		startDate = today.minusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
+		endDate = today.plusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
 		sqlDb.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
 				" from " + startDate + " to " + endDate + " ***");
 
@@ -68,10 +69,7 @@ public class SalesForceApi {
 			connection = Connector.newConnection(config);
 
 		} catch (ConnectionException e1) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CONNECTION_ERROR, new StudentNameModel("", "", false), 0,
-					": " + e1.getMessage());
-			sqlDb.disconnectDatabase();
-			System.exit(0);
+			exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
 		}
 
 		// Get contacts and store in list
@@ -81,13 +79,10 @@ public class SalesForceApi {
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 		updateAttendance(sfAttendance, contactList);
 
-		// Delete future cancelled attendance records
-		removeExtraAttendanceRecords(sfAttendance, today.toString("yyyy-MM-dd"), endDate);
+		// Delete canceled attendance records
+		removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
 
-		sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_COMPLETE, new StudentNameModel("", "", false), 0,
-				" from " + startDate + " to " + endDate + " ***");
-		sqlDb.disconnectDatabase();
-		System.exit(0);
+		exitProgram(-1, null); // -1 indicates no error
 	}
 
 	private static ArrayList<Contact> getContacts() {
@@ -150,7 +145,7 @@ public class SalesForceApi {
 			int remainingRecords = numRecords;
 			int arrayIdx = 0;
 
-			System.out.println(numRecords + " attendance records");
+			System.out.println(numRecords + " Pike13 attendance records");
 			if (numRecords > MAX_NUM_UPSERT_RECORDS)
 				recordArray = new Student_Attendance__c[MAX_NUM_UPSERT_RECORDS];
 			else
@@ -192,10 +187,11 @@ public class SalesForceApi {
 		ArrayList<String> deleteList = new ArrayList<String>();
 
 		try {
-			queryResult = connection.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c "
-					+ "FROM Student_Attendance__c WHERE Status__c = 'Enrolled' AND Service_Date__c > " + startDate
-					+ " AND Service_Date__c <= " + endDate + " ORDER BY Visit_Id__c ASC");
-			System.out.println(queryResult.getSize() + " future attendance records.");
+			queryResult = connection
+					.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c, Owner.Name "
+							+ "FROM Student_Attendance__c WHERE Owner.Name = 'League Bot' AND Visit_Id__c != NULL AND Service_Date__c >= "
+							+ startDate + " AND Service_Date__c <= " + endDate + " ORDER BY Visit_Id__c ASC");
+			System.out.println(queryResult.getSize() + " Salesforce attendance records for League Bot");
 
 			if (queryResult.getSize() > 0) {
 				while (!done) {
@@ -204,7 +200,7 @@ public class SalesForceApi {
 						// Check whether attendance record exists in Pike13
 						Student_Attendance__c a = (Student_Attendance__c) records[i];
 						if (!findVisitIdInList(a.getVisit_Id__c(), pike13Attendance)) {
-							// Record not found, so delete
+							// Record not found, so add to deletion list
 							serviceDate = (new DateTime(a.getService_Date__c().getTimeInMillis()))
 									.toString("yyyy-MM-dd");
 							deleteList.add(a.getId());
@@ -224,15 +220,13 @@ public class SalesForceApi {
 				// Delete obsolete attendance records
 				if (deleteList.size() > 0)
 					deleteAttendanceRecords((String[]) deleteList.toArray(new String[0]));
-
-			} else
-				System.out.println("No future attendance records found!");
+			}
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		sqlDb.insertLogData(LogDataModel.SALES_FORCE_FUTURE_ATTEND_CLEANUP, new StudentNameModel("", "", false), 0,
+		sqlDb.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP, new StudentNameModel("", "", false), 0,
 				", " + deleteList.size() + " records deleted");
 	}
 
@@ -320,5 +314,20 @@ public class SalesForceApi {
 			// Do nothing if file is not there
 		}
 		return "";
+	}
+
+	private static void exitProgram(int errorCode, String errorMessage) {
+		if (errorCode == -1) {
+			// Success
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_COMPLETE, new StudentNameModel("", "", false), 0,
+					" from " + startDate + " to " + endDate + " ***");
+		} else {
+			// Failure
+			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), 0, ": " + errorMessage);
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_ABORTED, new StudentNameModel("", "", false), 0,
+					" from " + startDate + " to " + endDate + " ***");
+		}
+		sqlDb.disconnectDatabase();
+		System.exit(0);
 	}
 }
