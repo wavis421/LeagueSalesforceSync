@@ -16,6 +16,7 @@ import com.sforce.soap.enterprise.QueryResult;
 import com.sforce.soap.enterprise.UpsertResult;
 import com.sforce.soap.enterprise.sobject.Contact;
 import com.sforce.soap.enterprise.sobject.SObject;
+import com.sforce.soap.enterprise.sobject.Staff_Hours__c;
 import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
 import com.sforce.ws.ConnectionException;
 import com.sforce.ws.ConnectorConfig;
@@ -24,6 +25,7 @@ import controller.Pike13Api;
 import model.LogDataModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
+import model.SalesForceStaffHoursModel;
 import model.StudentNameModel;
 
 public class SalesForceApi {
@@ -32,12 +34,13 @@ public class SalesForceApi {
 	private static final String SALES_FORCE_PASSWORD = readFile("./sfPassword.txt");
 	private static final String AWS_PASSWORD = readFile("./awsPassword.txt");
 	private static final int MAX_NUM_UPSERT_RECORDS = 200;
-	private static final int DATE_RANGE_INTERVAL_IN_DAYS = 30;
+	private static final int DATE_RANGE_INTERVAL_IN_DAYS = 20; // 30;
 
 	private static EnterpriseConnection connection;
 	private static MySqlDatabase sqlDb;
-	private static int upsertCount = 0;
-	private static String startDate, endDate;
+	private static int attendanceUpsertCount = 0;
+	private static int staffHoursUpsertCount = 0;
+	private static String startDate, endDate, today;
 
 	public static void main(String[] args) {
 		// Connect to MySql database for logging status/errors
@@ -49,9 +52,10 @@ public class SalesForceApi {
 		}
 
 		// Set start/end date to +/- 30 days
-		DateTime today = new DateTime();
-		startDate = today.minusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
-		endDate = today.plusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd").substring(0, 10);
+		DateTime t = new DateTime();
+		today = t.toString("yyyy-MM-dd");
+		startDate = t.minusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd");
+		endDate = t.plusDays(DATE_RANGE_INTERVAL_IN_DAYS).toString("yyyy-MM-dd");
 		sqlDb.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
 				" from " + startDate + " to " + endDate + " ***");
 
@@ -82,6 +86,11 @@ public class SalesForceApi {
 		// Delete canceled attendance records
 		removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
 
+		// Update Staff Hours records
+		ArrayList<SalesForceStaffHoursModel> sfStaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
+		updateStaffHours(sfStaffHours, contactList);
+		getStaffHours(); // temporary, for debug
+
 		exitProgram(-1, null); // -1 indicates no error
 	}
 
@@ -91,7 +100,7 @@ public class SalesForceApi {
 		try {
 			QueryResult queryResults = connection
 					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null "
-							+ "AND Record_Type__c = 'Student'");
+							+ "AND (Record_Type__c = 'Student' OR Teacher__c = 'Active' OR Teacher_Student__c = 'Active')");
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
 					// Add contact to list
@@ -116,7 +125,7 @@ public class SalesForceApi {
 				// Add each Pike13 attendance record to Sales Force list
 				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
 
-				Contact c = findContactInList(inputModel.getClientID(), contacts);
+				Contact c = findClientIDInList(inputModel.getClientID(), null, contacts);
 				if (c == null)
 					continue;
 
@@ -172,11 +181,11 @@ public class SalesForceApi {
 				upsertAttendanceRecords(recordArray);
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Attendance import error: " + e.getMessage());
 		}
 
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + upsertCount + " records processed");
+				", " + attendanceUpsertCount + " records processed");
 	}
 
 	private static void removeExtraAttendanceRecords(ArrayList<SalesForceAttendanceModel> pike13Attendance,
@@ -189,8 +198,9 @@ public class SalesForceApi {
 		try {
 			queryResult = connection
 					.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c, Owner.Name "
-							+ "FROM Student_Attendance__c WHERE Owner.Name = 'League Bot' AND Visit_Id__c != NULL AND Service_Date__c >= "
-							+ startDate + " AND Service_Date__c <= " + endDate + " ORDER BY Visit_Id__c ASC");
+							+ "FROM Student_Attendance__c WHERE Owner.Name = 'League Bot' AND Visit_Id__c != NULL "
+							+ "AND Service_Date__c >= " + startDate + " AND Service_Date__c <= " + endDate
+							+ " ORDER BY Visit_Id__c ASC");
 			System.out.println(queryResult.getSize() + " Salesforce attendance records for League Bot");
 
 			if (queryResult.getSize() > 0) {
@@ -230,13 +240,106 @@ public class SalesForceApi {
 				", " + deleteList.size() + " records deleted");
 	}
 
+	private static ArrayList<Staff_Hours__c> getStaffHours() {
+		ArrayList<Staff_Hours__c> staffHoursList = new ArrayList<Staff_Hours__c>();
+
+		try {
+			QueryResult queryResults = connection.query(
+					"SELECT Schedule_ID__c, Front_Desk__c, Service__c, Event_Name__c, Service_Date__c, Service_Time__c, "
+							+ "Hours__c, Location_Full__c, Present__c, Absent__c, Excused__c, schedule+client_ID__c "
+							+ "FROM Staff_Hours__c WHERE Service_Date__c >= " + startDate + " AND Service_Date__c <= "
+							+ today + " ORDER BY Service_Date__c DESC, Service_Time__c DESC");
+			System.out.println(queryResults.getRecords().length + " Staff Hours records in Sales Force");
+
+		} catch (Exception e) {
+			System.out.println("Staff hours import error: " + e.getMessage());
+		}
+
+		return staffHoursList;
+	}
+
+	private static void updateStaffHours(ArrayList<SalesForceStaffHoursModel> pike13StaffHours,
+			ArrayList<Contact> contacts) {
+		ArrayList<Staff_Hours__c> recordList = new ArrayList<Staff_Hours__c>();
+
+		System.out.println(pike13StaffHours.size() + " staff hour records from Pike13");
+
+		try {
+			for (int i = 0; i < pike13StaffHours.size(); i++) {
+				// Add each Pike13 staff hours record to Sales Force list
+				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
+
+				Contact c = findClientIDInList(inputModel.getClientID(), inputModel.getFullName(), contacts);
+				if (c == null)
+					continue;
+
+				Staff_Hours__c h = new Staff_Hours__c();
+				h.setStaff_Name__r(c);
+				h.setEvent_Name__c(inputModel.getEventName());
+				h.setService__c(inputModel.getServiceName());
+
+				Calendar cal = Calendar.getInstance();
+				String date = inputModel.getServiceDate();
+				cal.set(Calendar.YEAR, Integer.parseInt(date.substring(0, 4)));
+				cal.set(Calendar.MONTH, Integer.parseInt(date.substring(5, 7)) - 1);
+				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)));
+				h.setService_Date__c(cal);
+
+				h.setService_Time__c(inputModel.getServiceTime());
+				h.setSchedule_ID__c(inputModel.getScheduleID());
+				h.setLocation_Full__c(inputModel.getLocation());
+				h.setHours__c(inputModel.getHours());
+				h.setPresent__c(inputModel.getCompleted());
+				h.setAbsent__c(inputModel.getNoShow());
+				h.setExcused__c(inputModel.getLateCanceled());
+				recordList.add(h);
+			}
+
+			// Copy up to 200 records to array at a time (max allowed)
+			Staff_Hours__c[] recordArray;
+			int numRecords = recordList.size();
+			int remainingRecords = numRecords;
+			int arrayIdx = 0;
+
+			if (numRecords > MAX_NUM_UPSERT_RECORDS)
+				recordArray = new Staff_Hours__c[MAX_NUM_UPSERT_RECORDS];
+			else
+				recordArray = new Staff_Hours__c[numRecords];
+
+			for (int i = 0; i < numRecords; i++) {
+				recordArray[arrayIdx] = recordList.get(i);
+
+				arrayIdx++;
+				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
+					upsertStaffHoursRecords(recordArray);
+					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
+					arrayIdx = 0;
+
+					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
+						recordArray = new Staff_Hours__c[MAX_NUM_UPSERT_RECORDS];
+					else if (remainingRecords > 0)
+						recordArray = new Staff_Hours__c[remainingRecords];
+				}
+			}
+
+			// Update remaining records in Salesforce.com
+			if (arrayIdx > 0)
+				upsertStaffHoursRecords(recordArray);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		sqlDb.insertLogData(LogDataModel.SALES_FORCE_STAFF_HOURS_UPDATED, new StudentNameModel("", "", false), 0,
+				", " + staffHoursUpsertCount + " records processed");
+	}
+
 	private static void upsertAttendanceRecords(Student_Attendance__c[] records) {
 		UpsertResult[] upsertResults = null;
 
 		try {
 			// Update the records in Salesforce.com
 			upsertResults = connection.upsert("Visit_Id__c", records);
-			upsertCount += records.length;
 
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
@@ -251,7 +354,8 @@ public class SalesForceApi {
 					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
 							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
 				}
-			}
+			} else
+				attendanceUpsertCount++;
 		}
 	}
 
@@ -279,14 +383,40 @@ public class SalesForceApi {
 		}
 	}
 
-	private static Contact findContactInList(String clientID, ArrayList<Contact> contactList) {
+	private static void upsertStaffHoursRecords(Staff_Hours__c[] records) {
+		UpsertResult[] upsertResults = null;
+
+		try {
+			// Update the records in Salesforce.com
+			upsertResults = connection.upsert("Schedule_ID__c", records);
+
+		} catch (ConnectionException e) {
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR, new StudentNameModel("", "", false),
+					0, ": " + e.getMessage());
+		}
+
+		// check the returned results for any errors
+		for (int i = 0; i < upsertResults.length; i++) {
+			if (!upsertResults[i].isSuccess()) {
+				Error[] errors = upsertResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
+							new StudentNameModel("", "", false), 0,
+							" (" + records[i].getSchedule_ID__c() + "): " + errors[j].getMessage());
+				}
+			} else
+				staffHoursUpsertCount++;
+		}
+	}
+
+	private static Contact findClientIDInList(String clientID, String clientName, ArrayList<Contact> contactList) {
 		for (Contact c : contactList) {
 			if (c.getFront_Desk_Id__c().equals(clientID)) {
 				return c;
 			}
 		}
 		sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false),
-				Integer.parseInt(clientID), " for ClientID " + clientID);
+				Integer.parseInt(clientID), " for ClientID " + clientID + " " + clientName);
 		return null;
 	}
 
