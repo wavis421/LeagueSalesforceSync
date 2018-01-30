@@ -34,7 +34,7 @@ public class SalesForceApi {
 	private static final String SALES_FORCE_PASSWORD = readFile("./sfPassword.txt");
 	private static final String AWS_PASSWORD = readFile("./awsPassword.txt");
 	private static final int MAX_NUM_UPSERT_RECORDS = 200;
-	private static final int DATE_RANGE_INTERVAL_IN_DAYS = 20; // 30;
+	private static final int DATE_RANGE_INTERVAL_IN_DAYS = 30;
 
 	private static EnterpriseConnection connection;
 	private static MySqlDatabase sqlDb;
@@ -133,6 +133,7 @@ public class SalesForceApi {
 				a.setContact__r(c);
 				a.setEvent_Name__c(inputModel.getEventName());
 				a.setService_Name__c(inputModel.getServiceName());
+				a.setEvent_Type__c(inputModel.getEventType());
 				Calendar cal = Calendar.getInstance();
 				String date = inputModel.getServiceDate();
 				cal.set(Calendar.YEAR, Integer.parseInt(date.substring(0, 4)));
@@ -181,7 +182,10 @@ public class SalesForceApi {
 				upsertAttendanceRecords(recordArray);
 
 		} catch (Exception e) {
-			System.out.println("Attendance import error: " + e.getMessage());
+			if (e.getMessage() == null)
+				e.printStackTrace();
+			else
+				System.out.println("Attendance import error: " + e.getMessage());
 		}
 
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false), 0,
@@ -246,13 +250,16 @@ public class SalesForceApi {
 		try {
 			QueryResult queryResults = connection.query(
 					"SELECT Schedule_ID__c, Front_Desk__c, Service__c, Event_Name__c, Service_Date__c, Service_Time__c, "
-							+ "Hours__c, Location_Full__c, Present__c, Absent__c, Excused__c, schedule+client_ID__c "
+							+ "Hours__c, Location_Full__c, Present__c, Absent__c, Excused__c, schedule_client_ID__c "
 							+ "FROM Staff_Hours__c WHERE Service_Date__c >= " + startDate + " AND Service_Date__c <= "
 							+ today + " ORDER BY Service_Date__c DESC, Service_Time__c DESC");
-			System.out.println(queryResults.getRecords().length + " Staff Hours records in Sales Force");
+			System.out.println(queryResults.getSize() + " Staff Hours records in Sales Force");
 
 		} catch (Exception e) {
-			System.out.println("Staff hours import error: " + e.getMessage());
+			if (e.getMessage() == null)
+				e.printStackTrace();
+			else
+				System.out.println("Staff hours import error: " + e.getMessage());
 		}
 
 		return staffHoursList;
@@ -287,6 +294,7 @@ public class SalesForceApi {
 
 				h.setService_Time__c(inputModel.getServiceTime());
 				h.setSchedule_ID__c(inputModel.getScheduleID());
+				h.setSchedule_client_ID__c(inputModel.getScheduleID() + inputModel.getClientID());
 				h.setLocation_Full__c(inputModel.getLocation());
 				h.setHours__c(inputModel.getHours());
 				h.setPresent__c(inputModel.getCompleted());
@@ -388,7 +396,7 @@ public class SalesForceApi {
 
 		try {
 			// Update the records in Salesforce.com
-			upsertResults = connection.upsert("Schedule_ID__c", records);
+			upsertResults = connection.upsert("schedule_client_ID__c", records);
 
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR, new StudentNameModel("", "", false),
@@ -415,8 +423,12 @@ public class SalesForceApi {
 				return c;
 			}
 		}
-		sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false),
-				Integer.parseInt(clientID), " for ClientID " + clientID + " " + clientName);
+		if (clientName == null || clientName.startsWith("null"))
+			sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false),
+					Integer.parseInt(clientID), " for ClientID " + clientID);
+		else
+			sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false),
+					Integer.parseInt(clientID), " for ClientID " + clientID + " " + clientName);
 		return null;
 	}
 
