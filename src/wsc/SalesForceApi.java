@@ -26,6 +26,7 @@ import model.LogDataModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
 import model.SalesForceStaffHoursModel;
+import model.StaffMemberModel;
 import model.StudentNameModel;
 
 public class SalesForceApi {
@@ -87,8 +88,9 @@ public class SalesForceApi {
 		removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
 
 		// Update Staff Hours records
+		ArrayList<StaffMemberModel> sfStaffMembers = pike13Api.getSalesForceStaffMembers();
 		ArrayList<SalesForceStaffHoursModel> sfStaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
-		updateStaffHours(sfStaffHours, contactList);
+		updateStaffHours(sfStaffMembers, sfStaffHours, contactList);
 		getStaffHours(); // temporary, for debug
 
 		exitProgram(-1, null); // -1 indicates no error
@@ -134,18 +136,18 @@ public class SalesForceApi {
 				a.setEvent_Name__c(inputModel.getEventName());
 				a.setService_Name__c(inputModel.getServiceName());
 				a.setEvent_Type__c(inputModel.getEventType());
-				Calendar cal = Calendar.getInstance();
-				String date = inputModel.getServiceDate();
-				cal.set(Calendar.YEAR, Integer.parseInt(date.substring(0, 4)));
-				cal.set(Calendar.MONTH, Integer.parseInt(date.substring(5, 7)) - 1);
-				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)));
-				a.setService_Date__c(cal);
-				a.setService_TIme__c(inputModel.getServiceTime());
 				a.setStatus__c(inputModel.getStatus());
 				a.setSchedule_id__c(inputModel.getScheduleID());
 				a.setVisit_Id__c(inputModel.getVisitID());
 				a.setLocation__c(inputModel.getLocation());
 				a.setStaff__c(inputModel.getStaff());
+
+				DateTime date = new DateTime(inputModel.getServiceDate());
+				Calendar cal = Calendar.getInstance();
+				cal.setTimeInMillis(date.getMillis());
+				a.setService_Date__c(cal);
+				a.setService_TIme__c(inputModel.getServiceTime());
+
 				recordList.add(a);
 			}
 
@@ -265,8 +267,8 @@ public class SalesForceApi {
 		return staffHoursList;
 	}
 
-	private static void updateStaffHours(ArrayList<SalesForceStaffHoursModel> pike13StaffHours,
-			ArrayList<Contact> contacts) {
+	private static void updateStaffHours(ArrayList<StaffMemberModel> pike13StaffMembers,
+			ArrayList<SalesForceStaffHoursModel> pike13StaffHours, ArrayList<Contact> contacts) {
 		ArrayList<Staff_Hours__c> recordList = new ArrayList<Staff_Hours__c>();
 
 		System.out.println(pike13StaffHours.size() + " staff hour records from Pike13");
@@ -276,7 +278,11 @@ public class SalesForceApi {
 				// Add each Pike13 staff hours record to Sales Force list
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
 
-				Contact c = findClientIDInList(inputModel.getClientID(), inputModel.getFullName(), contacts);
+				String staffID = findStaffIDInList(inputModel.getClientID(), pike13StaffMembers);
+				if (staffID == null)
+					continue;
+
+				Contact c = findClientIDInList(staffID, inputModel.getFullName(), contacts);
 				if (c == null)
 					continue;
 
@@ -284,15 +290,6 @@ public class SalesForceApi {
 				h.setStaff_Name__r(c);
 				h.setEvent_Name__c(inputModel.getEventName());
 				h.setService__c(inputModel.getServiceName());
-
-				Calendar cal = Calendar.getInstance();
-				String date = inputModel.getServiceDate();
-				cal.set(Calendar.YEAR, Integer.parseInt(date.substring(0, 4)));
-				cal.set(Calendar.MONTH, Integer.parseInt(date.substring(5, 7)) - 1);
-				cal.set(Calendar.DAY_OF_MONTH, Integer.parseInt(date.substring(8, 10)));
-				h.setService_Date__c(cal);
-
-				h.setService_Time__c(inputModel.getServiceTime());
 				h.setSchedule_ID__c(inputModel.getScheduleID());
 				h.setSchedule_client_ID__c(inputModel.getScheduleID() + inputModel.getClientID());
 				h.setLocation_Full__c(inputModel.getLocation());
@@ -300,6 +297,13 @@ public class SalesForceApi {
 				h.setPresent__c(inputModel.getCompleted());
 				h.setAbsent__c(inputModel.getNoShow());
 				h.setExcused__c(inputModel.getLateCanceled());
+
+				DateTime date = new DateTime(inputModel.getServiceDate());
+				Calendar cal = Calendar.getInstance();
+				cal.setTimeInMillis(date.getMillis());
+				h.setService_Date__c(cal);
+				h.setService_Time__c(inputModel.getServiceTime());
+
 				recordList.add(h);
 			}
 
@@ -439,6 +443,16 @@ public class SalesForceApi {
 			}
 		}
 		return false;
+	}
+
+	private static String findStaffIDInList(String clientID, ArrayList<StaffMemberModel> staffList) {
+		for (StaffMemberModel s : staffList) {
+			if (s.getClientID().equals(clientID)) {
+				return s.getStaffID();
+			}
+		}
+		System.out.println("Staff member not in list: " + clientID);
+		return null;
 	}
 
 	private static String readFile(String filename) {
