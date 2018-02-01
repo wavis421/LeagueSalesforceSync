@@ -127,7 +127,8 @@ public class SalesForceApi {
 				// Add each Pike13 attendance record to Sales Force list
 				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
 
-				Contact c = findClientIDInList(inputModel.getClientID(), null, contacts);
+				Contact c = findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE, inputModel.getClientID(),
+						null, contacts);
 				if (c == null)
 					continue;
 
@@ -187,7 +188,8 @@ public class SalesForceApi {
 			if (e.getMessage() == null)
 				e.printStackTrace();
 			else
-				System.out.println("Attendance import error: " + e.getMessage());
+				sqlDb.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
 		}
 
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false), 0,
@@ -261,7 +263,8 @@ public class SalesForceApi {
 			if (e.getMessage() == null)
 				e.printStackTrace();
 			else
-				System.out.println("Staff hours import error: " + e.getMessage());
+				sqlDb.insertLogData(LogDataModel.SF_STAFF_HOURS_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
 		}
 
 		return staffHoursList;
@@ -271,7 +274,7 @@ public class SalesForceApi {
 			ArrayList<SalesForceStaffHoursModel> pike13StaffHours, ArrayList<Contact> contacts) {
 		ArrayList<Staff_Hours__c> recordList = new ArrayList<Staff_Hours__c>();
 
-		System.out.println(pike13StaffHours.size() + " staff hour records from Pike13");
+		System.out.println(pike13StaffHours.size() + " Staff Hour records from Pike13");
 
 		try {
 			for (int i = 0; i < pike13StaffHours.size(); i++) {
@@ -282,7 +285,8 @@ public class SalesForceApi {
 				if (staffID == null)
 					continue;
 
-				Contact c = findClientIDInList(staffID, inputModel.getFullName(), contacts);
+				Contact c = findClientIDInList(LogDataModel.MISSING_SALES_FORCE_STAFF_MEMBER, staffID,
+						inputModel.getFullName(), contacts);
 				if (c == null)
 					continue;
 
@@ -421,18 +425,19 @@ public class SalesForceApi {
 		}
 	}
 
-	private static Contact findClientIDInList(String clientID, String clientName, ArrayList<Contact> contactList) {
+	private static Contact findClientIDInList(int errorCode, String clientID, String clientName,
+			ArrayList<Contact> contactList) {
 		for (Contact c : contactList) {
 			if (c.getFront_Desk_Id__c().equals(clientID)) {
 				return c;
 			}
 		}
 		if (clientName == null || clientName.startsWith("null"))
-			sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false),
-					Integer.parseInt(clientID), " for ClientID " + clientID);
+			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
+					" for ClientID " + clientID);
 		else
-			sqlDb.insertLogData(LogDataModel.MISSING_SALES_FORCE_CONTACT, new StudentNameModel("", "", false),
-					Integer.parseInt(clientID), " for ClientID " + clientID + " " + clientName);
+			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
+					" for ClientID " + clientID + " " + clientName);
 		return null;
 	}
 
@@ -451,7 +456,8 @@ public class SalesForceApi {
 				return s.getStaffID();
 			}
 		}
-		System.out.println("Staff member not in list: " + clientID);
+		sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_STAFF_MEMBER, new StudentNameModel("", "", false),
+				Integer.parseInt(clientID), " for ClientID " + clientID);
 		return null;
 	}
 
