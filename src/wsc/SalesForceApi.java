@@ -102,7 +102,8 @@ public class SalesForceApi {
 		try {
 			QueryResult queryResults = connection
 					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null "
-							+ "AND (Record_Type__c = 'Student' OR Teacher__c = 'Active' OR Teacher_Student__c = 'Active')");
+							+ "AND (Record_Type__c = 'Student' OR Teacher__c = 'Active' OR Teacher_Student__c = 'Active' "
+							+ "OR Volunteer__c = 'Active')");
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
 					// Add contact to list
