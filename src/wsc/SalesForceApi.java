@@ -64,7 +64,7 @@ public class SalesForceApi {
 		String pike13Token = readFile("./pike13Token.txt");
 		Pike13Api pike13Api = new Pike13Api(sqlDb, pike13Token);
 
-		// Connect to Sales Force
+		// Connect to SalesForce
 		ConnectorConfig config = new ConnectorConfig();
 		config.setUsername(SALES_FORCE_USERNAME);
 		config.setPassword(SALES_FORCE_PASSWORD);
@@ -125,7 +125,7 @@ public class SalesForceApi {
 
 		try {
 			for (int i = 0; i < pike13Attendance.size(); i++) {
-				// Add each Pike13 attendance record to Sales Force list
+				// Add each Pike13 attendance record to SalesForce list
 				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
 
 				Contact c = findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE, inputModel.getClientID(),
@@ -258,7 +258,7 @@ public class SalesForceApi {
 							+ "Hours__c, Location_Full__c, Present__c, Absent__c, Excused__c, schedule_client_ID__c "
 							+ "FROM Staff_Hours__c WHERE Service_Date__c >= " + startDate + " AND Service_Date__c <= "
 							+ today + " ORDER BY Service_Date__c DESC, Service_Time__c DESC");
-			System.out.println(queryResults.getSize() + " Staff Hours records in Sales Force");
+			System.out.println(queryResults.getSize() + " Staff Hours records in SalesForce");
 
 		} catch (Exception e) {
 			if (e.getMessage() == null)
@@ -279,7 +279,7 @@ public class SalesForceApi {
 
 		try {
 			for (int i = 0; i < pike13StaffHours.size(); i++) {
-				// Add each Pike13 staff hours record to Sales Force list
+				// Add each Pike13 staff hours record to SalesForce list
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
 
 				String staffID = findStaffIDInList(inputModel.getClientID(), pike13StaffMembers);
@@ -388,13 +388,15 @@ public class SalesForceApi {
 					0, ": " + e.getMessage());
 		}
 
-		// check the returned results for any errors
-		for (int i = 0; i < deleteResults.length; i++) {
-			if (!deleteResults[i].isSuccess()) {
-				Error[] errors = deleteResults[i].getErrors();
-				for (int j = 0; j < errors.length; j++) {
-					sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
-							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
+		if (deleteResults != null) {
+			// check the returned results for any errors
+			for (int i = 0; i < deleteResults.length; i++) {
+				if (!deleteResults[i].isSuccess()) {
+					Error[] errors = deleteResults[i].getErrors();
+					for (int j = 0; j < errors.length; j++) {
+						sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+								new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
+					}
 				}
 			}
 		}
