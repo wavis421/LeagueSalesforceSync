@@ -27,6 +27,7 @@ import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
 import model.SalesForceStaffHoursModel;
 import model.StaffMemberModel;
+import model.StudentImportModel;
 import model.StudentNameModel;
 
 public class SalesForceApi {
@@ -40,6 +41,7 @@ public class SalesForceApi {
 
 	private static EnterpriseConnection connection;
 	private static MySqlDatabase sqlDb;
+	private static int clientUpdateCount = 0;
 	private static int attendanceUpsertCount = 0;
 	private static int staffHoursUpsertCount = 0;
 	private static String startDate, endDate, today;
@@ -78,12 +80,16 @@ public class SalesForceApi {
 			exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
 		}
 
-		// Get contacts and store in list
-		ArrayList<Contact> contactList = getContacts();
+		// Get SF contacts and store in list
+		ArrayList<Contact> sfContactList = getSalesForceContacts();
+
+		// Get Pike13 clients and upsert to Salesforce
+		ArrayList<StudentImportModel> pike13ContactList = pike13Api.getClientsForSfImport();
+		updateClients(pike13ContactList, sfContactList);
 
 		// Update attendance records
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
-		updateAttendance(sfAttendance, contactList);
+		updateAttendance(sfAttendance, sfContactList);
 
 		// Delete canceled attendance records
 		removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
@@ -91,13 +97,13 @@ public class SalesForceApi {
 		// Update Staff Hours records
 		ArrayList<StaffMemberModel> sfStaffMembers = pike13Api.getSalesForceStaffMembers();
 		ArrayList<SalesForceStaffHoursModel> sfStaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
-		updateStaffHours(sfStaffMembers, sfStaffHours, contactList);
+		updateStaffHours(sfStaffMembers, sfStaffHours, sfContactList);
 		getStaffHours(); // temporary, for debug
 
 		exitProgram(-1, null); // -1 indicates no error
 	}
 
-	private static ArrayList<Contact> getContacts() {
+	private static ArrayList<Contact> getSalesForceContacts() {
 		ArrayList<Contact> contactsList = new ArrayList<Contact>();
 
 		try {
@@ -118,6 +124,126 @@ public class SalesForceApi {
 		}
 
 		return contactsList;
+	}
+
+	private static void updateClients(ArrayList<StudentImportModel> pike13Clients, ArrayList<Contact> sfContacts) {
+		ArrayList<Contact> recordList = new ArrayList<Contact>();
+
+		try {
+			for (int i = 0; i < pike13Clients.size(); i++) {
+				// Add each Pike13 client record to SalesForce list
+				StudentImportModel model = pike13Clients.get(i);
+
+				// Ignore school clients!
+				if ((model.getFirstName().equals("gompers") && model.getLastName().equals("Prep"))
+						|| (model.getFirstName().equals("wilson") && model.getLastName().equals("Middle School"))
+						|| model.getFirstName().equals("barrio Logan"))
+					continue;
+
+				// Currently only updating existing clients, so ignore if not in SalesForce
+				Contact contactMatch = findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_CLIENT_IMPORT,
+						model.getClientID().toString(), model.getFirstName() + " " + model.getLastName(), sfContacts);
+				if (contactMatch == null)
+					continue;
+
+				// Create contact and fill in all fields
+				Contact c = new Contact();
+				c.setFront_Desk_Id__c(model.getClientID().toString());
+				if (model.getEmail() != null)
+					c.setEmail(model.getEmail());
+				if (model.getMobilePhone() != null)
+					c.setMobilePhone(model.getMobilePhone());
+				if (model.getHomePhone() != null)
+					c.setPhone(model.getHomePhone());
+				if (model.getAddress() != null)
+					c.setFull_Address__c(model.getAddress());
+				c.setPast_Events__c((double) model.getCompletedVisits());
+				c.setFuture_Events__c((double) model.getFutureVisits());
+				c.setSigned_Waiver__c(model.isSignedWaiver());
+				c.setMembership__c(model.getMembership());
+				if (model.getPassOnFile() != null)
+					c.setPlan__c(model.getPassOnFile());
+				if (model.getHomeLocAsString() != null)
+					c.setHome_Location_Long__c(model.getHomeLocAsString());
+				if (model.getSchoolName() != null)
+					c.setCurrent_School__c(model.getSchoolName());
+				if (model.gettShirtSize() != null)
+					c.setShirt_Size__c(model.gettShirtSize());
+				if (model.getGenderString() != null)
+					c.setGender__c(model.getGenderString());
+				if (model.getEmergContactName() != null)
+					c.setEmergency_Name__c(model.getEmergContactName());
+				if (model.getEmergContactPhone() != null)
+					c.setEmergency_Phone__c(model.getEmergContactPhone());
+				if (model.getEmergContactEmail() != null)
+					c.setEmergency_Email__c(model.getEmergContactEmail());
+				if (model.getCurrGrade() != null)
+					c.setGrade__c(model.getCurrGrade());
+				if (model.getHearAboutUs() != null)
+					c.setHow_you_heard_about_us__c(model.getHearAboutUs());
+				if (model.getGradYearString() != null)
+					c.setGrad_Year__c(model.getGradYearString());
+				if (model.getWhoToThank() != null)
+					c.setWho_can_we_thank__c(model.getWhoToThank());
+				if (model.getGithubName() != null)
+					c.setGIT_HUB_acct_name__c(model.getGithubName());
+				if (model.getGrantInfo() != null)
+					c.setGrant_Information__c(model.getGrantInfo());
+				c.setLeave_Reason__c(model.getLeaveReason());
+				c.setStop_Email__c(model.isStopEmail());
+				c.setScholarship__c(model.isFinancialAid());
+				if (model.getFinancialAidPercent() != null)
+					c.setScholarship_Percentage__c(model.getFinancialAidPercent());
+				if (model.getBirthDate() != null && !model.getBirthDate().equals(""))
+					c.setDate_of_Birth__c(convertDateStringToCalendar(model.getBirthDate()));
+
+				// TODO: Remaining fields not yet processed: acct mgr for key
+
+				recordList.add(c);
+			}
+
+			// Copy up to 200 records to array at a time (max allowed)
+			Contact[] recordArray;
+			int numRecords = recordList.size();
+			int remainingRecords = numRecords;
+			int arrayIdx = 0;
+
+			System.out.println(numRecords + " Pike13 client records");
+			if (numRecords > MAX_NUM_UPSERT_RECORDS)
+				recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
+			else
+				recordArray = new Contact[numRecords];
+
+			for (int i = 0; i < numRecords; i++) {
+				recordArray[arrayIdx] = recordList.get(i);
+
+				arrayIdx++;
+				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
+					updateClientRecords(recordArray);
+					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
+					arrayIdx = 0;
+
+					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
+						recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
+					else if (remainingRecords > 0)
+						recordArray = new Contact[remainingRecords];
+				}
+			}
+
+			// Update remaining records in Salesforce.com
+			if (arrayIdx > 0)
+				updateClientRecords(recordArray);
+
+		} catch (Exception e) {
+			if (e.getMessage() == null)
+				e.printStackTrace();
+			else
+				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
+		}
+
+		sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+				", " + clientUpdateCount + " records processed");
 	}
 
 	private static void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
@@ -352,6 +478,31 @@ public class SalesForceApi {
 				", " + staffHoursUpsertCount + " records processed");
 	}
 
+	private static void updateClientRecords(Contact[] records) {
+		UpsertResult[] upsertResults = null;
+
+		try {
+			// Update the records in Salesforce.com
+			upsertResults = connection.upsert("Front_Desk_ID__c", records);
+
+		} catch (ConnectionException e) {
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR, new StudentNameModel("", "", false), 0,
+					": " + e.getMessage());
+		}
+
+		// check the returned results for any errors
+		for (int i = 0; i < upsertResults.length; i++) {
+			if (!upsertResults[i].isSuccess()) {
+				Error[] errors = upsertResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR,
+							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
+				}
+			} else
+				clientUpdateCount++;
+		}
+	}
+
 	private static void upsertAttendanceRecords(Student_Attendance__c[] records) {
 		UpsertResult[] upsertResults = null;
 
@@ -438,10 +589,10 @@ public class SalesForceApi {
 		}
 		if (clientName == null || clientName.startsWith("null"))
 			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
-					" for ClientID " + clientID);
+					", ClientID " + clientID);
 		else
 			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
-					" for ClientID " + clientID + " " + clientName);
+					", ClientID " + clientID + " " + clientName);
 		return null;
 	}
 
@@ -463,6 +614,13 @@ public class SalesForceApi {
 		sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_STAFF_MEMBER, new StudentNameModel("", "", false),
 				Integer.parseInt(clientID), " for ClientID " + clientID);
 		return null;
+	}
+
+	private static Calendar convertDateStringToCalendar(String dateString) {
+		DateTime date = new DateTime(dateString);
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(date.getMillis());
+		return cal;
 	}
 
 	private static String readFile(String filename) {
