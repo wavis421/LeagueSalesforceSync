@@ -142,13 +142,13 @@ public class SalesForceApi {
 
 				// Currently only updating existing clients, so ignore if not in SalesForce
 				Contact contactMatch = findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_CLIENT_IMPORT,
-						model.getClientID().toString(), model.getFirstName() + " " + model.getLastName(), sfContacts);
+						String.valueOf(model.getClientID()), model.getFirstName() + " " + model.getLastName(), sfContacts);
 				if (contactMatch == null)
 					continue;
 
 				// Create contact and fill in all fields
 				Contact c = new Contact();
-				c.setFront_Desk_Id__c(model.getClientID().toString());
+				c.setFront_Desk_Id__c(String.valueOf(model.getClientID()));
 				if (model.getEmail() != null)
 					c.setEmail(model.getEmail());
 				if (model.getMobilePhone() != null)
