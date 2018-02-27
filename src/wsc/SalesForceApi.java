@@ -13,7 +13,9 @@ import com.sforce.soap.enterprise.DeleteResult;
 import com.sforce.soap.enterprise.EnterpriseConnection;
 import com.sforce.soap.enterprise.Error;
 import com.sforce.soap.enterprise.QueryResult;
+import com.sforce.soap.enterprise.SaveResult;
 import com.sforce.soap.enterprise.UpsertResult;
+import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
 import com.sforce.soap.enterprise.sobject.SObject;
 import com.sforce.soap.enterprise.sobject.Staff_Hours__c;
@@ -41,6 +43,7 @@ public class SalesForceApi {
 
 	private static EnterpriseConnection connection;
 	private static MySqlDatabase sqlDb;
+	private static Pike13Api pike13Api;
 	private static int clientUpdateCount = 0;
 	private static int attendanceUpsertCount = 0;
 	private static int staffHoursUpsertCount = 0;
@@ -65,7 +68,7 @@ public class SalesForceApi {
 
 		// Connect to Pike13
 		String pike13Token = readFile("./pike13Token.txt");
-		Pike13Api pike13Api = new Pike13Api(sqlDb, pike13Token);
+		pike13Api = new Pike13Api(sqlDb, pike13Token);
 
 		// Connect to SalesForce
 		ConnectorConfig config = new ConnectorConfig();
@@ -77,6 +80,7 @@ public class SalesForceApi {
 			connection = Connector.newConnection(config);
 
 		} catch (ConnectionException e1) {
+			e1.printStackTrace();
 			exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
 		}
 
@@ -126,6 +130,26 @@ public class SalesForceApi {
 		return contactsList;
 	}
 
+	private static Account getSalesForceAccountByName(String accountMgrName) {
+		Account account = null;
+
+		try {
+			QueryResult queryResults = connection
+					.query("SELECT Id, Name, Client_id__c " + "FROM Account WHERE Name = '" + accountMgrName + "'");
+
+			if (queryResults.getSize() > 0)
+				account = (Account) queryResults.getRecords()[0];
+
+		} catch (Exception e) {
+			sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+					" for " + accountMgrName + ": " + e.getMessage());
+			if (e.getMessage() == null)
+				e.printStackTrace();
+		}
+
+		return account;
+	}
+
 	private static void updateClients(ArrayList<StudentImportModel> pike13Clients, ArrayList<Contact> sfContacts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
 
@@ -137,18 +161,70 @@ public class SalesForceApi {
 				// Ignore school clients!
 				if ((model.getFirstName().equals("gompers") && model.getLastName().equals("Prep"))
 						|| (model.getFirstName().equals("wilson") && model.getLastName().equals("Middle School"))
-						|| model.getFirstName().equals("barrio Logan"))
+						|| (model.getFirstName().equals("nativity") && model.getLastName().equals("Prep Academy"))
+						|| (model.getFirstName().equals("Sample") && model.getLastName().equals("Customer"))
+						|| model.getFirstName().equals("barrio Logan") || model.getFirstName().startsWith("HOLIDAY"))
 					continue;
 
-				// Currently only updating existing clients, so ignore if not in SalesForce
-				Contact contactMatch = findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_CLIENT_IMPORT,
-						String.valueOf(model.getClientID()), model.getFirstName() + " " + model.getLastName(), sfContacts);
-				if (contactMatch == null)
-					continue;
-
-				// Create contact and fill in all fields
+				// Create contact
 				Contact c = new Contact();
+
+				// Check if client already exists in SalesForce
+				Contact clientMatch = findClientIDInList(-1, String.valueOf(model.getClientID()),
+						model.getFirstName() + " " + model.getLastName(), sfContacts);
+
+				if (clientMatch == null) {
+					// *** Student not in SalesForce ***
+					if (model.getAccountMgrNames() == null || model.getAccountMgrNames().equals("")) {
+						// Student not in SF and no Pike13 account manager, so error
+						sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
+								new StudentNameModel(model.getFirstName(), model.getLastName(), true),
+								model.getClientID(), " " + model.getFirstName() + " " + model.getLastName());
+						continue;
+
+					} else {
+						// Find account manager in Pike13 so we can parse first/last names
+						String accountMgrName = getAccountName(model.getAccountMgrNames());
+						StudentImportModel accountMgrModel = pike13Api.getClientByAcctMgr(accountMgrName);
+
+						if (accountMgrModel == null) {
+							// Pike13 account manager not found? This should not happen!
+							sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
+									new StudentNameModel(model.getFirstName(), model.getLastName(), true),
+									model.getClientID(), " " + model.getFirstName() + " " + model.getLastName()
+											+ ", manager " + accountMgrName);
+							continue;
+
+						} else {
+							// Create account for new client
+							String accountFamilyName = accountMgrModel.getLastName() + " "
+									+ accountMgrModel.getFirstName() + " Family";
+							Account account = getSalesForceAccountByName(accountFamilyName);
+							if (account == null) {
+								// SalesForce account does not yet exist, so create
+								account = new Account();
+								account.setName(accountFamilyName);
+								account.setType("Family");
+								if (!createAccountRecord(model, account))
+									continue;
+								account = getSalesForceAccountByName(accountFamilyName);
+								if (account == null)
+									continue;
+							}
+							c.setAccountId(account.getId());
+							sqlDb.insertLogData(LogDataModel.ADD_CLIENT_TO_SF_ACCOUNT,
+									new StudentNameModel(model.getFirstName(), model.getLastName(), true),
+									model.getClientID(),
+									" " + accountFamilyName + ": " + model.getFirstName() + " " + model.getLastName());
+						}
+					}
+				}
+
+				// Fill in all fields for this client
 				c.setFront_Desk_Id__c(String.valueOf(model.getClientID()));
+				c.setFirstName(model.getFirstName());
+				c.setLastName(model.getLastName());
+				c.setContact_Type__c("Student");
 				if (model.getEmail() != null)
 					c.setEmail(model.getEmail());
 				if (model.getMobilePhone() != null)
@@ -197,8 +273,6 @@ public class SalesForceApi {
 				if (model.getBirthDate() != null && !model.getBirthDate().equals(""))
 					c.setDate_of_Birth__c(convertDateStringToCalendar(model.getBirthDate()));
 
-				// TODO: Remaining fields not yet processed: acct mgr for key
-
 				recordList.add(c);
 			}
 
@@ -219,7 +293,7 @@ public class SalesForceApi {
 
 				arrayIdx++;
 				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
-					updateClientRecords(recordArray);
+					upsertClientRecords(recordArray);
 					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
 					arrayIdx = 0;
 
@@ -232,7 +306,7 @@ public class SalesForceApi {
 
 			// Update remaining records in Salesforce.com
 			if (arrayIdx > 0)
-				updateClientRecords(recordArray);
+				upsertClientRecords(recordArray);
 
 		} catch (Exception e) {
 			if (e.getMessage() == null)
@@ -478,7 +552,7 @@ public class SalesForceApi {
 				", " + staffHoursUpsertCount + " records processed");
 	}
 
-	private static void updateClientRecords(Contact[] records) {
+	private static void upsertClientRecords(Contact[] records) {
 		UpsertResult[] upsertResults = null;
 
 		try {
@@ -503,6 +577,39 @@ public class SalesForceApi {
 		}
 	}
 
+	private static boolean createAccountRecord(StudentImportModel model, Account account) {
+		SaveResult[] saveResults = null;
+		Account[] acctList = new Account[] { account };
+
+		try {
+			// Update the account records in Salesforce.com
+			saveResults = connection.create(acctList);
+			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT, new StudentNameModel("", "", false), 0,
+					" " + model.getFirstName() + " " + model.getLastName() + ": " + account.getName());
+
+		} catch (ConnectionException e) {
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+					new StudentNameModel(model.getFirstName(), model.getLastName(), false), model.getClientID(),
+					" for " + account.getName() + ": " + e.getMessage());
+			if (e.getMessage() == null)
+				e.printStackTrace();
+			return false;
+		}
+
+		// check the returned results for any errors
+		if (saveResults[0].isSuccess())
+			return true;
+		else {
+			Error[] errors = saveResults[0].getErrors();
+			for (int j = 0; j < errors.length; j++) {
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+						new StudentNameModel(model.getFirstName(), model.getLastName(), false), model.getClientID(),
+						" for " + account.getName() + ": " + errors[j].getMessage());
+			}
+			return false;
+		}
+	}
+
 	private static void upsertAttendanceRecords(Student_Attendance__c[] records) {
 		UpsertResult[] upsertResults = null;
 
@@ -513,6 +620,11 @@ public class SalesForceApi {
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
 					0, ": " + e.getMessage());
+		}
+
+		if (upsertResults == null) {
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
+					0, ": null upsert Result");
 		}
 
 		// check the returned results for any errors
@@ -587,12 +699,16 @@ public class SalesForceApi {
 				return c;
 			}
 		}
-		if (clientName == null || clientName.startsWith("null"))
-			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
-					", ClientID " + clientID);
-		else
-			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
-					", ClientID " + clientID + " " + clientName);
+
+		// -1 indicates error not to be posted
+		if (errorCode >= 0) {
+			if (clientName == null || clientName.startsWith("null"))
+				sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
+						", ClientID " + clientID);
+			else
+				sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
+						", ClientID " + clientID + " " + clientName);
+		}
 		return null;
 	}
 
@@ -614,6 +730,15 @@ public class SalesForceApi {
 		sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_STAFF_MEMBER, new StudentNameModel("", "", false),
 				Integer.parseInt(clientID), " for ClientID " + clientID);
 		return null;
+	}
+
+	private static String getAccountName(String accountManagerNames) {
+		String accountName = accountManagerNames.trim();
+		int idx = accountManagerNames.indexOf(',');
+		if (idx > 0)
+			accountName = accountManagerNames.substring(0, idx);
+
+		return accountName;
 	}
 
 	private static Calendar convertDateStringToCalendar(String dateString) {
