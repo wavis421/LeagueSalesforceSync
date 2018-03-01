@@ -88,8 +88,9 @@ public class SalesForceApi {
 		ArrayList<Contact> sfContactList = getSalesForceContacts();
 
 		// Get Pike13 clients and upsert to Salesforce
-		ArrayList<StudentImportModel> pike13ContactList = pike13Api.getClientsForSfImport();
-		updateClients(pike13ContactList, sfContactList);
+		ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
+		ArrayList<StudentImportModel> pike13ManagerContactList = pike13Api.getClientsForSfImport(true);
+		updateClients(pike13StudentContactList, pike13ManagerContactList, sfContactList);
 
 		// Update attendance records
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
@@ -132,146 +133,144 @@ public class SalesForceApi {
 
 	private static Account getSalesForceAccountByName(String accountMgrName) {
 		Account account = null;
+		String name = accountMgrName.replace("'", "\\'");
 
 		try {
 			QueryResult queryResults = connection
-					.query("SELECT Id, Name, Client_id__c " + "FROM Account WHERE Name = '" + accountMgrName + "'");
+					.query("SELECT Id, Name, Client_id__c " + "FROM Account WHERE Name = '" + name + "'");
 
 			if (queryResults.getSize() > 0)
 				account = (Account) queryResults.getRecords()[0];
+			else {
+				account = new Account();
+				account.setName("");
+			}
 
 		} catch (Exception e) {
-			sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-					" for " + accountMgrName + ": " + e.getMessage());
-			if (e.getMessage() == null)
+			if (e.getMessage() == null) {
+				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						" for " + accountMgrName);
 				e.printStackTrace();
+			} else
+				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						" for " + accountMgrName + ": " + e.getMessage());
 		}
 
 		return account;
 	}
 
-	private static void updateClients(ArrayList<StudentImportModel> pike13Clients, ArrayList<Contact> sfContacts) {
+	private static void updateClients(ArrayList<StudentImportModel> pike13Students,
+			ArrayList<StudentImportModel> pike13Managers, ArrayList<Contact> sfContacts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
 
 		try {
-			for (int i = 0; i < pike13Clients.size(); i++) {
+			for (int i = 0; i < pike13Students.size(); i++) {
 				// Add each Pike13 client record to SalesForce list
-				StudentImportModel model = pike13Clients.get(i);
+				StudentImportModel student = pike13Students.get(i);
 
 				// Ignore school clients!
-				if ((model.getFirstName().equals("gompers") && model.getLastName().equals("Prep"))
-						|| (model.getFirstName().equals("wilson") && model.getLastName().equals("Middle School"))
-						|| (model.getFirstName().equals("nativity") && model.getLastName().equals("Prep Academy"))
-						|| (model.getFirstName().equals("Sample") && model.getLastName().equals("Customer"))
-						|| model.getFirstName().equals("barrio Logan") || model.getFirstName().startsWith("HOLIDAY"))
+				if ((student.getFirstName().equals("gompers") && student.getLastName().equals("Prep"))
+						|| (student.getFirstName().equals("wilson") && student.getLastName().equals("Middle School"))
+						|| (student.getFirstName().equals("nativity") && student.getLastName().equals("Prep Academy"))
+						|| (student.getFirstName().equals("Sample") && student.getLastName().equals("Customer"))
+						|| student.getFirstName().equals("barrio Logan")
+						|| student.getFirstName().startsWith("HOLIDAY"))
 					continue;
 
-				// Create contact
-				Contact c = new Contact();
-
-				// Check if client already exists in SalesForce
-				Contact clientMatch = findClientIDInList(-1, String.valueOf(model.getClientID()),
-						model.getFirstName() + " " + model.getLastName(), sfContacts);
-
-				if (clientMatch == null) {
-					// *** Student not in SalesForce ***
-					if (model.getAccountMgrNames() == null || model.getAccountMgrNames().equals("")) {
-						// Student not in SF and no Pike13 account manager, so error
-						sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
-								new StudentNameModel(model.getFirstName(), model.getLastName(), true),
-								model.getClientID(), " " + model.getFirstName() + " " + model.getLastName());
-						continue;
-
-					} else {
-						// Find account manager in Pike13 so we can parse first/last names
-						String accountMgrName = getAccountName(model.getAccountMgrNames());
-						StudentImportModel accountMgrModel = pike13Api.getClientByAcctMgr(accountMgrName);
-
-						if (accountMgrModel == null) {
-							// Pike13 account manager not found? This should not happen!
-							sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
-									new StudentNameModel(model.getFirstName(), model.getLastName(), true),
-									model.getClientID(), " " + model.getFirstName() + " " + model.getLastName()
-											+ ", manager " + accountMgrName);
-							continue;
-
-						} else {
-							// Create account for new client
-							String accountFamilyName = accountMgrModel.getLastName() + " "
-									+ accountMgrModel.getFirstName() + " Family";
-							Account account = getSalesForceAccountByName(accountFamilyName);
-							if (account == null) {
-								// SalesForce account does not yet exist, so create
-								account = new Account();
-								account.setName(accountFamilyName);
-								account.setType("Family");
-								if (!createAccountRecord(model, account))
-									continue;
-								account = getSalesForceAccountByName(accountFamilyName);
-								if (account == null)
-									continue;
-							}
-							c.setAccountId(account.getId());
-							sqlDb.insertLogData(LogDataModel.ADD_CLIENT_TO_SF_ACCOUNT,
-									new StudentNameModel(model.getFirstName(), model.getLastName(), true),
-									model.getClientID(),
-									" " + accountFamilyName + ": " + model.getFirstName() + " " + model.getLastName());
-						}
-					}
+				// Check for account manager names
+				if (student.getAccountMgrNames() == null || student.getAccountMgrNames().equals("")) {
+					// Student has no Pike13 account manager, so error
+					sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
+							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
+							student.getClientID(), " " + student.getFirstName() + " " + student.getLastName());
+					continue;
 				}
 
-				// Fill in all fields for this client
-				c.setFront_Desk_Id__c(String.valueOf(model.getClientID()));
-				c.setFirstName(model.getFirstName());
-				c.setLastName(model.getLastName());
+				// Find account manager in Pike13 list so we can parse first/last names
+				String accountMgrName = getAccountName(student.getAccountMgrNames());
+				StudentImportModel acctMgrModel = findAcctManagerInList(accountMgrName, pike13Managers);
+				if (acctMgrModel == null) {
+					// Pike13 account manager not found? This should not happen!
+					sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
+							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
+							student.getClientID(),
+							" " + student.getFirstName() + " " + student.getLastName() + ", manager " + accountMgrName);
+					continue;
+				}
+
+				// Look for account in SalesForce
+				String acctFamilyName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
+				Account account = getSalesForceAccountByName(acctFamilyName);
+				if (account == null) // Error importing
+					continue;
+
+				if (account.getName().equals("")) {
+					// SalesForce account does not yet exist, so create
+					account.setName(acctFamilyName);
+					account.setType("Family");
+					if (!createAccountRecord(student, account))
+						continue;
+
+					// Now that account has been created, need to get account from SF again
+					account = getSalesForceAccountByName(acctFamilyName);
+					if (account == null || account.getName().equals(""))
+						continue;
+				}
+
+				// Create contact and fill in all fields
+				Contact c = new Contact();
+				c.setAccountId(account.getId());
+				c.setFront_Desk_Id__c(String.valueOf(student.getClientID()));
+				c.setFirstName(student.getFirstName());
+				c.setLastName(student.getLastName());
 				c.setContact_Type__c("Student");
-				if (model.getEmail() != null)
-					c.setEmail(model.getEmail());
-				if (model.getMobilePhone() != null)
-					c.setMobilePhone(model.getMobilePhone());
-				if (model.getHomePhone() != null)
-					c.setPhone(model.getHomePhone());
-				if (model.getAddress() != null)
-					c.setFull_Address__c(model.getAddress());
-				c.setPast_Events__c((double) model.getCompletedVisits());
-				c.setFuture_Events__c((double) model.getFutureVisits());
-				c.setSigned_Waiver__c(model.isSignedWaiver());
-				c.setMembership__c(model.getMembership());
-				if (model.getPassOnFile() != null)
-					c.setPlan__c(model.getPassOnFile());
-				if (model.getHomeLocAsString() != null)
-					c.setHome_Location_Long__c(model.getHomeLocAsString());
-				if (model.getSchoolName() != null)
-					c.setCurrent_School__c(model.getSchoolName());
-				if (model.gettShirtSize() != null)
-					c.setShirt_Size__c(model.gettShirtSize());
-				if (model.getGenderString() != null)
-					c.setGender__c(model.getGenderString());
-				if (model.getEmergContactName() != null)
-					c.setEmergency_Name__c(model.getEmergContactName());
-				if (model.getEmergContactPhone() != null)
-					c.setEmergency_Phone__c(model.getEmergContactPhone());
-				if (model.getEmergContactEmail() != null)
-					c.setEmergency_Email__c(model.getEmergContactEmail());
-				if (model.getCurrGrade() != null)
-					c.setGrade__c(model.getCurrGrade());
-				if (model.getHearAboutUs() != null)
-					c.setHow_you_heard_about_us__c(model.getHearAboutUs());
-				if (model.getGradYearString() != null)
-					c.setGrad_Year__c(model.getGradYearString());
-				if (model.getWhoToThank() != null)
-					c.setWho_can_we_thank__c(model.getWhoToThank());
-				if (model.getGithubName() != null)
-					c.setGIT_HUB_acct_name__c(model.getGithubName());
-				if (model.getGrantInfo() != null)
-					c.setGrant_Information__c(model.getGrantInfo());
-				c.setLeave_Reason__c(model.getLeaveReason());
-				c.setStop_Email__c(model.isStopEmail());
-				c.setScholarship__c(model.isFinancialAid());
-				if (model.getFinancialAidPercent() != null)
-					c.setScholarship_Percentage__c(model.getFinancialAidPercent());
-				if (model.getBirthDate() != null && !model.getBirthDate().equals(""))
-					c.setDate_of_Birth__c(convertDateStringToCalendar(model.getBirthDate()));
+				if (student.getEmail() != null)
+					c.setEmail(student.getEmail());
+				if (student.getMobilePhone() != null)
+					c.setMobilePhone(student.getMobilePhone());
+				if (student.getHomePhone() != null)
+					c.setPhone(student.getHomePhone());
+				if (student.getAddress() != null)
+					c.setFull_Address__c(student.getAddress());
+				c.setPast_Events__c((double) student.getCompletedVisits());
+				c.setFuture_Events__c((double) student.getFutureVisits());
+				c.setSigned_Waiver__c(student.isSignedWaiver());
+				c.setMembership__c(student.getMembership());
+				if (student.getPassOnFile() != null)
+					c.setPlan__c(student.getPassOnFile());
+				if (student.getHomeLocAsString() != null)
+					c.setHome_Location_Long__c(student.getHomeLocAsString());
+				if (student.getSchoolName() != null)
+					c.setCurrent_School__c(student.getSchoolName());
+				if (student.gettShirtSize() != null)
+					c.setShirt_Size__c(student.gettShirtSize());
+				if (student.getGenderString() != null)
+					c.setGender__c(student.getGenderString());
+				if (student.getEmergContactName() != null)
+					c.setEmergency_Name__c(student.getEmergContactName());
+				if (student.getEmergContactPhone() != null)
+					c.setEmergency_Phone__c(student.getEmergContactPhone());
+				if (student.getEmergContactEmail() != null)
+					c.setEmergency_Email__c(student.getEmergContactEmail());
+				if (student.getCurrGrade() != null)
+					c.setGrade__c(student.getCurrGrade());
+				if (student.getHearAboutUs() != null)
+					c.setHow_you_heard_about_us__c(student.getHearAboutUs());
+				if (student.getGradYearString() != null)
+					c.setGrad_Year__c(student.getGradYearString());
+				if (student.getWhoToThank() != null)
+					c.setWho_can_we_thank__c(student.getWhoToThank());
+				if (student.getGithubName() != null)
+					c.setGIT_HUB_acct_name__c(student.getGithubName());
+				if (student.getGrantInfo() != null)
+					c.setGrant_Information__c(student.getGrantInfo());
+				c.setLeave_Reason__c(student.getLeaveReason());
+				c.setStop_Email__c(student.isStopEmail());
+				c.setScholarship__c(student.isFinancialAid());
+				if (student.getFinancialAidPercent() != null)
+					c.setScholarship_Percentage__c(student.getFinancialAidPercent());
+				if (student.getBirthDate() != null && !student.getBirthDate().equals(""))
+					c.setDate_of_Birth__c(convertDateStringToCalendar(student.getBirthDate()));
 
 				recordList.add(c);
 			}
@@ -584,8 +583,6 @@ public class SalesForceApi {
 		try {
 			// Update the account records in Salesforce.com
 			saveResults = connection.create(acctList);
-			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT, new StudentNameModel("", "", false), 0,
-					" " + model.getFirstName() + " " + model.getLastName() + ": " + account.getName());
 
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
@@ -597,9 +594,11 @@ public class SalesForceApi {
 		}
 
 		// check the returned results for any errors
-		if (saveResults[0].isSuccess())
+		if (saveResults[0].isSuccess()) {
+			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT, new StudentNameModel("", "", false), 0,
+					" " + model.getFirstName() + " " + model.getLastName() + ": " + account.getName());
 			return true;
-		else {
+		} else {
 			Error[] errors = saveResults[0].getErrors();
 			for (int j = 0; j < errors.length; j++) {
 				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
@@ -729,6 +728,15 @@ public class SalesForceApi {
 		}
 		sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_STAFF_MEMBER, new StudentNameModel("", "", false),
 				Integer.parseInt(clientID), " for ClientID " + clientID);
+		return null;
+	}
+
+	private static StudentImportModel findAcctManagerInList(String accountMgrName,
+			ArrayList<StudentImportModel> mgrList) {
+		for (StudentImportModel m : mgrList) {
+			if (accountMgrName.equals(m.getFirstName() + " " + m.getLastName()))
+				return m;
+		}
 		return null;
 	}
 
