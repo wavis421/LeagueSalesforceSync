@@ -84,13 +84,17 @@ public class SalesForceApi {
 			exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
 		}
 
+		// Get SF accounts and store in list
+		ArrayList<Account> sfAccountList = getSalesForceAccounts();
+		if (sfAccountList != null && sfAccountList.size() > 0) {
+			// Get Pike13 clients and upsert to SalesForce
+			ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
+			ArrayList<StudentImportModel> pike13ManagerContactList = pike13Api.getClientsForSfImport(true);
+			updateClients(pike13StudentContactList, pike13ManagerContactList, sfAccountList);
+		}
+
 		// Get SF contacts and store in list
 		ArrayList<Contact> sfContactList = getSalesForceContacts();
-
-		// Get Pike13 clients and upsert to Salesforce
-		ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
-		ArrayList<StudentImportModel> pike13ManagerContactList = pike13Api.getClientsForSfImport(true);
-		updateClients(pike13StudentContactList, pike13ManagerContactList, sfContactList);
 
 		// Update attendance records
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
@@ -131,6 +135,34 @@ public class SalesForceApi {
 		return contactsList;
 	}
 
+	private static ArrayList<Account> getSalesForceAccounts() {
+		ArrayList<Account> accountList = new ArrayList<Account>();
+
+		try {
+			QueryResult queryResults = connection
+					.query("SELECT Id, Name FROM Account WHERE IsDeleted = false AND Type = 'Family'");
+
+			if (queryResults.getSize() > 0) {
+				for (int i = 0; i < queryResults.getRecords().length; i++) {
+					// Add account to list
+					accountList.add((Account) queryResults.getRecords()[i]);
+				}
+			}
+
+		} catch (Exception e) {
+			if (e.getMessage() == null) {
+				e.printStackTrace();
+				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
+
+			} else
+				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
+			return null;
+		}
+
+		return accountList;
+	}
+
 	private static Account getSalesForceAccountByName(String accountMgrName) {
 		Account account = null;
 		String name = accountMgrName.replace("'", "\\'");
@@ -139,9 +171,12 @@ public class SalesForceApi {
 			QueryResult queryResults = connection
 					.query("SELECT Id, Name, Client_id__c " + "FROM Account WHERE Name = '" + name + "'");
 
-			if (queryResults.getSize() > 0)
+			if (queryResults.getSize() > 0) {
 				account = (Account) queryResults.getRecords()[0];
-			else {
+				if (queryResults.getSize() > 1)
+					sqlDb.insertLogData(LogDataModel.DUPLICATE_SF_ACCOUNT_NAME, new StudentNameModel("", "", false), 0,
+							" '" + accountMgrName + "'");
+			} else {
 				account = new Account();
 				account.setName("");
 			}
@@ -160,7 +195,7 @@ public class SalesForceApi {
 	}
 
 	private static void updateClients(ArrayList<StudentImportModel> pike13Students,
-			ArrayList<StudentImportModel> pike13Managers, ArrayList<Contact> sfContacts) {
+			ArrayList<StudentImportModel> pike13Managers, ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
 
 		try {
@@ -198,11 +233,9 @@ public class SalesForceApi {
 					continue;
 				}
 
-				// Look for account in SalesForce
+				// Find account in SalesForce
 				String acctFamilyName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
-				Account account = getSalesForceAccountByName(acctFamilyName);
-				if (account == null) // Error importing
-					continue;
+				Account account = findAccountInSalesForceList(acctFamilyName, sfAccounts);
 
 				if (account.getName().equals("")) {
 					// SalesForce account does not yet exist, so create
@@ -738,6 +771,18 @@ public class SalesForceApi {
 				return m;
 		}
 		return null;
+	}
+
+	private static Account findAccountInSalesForceList(String accountMgrName, ArrayList<Account> acctList) {
+		for (Account a : acctList) {
+			if (accountMgrName.equalsIgnoreCase(a.getName()))
+				return a;
+		}
+
+		// Account not in list, so create new account with empty name
+		Account account = new Account();
+		account.setName("");
+		return account;
 	}
 
 	private static String getAccountName(String accountManagerNames) {
