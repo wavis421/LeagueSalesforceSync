@@ -90,24 +90,29 @@ public class SalesForceApi {
 			// Get Pike13 clients and upsert to SalesForce
 			ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
 			ArrayList<StudentImportModel> pike13ManagerContactList = pike13Api.getClientsForSfImport(true);
-			updateClients(pike13StudentContactList, pike13ManagerContactList, sfAccountList);
+
+			// Make sure Pike13 didn't have error getting data
+			if (pike13StudentContactList != null && pike13ManagerContactList != null)
+				updateClients(pike13StudentContactList, pike13ManagerContactList, sfAccountList);
 		}
 
 		// Get SF contacts and store in list
 		ArrayList<Contact> sfContactList = getSalesForceContacts();
 
-		// Update attendance records
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
-		updateAttendance(sfAttendance, sfContactList);
+		if (sfAttendance != null) {
+			// Update attendance records
+			updateAttendance(sfAttendance, sfContactList);
 
-		// Delete canceled attendance records
-		removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
+			// Delete canceled attendance records
+			removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
+		}
 
 		// Update Staff Hours records
 		ArrayList<StaffMemberModel> sfStaffMembers = pike13Api.getSalesForceStaffMembers();
 		ArrayList<SalesForceStaffHoursModel> sfStaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
-		updateStaffHours(sfStaffMembers, sfStaffHours, sfContactList);
-		getStaffHours(); // temporary, for debug
+		if (sfStaffMembers != null && sfStaffHours != null)
+			updateStaffHours(sfStaffMembers, sfStaffHours, sfContactList);
 
 		exitProgram(-1, null); // -1 indicates no error
 	}
@@ -250,62 +255,8 @@ public class SalesForceApi {
 						continue;
 				}
 
-				// Create contact and fill in all fields
-				Contact c = new Contact();
-				c.setAccountId(account.getId());
-				c.setFront_Desk_Id__c(String.valueOf(student.getClientID()));
-				c.setFirstName(student.getFirstName());
-				c.setLastName(student.getLastName());
-				c.setContact_Type__c("Student");
-				if (student.getEmail() != null)
-					c.setEmail(student.getEmail());
-				if (student.getMobilePhone() != null)
-					c.setMobilePhone(student.getMobilePhone());
-				if (student.getHomePhone() != null)
-					c.setPhone(student.getHomePhone());
-				if (student.getAddress() != null)
-					c.setFull_Address__c(student.getAddress());
-				c.setPast_Events__c((double) student.getCompletedVisits());
-				c.setFuture_Events__c((double) student.getFutureVisits());
-				c.setSigned_Waiver__c(student.isSignedWaiver());
-				c.setMembership__c(student.getMembership());
-				if (student.getPassOnFile() != null)
-					c.setPlan__c(student.getPassOnFile());
-				if (student.getHomeLocAsString() != null)
-					c.setHome_Location_Long__c(student.getHomeLocAsString());
-				if (student.getSchoolName() != null)
-					c.setCurrent_School__c(student.getSchoolName());
-				if (student.gettShirtSize() != null)
-					c.setShirt_Size__c(student.gettShirtSize());
-				if (student.getGenderString() != null)
-					c.setGender__c(student.getGenderString());
-				if (student.getEmergContactName() != null)
-					c.setEmergency_Name__c(student.getEmergContactName());
-				if (student.getEmergContactPhone() != null)
-					c.setEmergency_Phone__c(student.getEmergContactPhone());
-				if (student.getEmergContactEmail() != null)
-					c.setEmergency_Email__c(student.getEmergContactEmail());
-				if (student.getCurrGrade() != null)
-					c.setGrade__c(student.getCurrGrade());
-				if (student.getHearAboutUs() != null)
-					c.setHow_you_heard_about_us__c(student.getHearAboutUs());
-				if (student.getGradYearString() != null)
-					c.setGrad_Year__c(student.getGradYearString());
-				if (student.getWhoToThank() != null)
-					c.setWho_can_we_thank__c(student.getWhoToThank());
-				if (student.getGithubName() != null)
-					c.setGIT_HUB_acct_name__c(student.getGithubName());
-				if (student.getGrantInfo() != null)
-					c.setGrant_Information__c(student.getGrantInfo());
-				c.setLeave_Reason__c(student.getLeaveReason());
-				c.setStop_Email__c(student.isStopEmail());
-				c.setScholarship__c(student.isFinancialAid());
-				if (student.getFinancialAidPercent() != null)
-					c.setScholarship_Percentage__c(student.getFinancialAidPercent());
-				if (student.getBirthDate() != null && !student.getBirthDate().equals(""))
-					c.setDate_of_Birth__c(convertDateStringToCalendar(student.getBirthDate()));
-
-				recordList.add(c);
+				// Create contact and add to list
+				recordList.add(createContactRecord(student, account));
 			}
 
 			// Copy up to 200 records to array at a time (max allowed)
@@ -607,6 +558,66 @@ public class SalesForceApi {
 			} else
 				clientUpdateCount++;
 		}
+	}
+
+	private static Contact createContactRecord(StudentImportModel student, Account account) {
+		// Create contact and add fields
+		Contact c = new Contact();
+
+		c.setAccountId(account.getId());
+		c.setFront_Desk_Id__c(String.valueOf(student.getClientID()));
+		c.setFirstName(student.getFirstName());
+		c.setLastName(student.getLastName());
+		c.setContact_Type__c("Student");
+		if (student.getEmail() != null)
+			c.setEmail(student.getEmail());
+		if (student.getMobilePhone() != null)
+			c.setMobilePhone(student.getMobilePhone());
+		if (student.getHomePhone() != null)
+			c.setPhone(student.getHomePhone());
+		if (student.getAddress() != null)
+			c.setFull_Address__c(student.getAddress());
+		c.setPast_Events__c((double) student.getCompletedVisits());
+		c.setFuture_Events__c((double) student.getFutureVisits());
+		c.setSigned_Waiver__c(student.isSignedWaiver());
+		c.setMembership__c(student.getMembership());
+		if (student.getPassOnFile() != null)
+			c.setPlan__c(student.getPassOnFile());
+		if (student.getHomeLocAsString() != null)
+			c.setHome_Location_Long__c(student.getHomeLocAsString());
+		if (student.getSchoolName() != null)
+			c.setCurrent_School__c(student.getSchoolName());
+		if (student.gettShirtSize() != null)
+			c.setShirt_Size__c(student.gettShirtSize());
+		if (student.getGenderString() != null)
+			c.setGender__c(student.getGenderString());
+		if (student.getEmergContactName() != null)
+			c.setEmergency_Name__c(student.getEmergContactName());
+		if (student.getEmergContactPhone() != null)
+			c.setEmergency_Phone__c(student.getEmergContactPhone());
+		if (student.getEmergContactEmail() != null)
+			c.setEmergency_Email__c(student.getEmergContactEmail());
+		if (student.getCurrGrade() != null)
+			c.setGrade__c(student.getCurrGrade());
+		if (student.getHearAboutUs() != null)
+			c.setHow_you_heard_about_us__c(student.getHearAboutUs());
+		if (student.getGradYearString() != null)
+			c.setGrad_Year__c(student.getGradYearString());
+		if (student.getWhoToThank() != null)
+			c.setWho_can_we_thank__c(student.getWhoToThank());
+		if (student.getGithubName() != null)
+			c.setGIT_HUB_acct_name__c(student.getGithubName());
+		if (student.getGrantInfo() != null)
+			c.setGrant_Information__c(student.getGrantInfo());
+		c.setLeave_Reason__c(student.getLeaveReason());
+		c.setStop_Email__c(student.isStopEmail());
+		c.setScholarship__c(student.isFinancialAid());
+		if (student.getFinancialAidPercent() != null)
+			c.setScholarship_Percentage__c(student.getFinancialAidPercent());
+		if (student.getBirthDate() != null && !student.getBirthDate().equals(""))
+			c.setDate_of_Birth__c(convertDateStringToCalendar(student.getBirthDate()));
+
+		return c;
 	}
 
 	private static boolean createAccountRecord(StudentImportModel model, Account account) {
