@@ -89,11 +89,13 @@ public class SalesForceApi {
 		if (sfAccountList != null && sfAccountList.size() > 0) {
 			// Get Pike13 clients and upsert to SalesForce
 			ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
-			ArrayList<StudentImportModel> pike13ManagerContactList = pike13Api.getClientsForSfImport(true);
+			ArrayList<StudentImportModel> pike13AdultContactList = pike13Api.getClientsForSfImport(true);
 
 			// Make sure Pike13 didn't have error getting data
-			if (pike13StudentContactList != null && pike13ManagerContactList != null)
-				updateClients(pike13StudentContactList, pike13ManagerContactList, sfAccountList);
+			if (pike13StudentContactList != null && pike13AdultContactList != null) {
+				updateStudents(pike13StudentContactList, pike13AdultContactList, sfAccountList);
+				updateAdults(pike13StudentContactList, pike13AdultContactList, sfAccountList);
+			}
 		}
 
 		// Get SF contacts and store in list
@@ -199,9 +201,10 @@ public class SalesForceApi {
 		return account;
 	}
 
-	private static void updateClients(ArrayList<StudentImportModel> pike13Students,
+	private static void updateStudents(ArrayList<StudentImportModel> pike13Students,
 			ArrayList<StudentImportModel> pike13Managers, ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
+		clientUpdateCount = 0;
 
 		try {
 			for (int i = 0; i < pike13Students.size(); i++) {
@@ -227,7 +230,7 @@ public class SalesForceApi {
 				}
 
 				// Find account manager in Pike13 list so we can parse first/last names
-				String accountMgrName = getAccountName(student.getAccountMgrNames());
+				String accountMgrName = getFirstNameInString(student.getAccountMgrNames());
 				StudentImportModel acctMgrModel = findAcctManagerInList(accountMgrName, pike13Managers);
 				if (acctMgrModel == null) {
 					// Pike13 account manager not found? This should not happen!
@@ -253,10 +256,13 @@ public class SalesForceApi {
 					account = getSalesForceAccountByName(acctFamilyName);
 					if (account == null || account.getName().equals(""))
 						continue;
+
+					// Add to list in case more dependents belong to this account
+					sfAccounts.add(account);
 				}
 
 				// Create contact and add to list
-				recordList.add(createContactRecord(student, account));
+				recordList.add(createContactRecord(false, student, account));
 			}
 
 			// Copy up to 200 records to array at a time (max allowed)
@@ -265,7 +271,7 @@ public class SalesForceApi {
 			int remainingRecords = numRecords;
 			int arrayIdx = 0;
 
-			System.out.println(numRecords + " Pike13 client records");
+			System.out.println(numRecords + " Pike13 student records");
 			if (numRecords > MAX_NUM_UPSERT_RECORDS)
 				recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
 			else
@@ -300,7 +306,73 @@ public class SalesForceApi {
 		}
 
 		sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " records processed");
+				", " + clientUpdateCount + " student records processed");
+	}
+
+	private static void updateAdults(ArrayList<StudentImportModel> pike13Students,
+			ArrayList<StudentImportModel> pike13Adults, ArrayList<Account> sfAccounts) {
+		ArrayList<Contact> recordList = new ArrayList<Contact>();
+		clientUpdateCount = 0;
+
+		try {
+			for (int i = 0; i < pike13Adults.size(); i++) {
+				// Add each Pike13 client record to SalesForce list
+				StudentImportModel adult = pike13Adults.get(i);
+
+				// Get 1st dependent name, use this to get SalesForce Account
+				String dependentName = getFirstNameInString(adult.getDependentNames());
+				Account account = findAccountNameInList(dependentName, pike13Students, pike13Adults, sfAccounts);
+
+				if (account.getName().equals(""))
+					// Dependent is either hidden/deleted or this is test account
+					continue;
+
+				// Create contact and add to list
+				recordList.add(createContactRecord(true, adult, account));
+			}
+
+			// Copy up to 200 records to array at a time (max allowed)
+			Contact[] recordArray;
+			int numRecords = recordList.size();
+			int remainingRecords = numRecords;
+			int arrayIdx = 0;
+
+			System.out.println(numRecords + " Pike13 adult records");
+			if (numRecords > MAX_NUM_UPSERT_RECORDS)
+				recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
+			else
+				recordArray = new Contact[numRecords];
+
+			for (int i = 0; i < numRecords; i++) {
+				recordArray[arrayIdx] = recordList.get(i);
+
+				arrayIdx++;
+				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
+					upsertClientRecords(recordArray);
+					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
+					arrayIdx = 0;
+
+					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
+						recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
+					else if (remainingRecords > 0)
+						recordArray = new Contact[remainingRecords];
+				}
+			}
+
+			// Update remaining records in Salesforce.com
+			if (arrayIdx > 0)
+				upsertClientRecords(recordArray);
+
+		} catch (Exception e) {
+			if (e.getMessage() == null)
+				e.printStackTrace();
+			else
+				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
+		}
+
+		sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+				", " + clientUpdateCount + " adult records processed");
 	}
 
 	private static void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
@@ -560,62 +632,65 @@ public class SalesForceApi {
 		}
 	}
 
-	private static Contact createContactRecord(StudentImportModel student, Account account) {
+	private static Contact createContactRecord(boolean adult, StudentImportModel contact, Account account) {
 		// Create contact and add fields
 		Contact c = new Contact();
 
 		c.setAccountId(account.getId());
-		c.setFront_Desk_Id__c(String.valueOf(student.getClientID()));
-		c.setFirstName(student.getFirstName());
-		c.setLastName(student.getLastName());
-		c.setContact_Type__c("Student");
-		if (student.getEmail() != null)
-			c.setEmail(student.getEmail());
-		if (student.getMobilePhone() != null)
-			c.setMobilePhone(student.getMobilePhone());
-		if (student.getHomePhone() != null)
-			c.setPhone(student.getHomePhone());
-		if (student.getAddress() != null)
-			c.setFull_Address__c(student.getAddress());
-		c.setPast_Events__c((double) student.getCompletedVisits());
-		c.setFuture_Events__c((double) student.getFutureVisits());
-		c.setSigned_Waiver__c(student.isSignedWaiver());
-		c.setMembership__c(student.getMembership());
-		if (student.getPassOnFile() != null)
-			c.setPlan__c(student.getPassOnFile());
-		if (student.getHomeLocAsString() != null)
-			c.setHome_Location_Long__c(student.getHomeLocAsString());
-		if (student.getSchoolName() != null)
-			c.setCurrent_School__c(student.getSchoolName());
-		if (student.gettShirtSize() != null)
-			c.setShirt_Size__c(student.gettShirtSize());
-		if (student.getGenderString() != null)
-			c.setGender__c(student.getGenderString());
-		if (student.getEmergContactName() != null)
-			c.setEmergency_Name__c(student.getEmergContactName());
-		if (student.getEmergContactPhone() != null)
-			c.setEmergency_Phone__c(student.getEmergContactPhone());
-		if (student.getEmergContactEmail() != null)
-			c.setEmergency_Email__c(student.getEmergContactEmail());
-		if (student.getCurrGrade() != null)
-			c.setGrade__c(student.getCurrGrade());
-		if (student.getHearAboutUs() != null)
-			c.setHow_you_heard_about_us__c(student.getHearAboutUs());
-		if (student.getGradYearString() != null)
-			c.setGrad_Year__c(student.getGradYearString());
-		if (student.getWhoToThank() != null)
-			c.setWho_can_we_thank__c(student.getWhoToThank());
-		if (student.getGithubName() != null)
-			c.setGIT_HUB_acct_name__c(student.getGithubName());
-		if (student.getGrantInfo() != null)
-			c.setGrant_Information__c(student.getGrantInfo());
-		c.setLeave_Reason__c(student.getLeaveReason());
-		c.setStop_Email__c(student.isStopEmail());
-		c.setScholarship__c(student.isFinancialAid());
-		if (student.getFinancialAidPercent() != null)
-			c.setScholarship_Percentage__c(student.getFinancialAidPercent());
-		if (student.getBirthDate() != null && !student.getBirthDate().equals(""))
-			c.setDate_of_Birth__c(convertDateStringToCalendar(student.getBirthDate()));
+		c.setFront_Desk_Id__c(String.valueOf(contact.getClientID()));
+		c.setFirstName(contact.getFirstName());
+		c.setLastName(contact.getLastName());
+		if (adult)
+			c.setContact_Type__c("Adult");
+		else
+			c.setContact_Type__c("Student");
+		if (contact.getEmail() != null)
+			c.setEmail(contact.getEmail());
+		if (contact.getMobilePhone() != null)
+			c.setMobilePhone(contact.getMobilePhone());
+		if (contact.getHomePhone() != null)
+			c.setPhone(contact.getHomePhone());
+		if (contact.getAddress() != null)
+			c.setFull_Address__c(contact.getAddress());
+		c.setPast_Events__c((double) contact.getCompletedVisits());
+		c.setFuture_Events__c((double) contact.getFutureVisits());
+		c.setSigned_Waiver__c(contact.isSignedWaiver());
+		c.setMembership__c(contact.getMembership());
+		if (contact.getPassOnFile() != null)
+			c.setPlan__c(contact.getPassOnFile());
+		if (contact.getHomeLocAsString() != null)
+			c.setHome_Location_Long__c(contact.getHomeLocAsString());
+		if (contact.getSchoolName() != null)
+			c.setCurrent_School__c(contact.getSchoolName());
+		if (contact.gettShirtSize() != null)
+			c.setShirt_Size__c(contact.gettShirtSize());
+		if (contact.getGenderString() != null)
+			c.setGender__c(contact.getGenderString());
+		if (contact.getEmergContactName() != null)
+			c.setEmergency_Name__c(contact.getEmergContactName());
+		if (contact.getEmergContactPhone() != null)
+			c.setEmergency_Phone__c(contact.getEmergContactPhone());
+		if (contact.getEmergContactEmail() != null)
+			c.setEmergency_Email__c(contact.getEmergContactEmail());
+		if (contact.getCurrGrade() != null)
+			c.setGrade__c(contact.getCurrGrade());
+		if (contact.getHearAboutUs() != null)
+			c.setHow_you_heard_about_us__c(contact.getHearAboutUs());
+		if (contact.getGradYearString() != null)
+			c.setGrad_Year__c(contact.getGradYearString());
+		if (contact.getWhoToThank() != null)
+			c.setWho_can_we_thank__c(contact.getWhoToThank());
+		if (contact.getGithubName() != null)
+			c.setGIT_HUB_acct_name__c(contact.getGithubName());
+		if (contact.getGrantInfo() != null)
+			c.setGrant_Information__c(contact.getGrantInfo());
+		c.setLeave_Reason__c(contact.getLeaveReason());
+		c.setStop_Email__c(contact.isStopEmail());
+		c.setScholarship__c(contact.isFinancialAid());
+		if (contact.getFinancialAidPercent() != null)
+			c.setScholarship_Percentage__c(contact.getFinancialAidPercent());
+		if (contact.getBirthDate() != null && !contact.getBirthDate().equals(""))
+			c.setDate_of_Birth__c(convertDateStringToCalendar(contact.getBirthDate()));
 
 		return c;
 	}
@@ -784,6 +859,28 @@ public class SalesForceApi {
 		return null;
 	}
 
+	private static Account findAccountNameInList(String studentName, ArrayList<StudentImportModel> studentList,
+			ArrayList<StudentImportModel> adultList, ArrayList<Account> sfAcctList) {
+		// Find matching student, then get Account using account manager name
+		for (StudentImportModel s : studentList) {
+			if (studentName.equals(s.getFirstName() + " " + s.getLastName())) {
+				String accountMgrName = getFirstNameInString(s.getAccountMgrNames());
+				if (!accountMgrName.equals("")) {
+					StudentImportModel acctMgrModel = findAcctManagerInList(accountMgrName, adultList);
+					if (acctMgrModel != null) {
+						String acctName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
+						return findAccountInSalesForceList(acctName, sfAcctList);
+					}
+				}
+			}
+		}
+
+		// Account not found, so create account with empty name
+		Account a = new Account();
+		a.setName("");
+		return a;
+	}
+
 	private static Account findAccountInSalesForceList(String accountMgrName, ArrayList<Account> acctList) {
 		for (Account a : acctList) {
 			if (accountMgrName.equalsIgnoreCase(a.getName()))
@@ -796,13 +893,13 @@ public class SalesForceApi {
 		return account;
 	}
 
-	private static String getAccountName(String accountManagerNames) {
-		String accountName = accountManagerNames.trim();
-		int idx = accountManagerNames.indexOf(',');
+	private static String getFirstNameInString(String nameString) {
+		String name1 = nameString.trim();
+		int idx = nameString.indexOf(',');
 		if (idx > 0)
-			accountName = accountManagerNames.substring(0, idx);
+			name1 = nameString.substring(0, idx);
 
-		return accountName;
+		return name1;
 	}
 
 	private static Calendar convertDateStringToCalendar(String dateString) {
