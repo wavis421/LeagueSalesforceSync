@@ -24,6 +24,7 @@ import com.sforce.ws.ConnectionException;
 import com.sforce.ws.ConnectorConfig;
 
 import controller.Pike13Api;
+import model.AttendanceEventModel;
 import model.LogDataModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
@@ -98,13 +99,14 @@ public class SalesForceApi {
 			}
 		}
 
-		// Get SF contacts and store in list
+		// Get SF contacts and Github comments; store in list
 		ArrayList<Contact> sfContactList = getSalesForceContacts();
+		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents();
 
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 		if (sfAttendance != null) {
 			// Update attendance records
-			updateAttendance(sfAttendance, sfContactList);
+			updateAttendance(sfAttendance, dbAttendanceList, sfContactList);
 
 			// Delete canceled attendance records
 			removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
@@ -176,7 +178,7 @@ public class SalesForceApi {
 
 		try {
 			QueryResult queryResults = connection
-					.query("SELECT Id, Name, Client_id__c " + "FROM Account WHERE Name = '" + name + "'");
+					.query("SELECT Id, Name, Client_id__c FROM Account WHERE Name = '" + name + "'");
 
 			if (queryResults.getSize() > 0) {
 				account = (Account) queryResults.getRecords()[0];
@@ -376,7 +378,7 @@ public class SalesForceApi {
 	}
 
 	private static void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
-			ArrayList<Contact> contacts) {
+			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 
 		try {
@@ -399,6 +401,13 @@ public class SalesForceApi {
 				a.setVisit_Id__c(inputModel.getVisitID());
 				a.setLocation__c(inputModel.getLocation());
 				a.setStaff__c(inputModel.getStaff());
+				AttendanceEventModel attend = findAttendanceEventInList(inputModel.getVisitID(), dbAttendance);
+				if (attend != null) {
+					if (!attend.getGithubComments().equals(""))
+						a.setNote__c(attend.getGithubComments());
+					if (attend.getRepoName() != null && !attend.getRepoName().equals(""))
+						a.setRepo_Name__c(attend.getRepoName());
+				}
 
 				DateTime date = new DateTime(inputModel.getServiceDate());
 				Calendar cal = Calendar.getInstance();
@@ -649,7 +658,7 @@ public class SalesForceApi {
 		if (contact.getMobilePhone() != null)
 			c.setMobilePhone(contact.getMobilePhone());
 		if (contact.getHomePhone() != null)
-			c.setPhone(contact.getHomePhone());
+			c.setHomePhone(contact.getHomePhone());
 		if (contact.getAddress() != null)
 			c.setFull_Address__c(contact.getAddress());
 		c.setPast_Events__c((double) contact.getCompletedVisits());
@@ -837,6 +846,18 @@ public class SalesForceApi {
 			}
 		}
 		return false;
+	}
+
+	private static AttendanceEventModel findAttendanceEventInList(String visitID,
+			ArrayList<AttendanceEventModel> attendList) {
+		if (visitID == null || visitID.equals("") || visitID.equals("0"))
+			return null;
+
+		for (AttendanceEventModel a : attendList) {
+			if (a.getVisitID() != 0 && String.valueOf(a.getVisitID()).equals(visitID))
+				return a;
+		}
+		return null;
 	}
 
 	private static String findStaffIDInList(String clientID, ArrayList<StaffMemberModel> staffList) {
