@@ -85,25 +85,32 @@ public class SalesForceApi {
 			exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
 		}
 
-		// Get SF accounts and store in list
+		// Get SF contacts and accounts and store in list
+		ArrayList<Contact> sfContactList = getSalesForceContacts();
+		ArrayList<Contact> sfAllContactList = getAllSalesForceContacts();
 		ArrayList<Account> sfAccountList = getSalesForceAccounts();
-		if (sfAccountList != null && sfAccountList.size() > 0) {
+
+		if (sfContactList != null && sfAllContactList != null && sfAccountList != null) {
 			// Get Pike13 clients and upsert to SalesForce
 			ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
 			ArrayList<StudentImportModel> pike13AdultContactList = pike13Api.getClientsForSfImport(true);
 
 			// Make sure Pike13 didn't have error getting data
 			if (pike13StudentContactList != null && pike13AdultContactList != null) {
+				// Insert account ID for all students & adults
+				fillInAccountID(pike13StudentContactList, sfAllContactList);
+				fillInAccountID(pike13AdultContactList, sfAllContactList);
+
+				// Update student & adult contact records
 				updateStudents(pike13StudentContactList, pike13AdultContactList, sfAccountList);
 				updateAdults(pike13StudentContactList, pike13AdultContactList, sfAccountList);
 			}
 		}
 
-		// Get SF contacts and Github comments; store in list
-		ArrayList<Contact> sfContactList = getSalesForceContacts();
+		// Get Github comments and Pike13 attendance; store in list
 		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents();
-
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
+
 		if (sfAttendance != null) {
 			// Update attendance records
 			updateAttendance(sfAttendance, dbAttendanceList, sfContactList);
@@ -129,6 +136,7 @@ public class SalesForceApi {
 					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null "
 							+ "AND (Record_Type__c = 'Student' OR Teacher__c = 'Active' OR Teacher_Student__c = 'Active' "
 							+ "OR Volunteer__c = 'Active')");
+
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
 					// Add contact to list
@@ -139,6 +147,31 @@ public class SalesForceApi {
 		} catch (Exception e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CONTACTS_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
 					": " + e.getMessage());
+			return null;
+		}
+
+		return contactsList;
+	}
+
+	private static ArrayList<Contact> getAllSalesForceContacts() {
+		ArrayList<Contact> contactsList = new ArrayList<Contact>();
+
+		try {
+			QueryResult queryResults = connection
+					.query("SELECT Front_Desk_ID__c, AccountId FROM Contact WHERE Front_Desk_ID__c != null "
+							+ "AND (Record_Type__c = 'Student' OR Record_Type__c = 'Adult')");
+
+			if (queryResults.getSize() > 0) {
+				for (int i = 0; i < queryResults.getRecords().length; i++) {
+					// Add contact to list
+					contactsList.add((Contact) queryResults.getRecords()[i]);
+				}
+			}
+
+		} catch (Exception e) {
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CONTACTS_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+					": " + e.getMessage());
+			return null;
 		}
 
 		return contactsList;
@@ -203,6 +236,14 @@ public class SalesForceApi {
 		return account;
 	}
 
+	private static void fillInAccountID(ArrayList<StudentImportModel> clientList, ArrayList<Contact> contacts) {
+		for (StudentImportModel m : clientList) {
+			Contact c = findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(), contacts);
+			if (c != null)
+				m.setAccountID(c.getAccountId());
+		}
+	}
+
 	private static void updateStudents(ArrayList<StudentImportModel> pike13Students,
 			ArrayList<StudentImportModel> pike13Managers, ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
@@ -214,11 +255,10 @@ public class SalesForceApi {
 				StudentImportModel student = pike13Students.get(i);
 
 				// Ignore school clients!
-				if ((student.getFirstName().equals("gompers") && student.getLastName().equals("Prep"))
-						|| (student.getFirstName().equals("wilson") && student.getLastName().equals("Middle School"))
-						|| (student.getFirstName().equals("nativity") && student.getLastName().equals("Prep Academy"))
-						|| (student.getFirstName().equals("Sample") && student.getLastName().equals("Customer"))
-						|| student.getFirstName().equals("barrio Logan")
+				if (student.getFullName().equals("gompers Prep") || student.getFullName().equals("wilson Middle School")
+						|| student.getFullName().equals("nativity Prep Academy")
+						|| student.getFullName().equals("Sample Customer")
+						|| student.getFullName().equals("barrio Logan College Institute")
 						|| student.getFirstName().startsWith("HOLIDAY"))
 					continue;
 
@@ -227,25 +267,24 @@ public class SalesForceApi {
 					// Student has no Pike13 account manager, so error
 					sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
 							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
-							student.getClientID(), " " + student.getFirstName() + " " + student.getLastName());
+							student.getClientID(), " " + student.getFullName());
 					continue;
 				}
 
 				// Find account manager in Pike13 list so we can parse first/last names
 				String accountMgrName = getFirstNameInString(student.getAccountMgrNames());
-				StudentImportModel acctMgrModel = findAcctManagerInList(accountMgrName, pike13Managers);
+				StudentImportModel acctMgrModel = findAcctManagerInList(student, accountMgrName, pike13Managers);
 				if (acctMgrModel == null) {
 					// Pike13 account manager not found? This should not happen!
 					sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
 							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
-							student.getClientID(),
-							" " + student.getFirstName() + " " + student.getLastName() + ", manager " + accountMgrName);
+							student.getClientID(), " " + student.getFullName() + ", manager " + accountMgrName);
 					continue;
 				}
 
 				// Find account in SalesForce
 				String acctFamilyName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
-				Account account = findAccountInSalesForceList(acctFamilyName, sfAccounts);
+				Account account = findAccountInSalesForceList(acctFamilyName, acctMgrModel, sfAccounts);
 
 				if (account.getName().equals("")) {
 					// SalesForce account does not yet exist, so create
@@ -724,7 +763,7 @@ public class SalesForceApi {
 		// check the returned results for any errors
 		if (saveResults[0].isSuccess()) {
 			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT, new StudentNameModel("", "", false), 0,
-					" " + model.getFirstName() + " " + model.getLastName() + ": " + account.getName());
+					" " + model.getFullName() + ": " + account.getName());
 			return true;
 		} else {
 			Error[] errors = saveResults[0].getErrors();
@@ -747,11 +786,7 @@ public class SalesForceApi {
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
 					0, ": " + e.getMessage());
-		}
-
-		if (upsertResults == null) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
-					0, ": null upsert Result");
+			return;
 		}
 
 		// check the returned results for any errors
@@ -777,17 +812,16 @@ public class SalesForceApi {
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
 					0, ": " + e.getMessage());
+			return;
 		}
 
-		if (deleteResults != null) {
-			// check the returned results for any errors
-			for (int i = 0; i < deleteResults.length; i++) {
-				if (!deleteResults[i].isSuccess()) {
-					Error[] errors = deleteResults[i].getErrors();
-					for (int j = 0; j < errors.length; j++) {
-						sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
-								new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
-					}
+		// check the returned results for any errors
+		for (int i = 0; i < deleteResults.length; i++) {
+			if (!deleteResults[i].isSuccess()) {
+				Error[] errors = deleteResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
 				}
 			}
 		}
@@ -803,6 +837,7 @@ public class SalesForceApi {
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR, new StudentNameModel("", "", false),
 					0, ": " + e.getMessage());
+			return;
 		}
 
 		// check the returned results for any errors
@@ -871,12 +906,27 @@ public class SalesForceApi {
 		return null;
 	}
 
-	private static StudentImportModel findAcctManagerInList(String accountMgrName,
+	private static StudentImportModel findAcctManagerInList(StudentImportModel student, String accountMgrName,
 			ArrayList<StudentImportModel> mgrList) {
+		StudentImportModel partialMatch = null;
+
 		for (StudentImportModel m : mgrList) {
-			if (accountMgrName.equals(m.getFirstName() + " " + m.getLastName()))
-				return m;
+			String dependents = m.getDependentNames().toLowerCase();
+
+			if (accountMgrName.equalsIgnoreCase(m.getFullName())
+					&& dependents.contains(student.getFullName().toLowerCase())) {
+				if (m.getAccountID() == null || student.getAccountID().equals(m.getAccountID())) {
+					return m;
+				} else {
+					partialMatch = m;
+				}
+			}
 		}
+
+		// Since there was no better match in the list, use the partial match
+		if (partialMatch != null)
+			return partialMatch;
+
 		return null;
 	}
 
@@ -884,13 +934,13 @@ public class SalesForceApi {
 			ArrayList<StudentImportModel> adultList, ArrayList<Account> sfAcctList) {
 		// Find matching student, then get Account using account manager name
 		for (StudentImportModel s : studentList) {
-			if (studentName.equals(s.getFirstName() + " " + s.getLastName())) {
+			if (studentName.equalsIgnoreCase(s.getFullName())) {
 				String accountMgrName = getFirstNameInString(s.getAccountMgrNames());
 				if (!accountMgrName.equals("")) {
-					StudentImportModel acctMgrModel = findAcctManagerInList(accountMgrName, adultList);
+					StudentImportModel acctMgrModel = findAcctManagerInList(s, accountMgrName, adultList);
 					if (acctMgrModel != null) {
 						String acctName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
-						return findAccountInSalesForceList(acctName, sfAcctList);
+						return findAccountInSalesForceList(acctName, acctMgrModel, sfAcctList);
 					}
 				}
 			}
@@ -902,11 +952,23 @@ public class SalesForceApi {
 		return a;
 	}
 
-	private static Account findAccountInSalesForceList(String accountMgrName, ArrayList<Account> acctList) {
+	private static Account findAccountInSalesForceList(String accountMgrName, StudentImportModel accountMgrModel,
+			ArrayList<Account> acctList) {
+
+		Account partialMatch = null;
+
 		for (Account a : acctList) {
-			if (accountMgrName.equalsIgnoreCase(a.getName()))
-				return a;
+			if (accountMgrName.equalsIgnoreCase(a.getName())) {
+				if (accountMgrModel.getAccountID() == null || accountMgrModel.getAccountID().equals(a.getId()))
+					return a;
+				else
+					partialMatch = a;
+			}
 		}
+
+		// Since there was no better match in the list, use the partial match
+		if (partialMatch != null)
+			return partialMatch;
 
 		// Account not in list, so create new account with empty name
 		Account account = new Account();
