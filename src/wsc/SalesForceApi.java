@@ -8,6 +8,7 @@ import java.util.Calendar;
 
 import org.joda.time.DateTime;
 
+import com.sforce.soap.enterprise.Address;
 import com.sforce.soap.enterprise.Connector;
 import com.sforce.soap.enterprise.DeleteResult;
 import com.sforce.soap.enterprise.EnterpriseConnection;
@@ -665,6 +666,7 @@ public class SalesForceApi {
 		} catch (ConnectionException e) {
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR, new StudentNameModel("", "", false), 0,
 					": " + e.getMessage());
+			return;
 		}
 
 		// check the returned results for any errors
@@ -698,8 +700,17 @@ public class SalesForceApi {
 			c.setMobilePhone(contact.getMobilePhone());
 		if (contact.getHomePhone() != null)
 			c.setHomePhone(contact.getHomePhone());
-		if (contact.getAddress() != null)
+		if (contact.getAddress() != null) {
 			c.setFull_Address__c(contact.getAddress());
+			Address addr = parseAddress(contact.getAddress());
+			if (addr != null) {
+				c.setMailingStreet(addr.getStreet());
+				c.setMailingCity(addr.getCity());
+				c.setMailingState("California");
+				c.setMailingCountry("United States");
+				c.setMailingPostalCode(addr.getPostalCode());
+			}
+		}
 		c.setPast_Events__c((double) contact.getCompletedVisits());
 		c.setFuture_Events__c((double) contact.getFutureVisits());
 		c.setSigned_Waiver__c(contact.isSignedWaiver());
@@ -847,7 +858,7 @@ public class SalesForceApi {
 				for (int j = 0; j < errors.length; j++) {
 					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
 							new StudentNameModel("", "", false), 0,
-							" (" + records[i].getSchedule_ID__c() + "): " + errors[j].getMessage());
+							" (" + records[i].getSchedule_client_ID__c() + "): " + errors[j].getMessage());
 				}
 			} else
 				staffHoursUpsertCount++;
@@ -974,6 +985,68 @@ public class SalesForceApi {
 		Account account = new Account();
 		account.setName("");
 		return account;
+	}
+
+	private static Address parseAddress(String origAddress) {
+		Address mailAddr = new Address();
+		String address = origAddress;
+
+		// Don't process if address contains tabs or newline characters
+		if (address.contains("\\r") || address.contains("\\n"))
+			return null;
+
+		// Find street by looking for next comma
+		int idx = address.indexOf(',');
+		if (idx <= 0)
+			return null;
+
+		mailAddr.setStreet(address.substring(0, idx).trim());
+		address = address.substring(idx + 1).trim();
+
+		// Find city by looking for next comma
+		idx = address.indexOf(',');
+		if (idx <= 0)
+			return null;
+
+		mailAddr.setCity(address.substring(0, idx).trim());
+		address = address.substring(idx + 1).trim();
+
+		// State may be followed by a comma or a space "CA, 92130" or "CA 92130",
+		// or sometimes "CA 92130, United States".
+		// So finding the first comma does not always work.
+		int idx1 = address.indexOf(',');
+		int idx2 = address.indexOf(' ');
+		if (idx2 <= 0)
+			return null;
+
+		if (idx1 > 0) { // comma and space both exist
+			if (idx1 < idx2)
+				idx = idx1;
+			else
+				idx = idx2;
+		} else // only a space exists
+			idx = idx2;
+
+		// Found state, but only handling California
+		String state = address.substring(0, idx).trim();
+		if (!state.equalsIgnoreCase("CA") && !state.equalsIgnoreCase("California") && !state.equalsIgnoreCase("CA.")) {
+			return null;
+		}
+
+		mailAddr.setState(state);
+		address = address.substring(idx + 1).trim();
+
+		// Find zip, make sure not to include country
+		if (address.length() < 5)
+			return null;
+
+		// Check that zip code is all numeric
+		String zip = address.substring(0, 5);
+		if (!zip.matches("\\d+"))
+			return null;
+
+		mailAddr.setPostalCode(zip);
+		return mailAddr;
 	}
 
 	private static String getFirstNameInString(String nameString) {
