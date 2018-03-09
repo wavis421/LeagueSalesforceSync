@@ -990,10 +990,13 @@ public class SalesForceApi {
 	private static Address parseAddress(String origAddress) {
 		Address mailAddr = new Address();
 		String address = origAddress;
-
-		// Don't process if address contains tabs or newline characters
-		if (address.contains("\\r") || address.contains("\\n"))
-			return null;
+		
+		// Replace all CR/LF characters in address
+		if (address.contains("\\r") || address.contains("\\n")) {
+			address = address.replace(",\\r\\n", ", ");
+			address = address.replace("\\r\\n", ", ");
+			address = address.replace("\\n", ", ");
+		}
 
 		// Find street by looking for next comma
 		int idx = address.indexOf(',');
