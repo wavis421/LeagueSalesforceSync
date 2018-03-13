@@ -109,37 +109,7 @@ public class UpdateRecordsInSalesForce {
 				recordList.add(createContactRecord(false, student, account));
 			}
 
-			// Copy up to 200 records to array at a time (max allowed)
-			Contact[] recordArray;
-			int numRecords = recordList.size();
-			int remainingRecords = numRecords;
-			int arrayIdx = 0;
-
-			System.out.println(numRecords + " Pike13 student records");
-			if (numRecords > MAX_NUM_UPSERT_RECORDS)
-				recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
-			else
-				recordArray = new Contact[numRecords];
-
-			for (int i = 0; i < numRecords; i++) {
-				recordArray[arrayIdx] = recordList.get(i);
-
-				arrayIdx++;
-				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
-					upsertClientRecords(recordArray);
-					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
-					arrayIdx = 0;
-
-					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
-						recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
-					else if (remainingRecords > 0)
-						recordArray = new Contact[remainingRecords];
-				}
-			}
-
-			// Update remaining records in Salesforce.com
-			if (arrayIdx > 0)
-				upsertClientRecords(recordArray);
+			upsertContactRecordList(recordList, "student");
 
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
@@ -177,37 +147,7 @@ public class UpdateRecordsInSalesForce {
 				recordList.add(createContactRecord(true, adult, account));
 			}
 
-			// Copy up to 200 records to array at a time (max allowed)
-			Contact[] recordArray;
-			int numRecords = recordList.size();
-			int remainingRecords = numRecords;
-			int arrayIdx = 0;
-
-			System.out.println(numRecords + " Pike13 adult records");
-			if (numRecords > MAX_NUM_UPSERT_RECORDS)
-				recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
-			else
-				recordArray = new Contact[numRecords];
-
-			for (int i = 0; i < numRecords; i++) {
-				recordArray[arrayIdx] = recordList.get(i);
-
-				arrayIdx++;
-				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
-					upsertClientRecords(recordArray);
-					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
-					arrayIdx = 0;
-
-					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
-						recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
-					else if (remainingRecords > 0)
-						recordArray = new Contact[remainingRecords];
-				}
-			}
-
-			// Update remaining records in Salesforce.com
-			if (arrayIdx > 0)
-				upsertClientRecords(recordArray);
+			upsertContactRecordList(recordList, "adult");
 
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
@@ -460,37 +400,7 @@ public class UpdateRecordsInSalesForce {
 				recordList.add(c);
 			}
 
-			// Copy up to 200 records to array at a time (max allowed)
-			Contact[] recordArray;
-			int numRecords = recordList.size();
-			int remainingRecords = numRecords;
-			int arrayIdx = 0;
-
-			System.out.println(numRecords + " Pike13 staff records");
-			if (numRecords > MAX_NUM_UPSERT_RECORDS)
-				recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
-			else
-				recordArray = new Contact[numRecords];
-
-			for (int i = 0; i < numRecords; i++) {
-				recordArray[arrayIdx] = recordList.get(i);
-
-				arrayIdx++;
-				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
-					upsertClientRecords(recordArray);
-					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
-					arrayIdx = 0;
-
-					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
-						recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
-					else if (remainingRecords > 0)
-						recordArray = new Contact[remainingRecords];
-				}
-			}
-
-			// Update remaining records in Salesforce.com
-			if (arrayIdx > 0)
-				upsertClientRecords(recordArray);
+			upsertContactRecordList(recordList, "staff");
 
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
@@ -684,6 +594,40 @@ public class UpdateRecordsInSalesForce {
 			} else
 				staffHoursUpsertCount++;
 		}
+	}
+
+	private void upsertContactRecordList(ArrayList<Contact> recordList, String recordType) {
+		// Copy up to 200 records to array at a time (max allowed)
+		Contact[] recordArray;
+		int numRecords = recordList.size();
+		int remainingRecords = numRecords;
+		int arrayIdx = 0;
+
+		System.out.println(numRecords + " Pike13 " + recordType + " records");
+		if (numRecords > MAX_NUM_UPSERT_RECORDS)
+			recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
+		else
+			recordArray = new Contact[numRecords];
+
+		for (int i = 0; i < numRecords; i++) {
+			recordArray[arrayIdx] = recordList.get(i);
+
+			arrayIdx++;
+			if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
+				upsertClientRecords(recordArray);
+				remainingRecords -= MAX_NUM_UPSERT_RECORDS;
+				arrayIdx = 0;
+
+				if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
+					recordArray = new Contact[MAX_NUM_UPSERT_RECORDS];
+				else if (remainingRecords > 0)
+					recordArray = new Contact[remainingRecords];
+			}
+		}
+
+		// Update remaining records in Salesforce.com
+		if (arrayIdx > 0)
+			upsertClientRecords(recordArray);
 	}
 
 	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account) {
