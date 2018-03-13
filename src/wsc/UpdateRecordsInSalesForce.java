@@ -353,9 +353,9 @@ public class UpdateRecordsInSalesForce {
 					}
 				}
 				if (staff.getPhone() != null)
-					c.setPhone(staff.getPhone());
+					c.setPhone(parsePhone(staff.getPhone()));
 				if (staff.getHomePhone() != null)
-					c.setHomePhone(staff.getHomePhone());
+					c.setHomePhone(parsePhone(staff.getHomePhone()));
 				c.setBoard_Member_Active__c(staff.isBoardMember() ? "Active" : "");
 				c.setStaff__c(staff.isStaffMember() ? "Active" : "");
 				if (staff.getCategory() != null)
@@ -367,7 +367,7 @@ public class UpdateRecordsInSalesForce {
 				if (staff.getEmergName() != null)
 					c.setEmergency_Name__c(staff.getEmergName());
 				if (staff.getEmergPhone() != null)
-					c.setEmergency_Phone__c(staff.getEmergPhone());
+					c.setEmergency_Phone__c(parsePhone(staff.getEmergPhone()));
 				if (staff.getEmployer() != null)
 					c.setEmployer__c(staff.getEmployer());
 				if (staff.getGender() != null)
@@ -645,9 +645,9 @@ public class UpdateRecordsInSalesForce {
 		if (contact.getEmail() != null)
 			c.setEmail(contact.getEmail());
 		if (contact.getMobilePhone() != null)
-			c.setMobilePhone(contact.getMobilePhone());
+			c.setMobilePhone(parsePhone(contact.getMobilePhone()));
 		if (contact.getHomePhone() != null)
-			c.setHomePhone(contact.getHomePhone());
+			c.setHomePhone(parsePhone(contact.getHomePhone()));
 		if (contact.getAddress() != null) {
 			c.setFull_Address__c(contact.getAddress());
 			Address addr = parseAddress(contact.getAddress());
@@ -676,7 +676,7 @@ public class UpdateRecordsInSalesForce {
 		if (contact.getEmergContactName() != null)
 			c.setEmergency_Name__c(contact.getEmergContactName());
 		if (contact.getEmergContactPhone() != null)
-			c.setEmergency_Phone__c(contact.getEmergContactPhone());
+			c.setEmergency_Phone__c(parsePhone(contact.getEmergContactPhone()));
 		if (contact.getEmergContactEmail() != null)
 			c.setEmergency_Email__c(contact.getEmergContactEmail());
 		if (contact.getCurrGrade() != null)
@@ -737,6 +737,22 @@ public class UpdateRecordsInSalesForce {
 			}
 			return false;
 		}
+	}
+
+	private static String parsePhone(String origPhone) {
+		String phone = origPhone.trim();
+		if (phone.length() < 10)
+			return origPhone;
+
+		if (phone.length() == 10 && phone.indexOf('(') == -1 && phone.indexOf('-') == -1)
+			phone = "(" + phone.substring(0, 3) + ")" + " " + phone.substring(3, 6) + "-" + phone.substring(6);
+		else if (phone.length() == 12 && (phone.charAt(3) == '-' || phone.charAt(3) == '.' || phone.charAt(3) == ' ')
+				&& (phone.charAt(7) == '-' || phone.charAt(7) == '.' || phone.charAt(7) == ' '))
+			phone = "(" + phone.substring(0, 3) + ")" + " " + phone.substring(4, 7) + "-" + phone.substring(8);
+		else if (phone.length() == 13 && phone.charAt(0) == '(' && phone.charAt(4) == ')' && phone.charAt(8) == '-')
+			phone = phone.substring(0, 5) + " " + phone.substring(5);
+
+		return phone;
 	}
 
 	private static Address parseAddress(String origAddress) {
