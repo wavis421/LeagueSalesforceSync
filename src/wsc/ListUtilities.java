@@ -64,7 +64,7 @@ public class ListUtilities {
 	public static String findStaffIDInList(String clientID, ArrayList<StaffMemberModel> staffList) {
 		for (StaffMemberModel s : staffList) {
 			if (s.getClientID().equals(clientID)) {
-				return s.getStaffID();
+				return s.getSfClientID();
 			}
 		}
 		sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_STAFF_MEMBER, new StudentNameModel("", "", false),
@@ -150,10 +150,11 @@ public class ListUtilities {
 
 		return name1;
 	}
-	
+
 	public static void fillInAccountID(ArrayList<StudentImportModel> clientList, ArrayList<Contact> contacts) {
 		for (StudentImportModel m : clientList) {
-			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(), contacts);
+			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(),
+					contacts);
 			if (c != null)
 				m.setAccountID(c.getAccountId());
 		}

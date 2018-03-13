@@ -84,6 +84,7 @@ public class SalesForceApi {
 		ArrayList<Contact> sfAllContactList = getRecords.getAllSalesForceContacts();
 		ArrayList<Account> sfAccountList = getRecords.getSalesForceAccounts();
 
+		// === UPDATE CLIENTS: Students & Parents ===
 		if (sfContactList != null && sfAllContactList != null && sfAccountList != null) {
 			// Get Pike13 clients and upsert to SalesForce
 			ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
@@ -101,23 +102,27 @@ public class SalesForceApi {
 			}
 		}
 
-		// Get Github comments and Pike13 attendance; store in list
+		// === UPDATE ATTENDANCE ===
+		// (1) Get Github comments and Pike13 attendance; store in list
 		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents();
 		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 
-		if (sfAttendance != null) {
-			// Update attendance records
+		if (sfAttendance != null && dbAttendanceList != null && sfContactList != null) {
+			// (2) Update attendance records
 			updateRecords.updateAttendance(sfAttendance, dbAttendanceList, sfContactList);
 
-			// Delete canceled attendance records
+			// (3) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
 		}
 
-		// Update Staff Hours records
+		// === UPDATE STAFF MEMBERS AND HOURS ===
 		ArrayList<StaffMemberModel> sfStaffMembers = pike13Api.getSalesForceStaffMembers();
 		ArrayList<SalesForceStaffHoursModel> sfStaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
-		if (sfStaffMembers != null && sfStaffHours != null)
+
+		if (sfStaffMembers != null && sfStaffHours != null && sfAllContactList != null && sfContactList != null) {
+			updateRecords.updateStaffMembers(sfStaffMembers, sfAllContactList);
 			updateRecords.updateStaffHours(sfStaffMembers, sfStaffHours, sfContactList);
+		}
 
 		exitProgram(-1, null); // -1 indicates no error
 	}

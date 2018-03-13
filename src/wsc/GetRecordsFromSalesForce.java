@@ -50,8 +50,7 @@ public class GetRecordsFromSalesForce {
 
 		try {
 			QueryResult queryResults = connection
-					.query("SELECT Front_Desk_ID__c, AccountId FROM Contact WHERE Front_Desk_ID__c != null "
-							+ "AND (Record_Type__c = 'Student' OR Record_Type__c = 'Adult')");
+					.query("SELECT Front_Desk_ID__c, AccountId FROM Contact WHERE Front_Desk_ID__c != null");
 
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {

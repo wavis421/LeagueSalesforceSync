@@ -7,7 +7,7 @@
 	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.40-bin.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-0.1.54.jar"/>
 	<classpathentry kind="lib" path="lib/javax.json-1.0.4.jar"/>
-	<classpathentry kind="lib" path="lib/enterprise.jar"/>
 	<classpathentry kind="lib" path="lib/leagueDataManager.jar"/>
+	<classpathentry kind="lib" path="lib/enterprise.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
