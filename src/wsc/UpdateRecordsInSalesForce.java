@@ -311,15 +311,18 @@ public class UpdateRecordsInSalesForce {
 				String firstName = staff.getFirstName();
 				String clientID = staff.getClientID();
 				if (firstName.startsWith("TA-")) {
-					// TA's must have valid SFClientID that is different from ClientID
-					if (clientID.equals(staff.getSfClientID())) {
-						// TODO: Make this a log error
-						System.out.println(
-								firstName + " is missing SFClientID: " + staff.getCategory() + ", " + clientID);
-						continue;
-					}
 					// Remove TA- from front of string
 					firstName = firstName.substring(3);
+					
+					// TA's must have valid SFClientID that is different from ClientID
+					if (clientID.equals(staff.getSfClientID())) {
+						sqlDb.insertLogData(LogDataModel.MISSING_SF_CLIENT_ID_FOR_TA,
+								new StudentNameModel(firstName, staff.getLastName(), false), Integer.parseInt(clientID),
+								" for " + staff.getFullName());
+						continue;
+					}
+					
+					// TA's use SF Client ID
 					clientID = staff.getSfClientID();
 				}
 				Contact c = ListUtilities.findClientIDInList(-1, clientID, staff.getFullName(), sfContacts);

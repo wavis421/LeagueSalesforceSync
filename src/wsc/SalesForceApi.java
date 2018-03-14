@@ -80,12 +80,12 @@ public class SalesForceApi {
 		ListUtilities.initDatabase(sqlDb);
 
 		// Get SF contacts and accounts and store in list
-		ArrayList<Contact> sfContactList = getRecords.getSalesForceContacts();
-		ArrayList<Contact> sfAllContactList = getRecords.getAllSalesForceContacts();
+		ArrayList<Contact> sfContactList = getRecords.getSalesForceContacts(); // Students & teachers
+		ArrayList<Contact> sfAllContactList = getRecords.getAllSalesForceContacts(); // +  all adults
 		ArrayList<Account> sfAccountList = getRecords.getSalesForceAccounts();
 
 		// === UPDATE CLIENTS: Students & Parents ===
-		if (sfContactList != null && sfAllContactList != null && sfAccountList != null) {
+		if (sfAllContactList != null && sfAccountList != null) {
 			// Get Pike13 clients and upsert to SalesForce
 			ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
 			ArrayList<StudentImportModel> pike13AdultContactList = pike13Api.getClientsForSfImport(true);
@@ -105,23 +105,23 @@ public class SalesForceApi {
 		// === UPDATE ATTENDANCE ===
 		// (1) Get Github comments and Pike13 attendance; store in list
 		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents();
-		ArrayList<SalesForceAttendanceModel> sfAttendance = pike13Api.getSalesForceAttendance(startDate, endDate);
+		ArrayList<SalesForceAttendanceModel> pike13Attendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 
-		if (sfAttendance != null && dbAttendanceList != null && sfContactList != null) {
+		if (pike13Attendance != null && dbAttendanceList != null && sfContactList != null) {
 			// (2) Update attendance records
-			updateRecords.updateAttendance(sfAttendance, dbAttendanceList, sfContactList);
+			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList);
 
 			// (3) Delete canceled attendance records
-			updateRecords.removeExtraAttendanceRecords(sfAttendance, startDate, endDate);
+			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate);
 		}
 
 		// === UPDATE STAFF MEMBERS AND HOURS ===
-		ArrayList<StaffMemberModel> sfStaffMembers = pike13Api.getSalesForceStaffMembers();
-		ArrayList<SalesForceStaffHoursModel> sfStaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
+		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
+		ArrayList<SalesForceStaffHoursModel> pike13StaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
 
-		if (sfStaffMembers != null && sfStaffHours != null && sfAllContactList != null && sfContactList != null) {
-			updateRecords.updateStaffMembers(sfStaffMembers, sfAllContactList);
-			updateRecords.updateStaffHours(sfStaffMembers, sfStaffHours, sfContactList);
+		if (pike13StaffMembers != null && pike13StaffHours != null && sfAllContactList != null && sfContactList != null) {
+			updateRecords.updateStaffMembers(pike13StaffMembers, sfAllContactList);
+			updateRecords.updateStaffHours(pike13StaffMembers, pike13StaffHours, sfContactList);
 		}
 
 		exitProgram(-1, null); // -1 indicates no error
