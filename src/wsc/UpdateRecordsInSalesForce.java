@@ -330,74 +330,9 @@ public class UpdateRecordsInSalesForce {
 							+ staff.getClientID() + ", " + staff.getSfClientID());
 					continue;
 				}
-				String accountID = c.getAccountId();
-
-				c = new Contact();
-				c.setAccountId(accountID);
-				c.setFront_Desk_Id__c(clientID);
-				c.setFirstName(firstName);
-				c.setLastName(staff.getLastName());
-				if (staff.getEmail() != null)
-					c.setEmail(staff.getEmail());
-				if (staff.getAlternateEmail() != null)
-					c.setAlternate_Email__c(staff.getAlternateEmail());
-				if (staff.getAddress() != null) {
-					c.setFull_Address__c(staff.getAddress());
-					Address addr = parseAddress(staff.getAddress());
-					if (addr != null) {
-						c.setMailingStreet(addr.getStreet());
-						c.setMailingCity(addr.getCity());
-						c.setMailingState("California");
-						c.setMailingCountry("United States");
-						c.setMailingPostalCode(addr.getPostalCode());
-					}
-				}
-				if (staff.getPhone() != null)
-					c.setPhone(parsePhone(staff.getPhone()));
-				if (staff.getHomePhone() != null)
-					c.setHomePhone(parsePhone(staff.getHomePhone()));
-				c.setBoard_Member_Active__c(staff.isBoardMember() ? "Active" : "");
-				c.setStaff__c(staff.isStaffMember() ? "Active" : "");
-				if (staff.getCategory() != null)
-					c.setStaff_Category__c(staff.getCategory());
-				if (staff.getRole() != null)
-					c.setRole__c(staff.getRole());
-				if (staff.getEmergEmail() != null)
-					c.setEmergency_Email__c(staff.getEmergEmail());
-				if (staff.getEmergName() != null)
-					c.setEmergency_Name__c(staff.getEmergName());
-				if (staff.getEmergPhone() != null)
-					c.setEmergency_Phone__c(parsePhone(staff.getEmergPhone()));
-				if (staff.getEmployer() != null)
-					c.setEmployer__c(staff.getEmployer());
-				if (staff.getGender() != null)
-					c.setGender__c(staff.getGender());
-				if (staff.getGithubName() != null)
-					c.setGIT_HUB_acct_name__c(staff.getGithubName());
-				if (staff.getHomeLocation() != null)
-					c.setHome_Location_Long__c(staff.getHomeLocation());
-				c.setPast_Staff_Events__c((double) staff.getPastEvents());
-				c.setFuture_Staff_Events__c((double) staff.getFutureEvents());
-				c.setKey_Holder__c(staff.getKeyHolder());
-				if (staff.getLeave() != null)
-					c.setStaff_Leave_Reason__c(staff.getLeave());
-				if (staff.getOccupation() != null)
-					c.setOccupation__c(staff.getOccupation());
-				if (staff.getStartInfo() != null)
-					c.setAdditional_Details_1__c(staff.getStartInfo());
-				if (staff.getTShirt() != null)
-					c.setShirt_Size__c(staff.getTShirt());
-				if (staff.getWhereDidYouHear() != null)
-					c.setHow_you_heard_about_us__c(staff.getWhereDidYouHear());
-
-				// Convert dates
-				if (staff.getLiveScan() != null && !staff.getLiveScan().equals(""))
-					c.setLiveScan_Date__c(convertDateStringToCalendar(staff.getLiveScan()));
-				if (staff.getBirthdate() != null && !staff.getBirthdate().equals(""))
-					c.setDate_of_Birth__c(convertDateStringToCalendar(staff.getBirthdate()));
 
 				// Add to list
-				recordList.add(c);
+				recordList.add(createStaffRecord(staff, firstName, clientID, c.getAccountId()));
 			}
 
 			upsertContactRecordList(recordList, "staff");
@@ -698,6 +633,76 @@ public class UpdateRecordsInSalesForce {
 			c.setScholarship_Percentage__c(contact.getFinancialAidPercent());
 		if (contact.getBirthDate() != null && !contact.getBirthDate().equals(""))
 			c.setDate_of_Birth__c(convertDateStringToCalendar(contact.getBirthDate()));
+
+		return c;
+	}
+
+	private Contact createStaffRecord(StaffMemberModel staff, String firstName, String clientID, String accountID) {
+		// Create contact and add fields
+		Contact c = new Contact();
+
+		c.setAccountId(accountID);
+		c.setFront_Desk_Id__c(clientID);
+		c.setFirstName(firstName);
+		c.setLastName(staff.getLastName());
+		if (staff.getEmail() != null)
+			c.setEmail(staff.getEmail());
+		if (staff.getAlternateEmail() != null)
+			c.setAlternate_Email__c(staff.getAlternateEmail());
+		if (staff.getAddress() != null) {
+			c.setFull_Address__c(staff.getAddress());
+			Address addr = parseAddress(staff.getAddress());
+			if (addr != null) {
+				c.setMailingStreet(addr.getStreet());
+				c.setMailingCity(addr.getCity());
+				c.setMailingState("California");
+				c.setMailingCountry("United States");
+				c.setMailingPostalCode(addr.getPostalCode());
+			}
+		}
+		if (staff.getPhone() != null)
+			c.setPhone(parsePhone(staff.getPhone()));
+		if (staff.getHomePhone() != null)
+			c.setHomePhone(parsePhone(staff.getHomePhone()));
+		c.setBoard_Member_Active__c(staff.isBoardMember() ? "Active" : "");
+		c.setStaff__c(staff.isStaffMember() ? "Active" : "");
+		if (staff.getCategory() != null)
+			c.setStaff_Category__c(staff.getCategory());
+		if (staff.getRole() != null)
+			c.setRole__c(staff.getRole());
+		if (staff.getEmergEmail() != null)
+			c.setEmergency_Email__c(staff.getEmergEmail());
+		if (staff.getEmergName() != null)
+			c.setEmergency_Name__c(staff.getEmergName());
+		if (staff.getEmergPhone() != null)
+			c.setEmergency_Phone__c(parsePhone(staff.getEmergPhone()));
+		if (staff.getEmployer() != null)
+			c.setEmployer__c(staff.getEmployer());
+		if (staff.getGender() != null)
+			c.setGender__c(staff.getGender());
+		if (staff.getGithubName() != null)
+			c.setGIT_HUB_acct_name__c(staff.getGithubName());
+		if (staff.getHomeLocation() != null)
+			c.setHome_Location_Long__c(staff.getHomeLocation());
+		c.setPast_Staff_Events__c((double) staff.getPastEvents());
+		c.setFuture_Staff_Events__c((double) staff.getFutureEvents());
+		c.setKey_Holder__c(staff.getKeyHolder());
+		if (staff.getLeave() != null)
+			c.setStaff_Leave_Reason__c(staff.getLeave());
+		if (staff.getOccupation() != null)
+			c.setOccupation__c(staff.getOccupation());
+		if (staff.getStartInfo() != null)
+			c.setAdditional_Details_1__c(staff.getStartInfo());
+		if (staff.getTShirt() != null)
+			c.setShirt_Size__c(staff.getTShirt());
+		if (staff.getWhereDidYouHear() != null)
+			c.setHow_you_heard_about_us__c(staff.getWhereDidYouHear());
+
+		// Convert dates
+		if (staff.getLiveScan() != null && !staff.getLiveScan().equals(""))
+			c.setLiveScan_Date__c(convertDateStringToCalendar(staff.getLiveScan()));
+		if (staff.getBirthdate() != null && !staff.getBirthdate().equals(""))
+			c.setDate_of_Birth__c(convertDateStringToCalendar(staff.getBirthdate()));
 
 		return c;
 	}
