@@ -93,7 +93,8 @@ public class UpdateRecordsInSalesForce {
 					// SalesForce account does not yet exist, so create
 					account.setName(acctFamilyName);
 					account.setType("Family");
-					if (!createAccountRecord(student.getFirstName(), student.getLastName(), student.getClientID(), account))
+					if (!createAccountRecord(student.getFirstName(), student.getLastName(), student.getClientID(),
+							account))
 						continue;
 
 					// Now that account has been created, need to get account from SF again
@@ -175,6 +176,12 @@ public class UpdateRecordsInSalesForce {
 						inputModel.getClientID(), null, contacts);
 				if (c == null)
 					continue;
+
+				// Report error if event name is blank
+				if (inputModel.getEventName() == null || inputModel.getEventName().equals(""))
+					sqlDb.insertLogData(LogDataModel.BLANK_EVENT_NAME_FOR_ATTENDANCE,
+							new StudentNameModel("", "", false), Integer.parseInt(inputModel.getClientID()),
+							" on " + inputModel.getServiceDate() + ", " + inputModel.getServiceName());
 
 				Student_Attendance__c a = new Student_Attendance__c();
 				a.setContact__r(c);
@@ -732,8 +739,7 @@ public class UpdateRecordsInSalesForce {
 		} catch (ConnectionException e) {
 			if (e.getMessage() == null) {
 				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
-						new StudentNameModel(firstName, lastName, false), clientID,
-						" for " + account.getName());
+						new StudentNameModel(firstName, lastName, false), clientID, " for " + account.getName());
 				e.printStackTrace();
 			} else
 				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
@@ -744,7 +750,8 @@ public class UpdateRecordsInSalesForce {
 
 		// check the returned results for any errors
 		if (saveResults[0].isSuccess()) {
-			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT, new StudentNameModel(firstName, lastName, false), clientID,
+			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT,
+					new StudentNameModel(firstName, lastName, false), clientID,
 					" " + firstName + " " + lastName + ": " + account.getName());
 			return true;
 		} else {
@@ -781,27 +788,30 @@ public class UpdateRecordsInSalesForce {
 					+ staff.getClientID() + ", " + staff.getSfClientID());
 			return null;
 		}
-		
+
 		// New volunteer/teacher: create an account
 		account = new Account();
 		account.setName(acctFamilyName);
 		account.setType("Family");
-//		if (!createAccountRecord(staff.getFirstName(), staff.getLastName(), Integer.parseInt(staff.getClientID()), account)) {
-//			System.out.println("Failed to create account for " + staff.getFullName() + ", " + staff.getClientID() + ", "
-//					+ staff.getSfClientID() + ", " + acctFamilyName);
-//			return null;
-//		}
-//
-//		// Now that account has been created, need to get account from SF again
-//		account = getRecords.getSalesForceAccountByName(acctFamilyName);
-//		if (account == null || account.getName().equals("")) {
-//			System.out.println("Failed to get account for " + staff.getFullName() + ", " + staff.getClientID() + ", "
-//					+ staff.getSfClientID() + ", " + acctFamilyName);
-//			return null;
-//		}
-//
-//		// Add to SF account list
-//		sfAccounts.add(account);
+		// if (!createAccountRecord(staff.getFirstName(), staff.getLastName(),
+		// Integer.parseInt(staff.getClientID()), account)) {
+		// System.out.println("Failed to create account for " + staff.getFullName() + ",
+		// " + staff.getClientID() + ", "
+		// + staff.getSfClientID() + ", " + acctFamilyName);
+		// return null;
+		// }
+		//
+		// // Now that account has been created, need to get account from SF again
+		// account = getRecords.getSalesForceAccountByName(acctFamilyName);
+		// if (account == null || account.getName().equals("")) {
+		// System.out.println("Failed to get account for " + staff.getFullName() + ", "
+		// + staff.getClientID() + ", "
+		// + staff.getSfClientID() + ", " + acctFamilyName);
+		// return null;
+		// }
+		//
+		// // Add to SF account list
+		// sfAccounts.add(account);
 		System.out.println("Created account for " + staff.getFullName() + ", " + staff.getClientID() + ", "
 				+ staff.getSfClientID() + ", " + acctFamilyName);
 		return account.getId();
