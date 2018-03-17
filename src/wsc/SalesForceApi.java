@@ -81,7 +81,7 @@ public class SalesForceApi {
 
 		// Get SF contacts and accounts and store in list
 		ArrayList<Contact> sfContactList = getRecords.getSalesForceContacts(); // Students & teachers
-		ArrayList<Contact> sfAllContactList = getRecords.getAllSalesForceContacts(); // +  all adults
+		ArrayList<Contact> sfAllContactList = getRecords.getAllSalesForceContacts(); // + all adults
 		ArrayList<Account> sfAccountList = getRecords.getSalesForceAccounts();
 
 		// === UPDATE CLIENTS: Students & Parents ===
@@ -119,8 +119,13 @@ public class SalesForceApi {
 		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
 		ArrayList<SalesForceStaffHoursModel> pike13StaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
 
-		if (pike13StaffMembers != null && pike13StaffHours != null && sfAllContactList != null && sfContactList != null) {
-			updateRecords.updateStaffMembers(pike13StaffMembers, sfAllContactList);
+		if (pike13StaffMembers != null && pike13StaffHours != null && sfAllContactList != null && sfAccountList != null
+				&& sfContactList != null) {
+			// Insert account ID into staff records
+			ListUtilities.fillInAccountIDForStaff(pike13StaffMembers, sfAllContactList);
+
+			// Update staff member data and hours
+			updateRecords.updateStaffMembers(pike13StaffMembers, sfAllContactList, sfAccountList);
 			updateRecords.updateStaffHours(pike13StaffMembers, pike13StaffHours, sfContactList);
 		}
 

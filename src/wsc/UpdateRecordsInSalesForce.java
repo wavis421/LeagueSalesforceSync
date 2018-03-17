@@ -93,7 +93,7 @@ public class UpdateRecordsInSalesForce {
 					// SalesForce account does not yet exist, so create
 					account.setName(acctFamilyName);
 					account.setType("Family");
-					if (!createAccountRecord(student, account))
+					if (!createAccountRecord(student.getFirstName(), student.getLastName(), student.getClientID(), account))
 						continue;
 
 					// Now that account has been created, need to get account from SF again
@@ -299,7 +299,8 @@ public class UpdateRecordsInSalesForce {
 				", " + deleteList.size() + " records deleted");
 	}
 
-	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts) {
+	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts,
+			ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
 		clientUpdateCount = 0;
 
@@ -310,10 +311,12 @@ public class UpdateRecordsInSalesForce {
 
 				String firstName = staff.getFirstName();
 				String clientID = staff.getClientID();
+				String accountID;
+
 				if (firstName.startsWith("TA-")) {
 					// Remove TA- from front of string
 					firstName = firstName.substring(3);
-					
+
 					// TA's must have valid SFClientID that is different from ClientID
 					if (clientID.equals(staff.getSfClientID())) {
 						sqlDb.insertLogData(LogDataModel.MISSING_SF_CLIENT_ID_FOR_TA,
@@ -321,21 +324,29 @@ public class UpdateRecordsInSalesForce {
 								" for " + staff.getFullName());
 						continue;
 					}
-					
+
 					// TA's use SF Client ID
 					clientID = staff.getSfClientID();
 				}
+
 				Contact c = ListUtilities.findClientIDInList(-1, clientID, staff.getFullName(), sfContacts);
 				if (c == null) {
 					// TODO: Add new contacts
-					System.out.println("New contact: " + staff.getFullName() + ", " + staff.getCategory()
-							+ ", is Staff=" + staff.isStaffMember() + ", is Board=" + staff.isBoardMember() + ", "
-							+ staff.getClientID() + ", " + staff.getSfClientID());
+					accountID = getStaffAccountID(staff, sfAccounts);
+					if (accountID == null)
+						System.out.println("Failed to create staff account: " + staff.getFullName() + ", "
+								+ staff.getCategory() + ", is Staff=" + staff.isStaffMember() + ", is Board="
+								+ staff.isBoardMember() + staff.getClientID() + ", " + staff.getSfClientID());
+					else
+						System.out.println("New staff account: " + staff.getFullName() + ", " + staff.getCategory()
+								+ ", is Staff=" + staff.isStaffMember() + ", is Board=" + staff.isBoardMember() + ", "
+								+ staff.getClientID() + ", " + staff.getSfClientID() + ", " + accountID);
 					continue;
-				}
+				} else
+					accountID = c.getAccountId();
 
 				// Add to list
-				recordList.add(createStaffRecord(staff, firstName, clientID, c.getAccountId()));
+				recordList.add(createStaffRecord(staff, firstName, clientID, accountID));
 			}
 
 			upsertContactRecordList(recordList, "staff");
@@ -710,7 +721,7 @@ public class UpdateRecordsInSalesForce {
 		return c;
 	}
 
-	private boolean createAccountRecord(StudentImportModel model, Account account) {
+	private boolean createAccountRecord(String firstName, String lastName, int clientID, Account account) {
 		SaveResult[] saveResults = null;
 		Account[] acctList = new Account[] { account };
 
@@ -721,30 +732,79 @@ public class UpdateRecordsInSalesForce {
 		} catch (ConnectionException e) {
 			if (e.getMessage() == null) {
 				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
-						new StudentNameModel(model.getFirstName(), model.getLastName(), false), model.getClientID(),
+						new StudentNameModel(firstName, lastName, false), clientID,
 						" for " + account.getName());
 				e.printStackTrace();
 			} else
 				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
-						new StudentNameModel(model.getFirstName(), model.getLastName(), false), model.getClientID(),
+						new StudentNameModel(firstName, lastName, false), clientID,
 						" for " + account.getName() + ": " + e.getMessage());
 			return false;
 		}
 
 		// check the returned results for any errors
 		if (saveResults[0].isSuccess()) {
-			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT, new StudentNameModel("", "", false), 0,
-					" " + model.getFullName() + ": " + account.getName());
+			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT, new StudentNameModel(firstName, lastName, false), clientID,
+					" " + firstName + " " + lastName + ": " + account.getName());
 			return true;
 		} else {
 			Error[] errors = saveResults[0].getErrors();
 			for (int j = 0; j < errors.length; j++) {
 				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
-						new StudentNameModel(model.getFirstName(), model.getLastName(), false), model.getClientID(),
+						new StudentNameModel(firstName, lastName, false), clientID,
 						" for " + account.getName() + ": " + errors[j].getMessage());
 			}
 			return false;
 		}
+	}
+
+	private String getStaffAccountID(StaffMemberModel staff, ArrayList<Account> sfAccounts) {
+
+		// Check if staff member already has an account ID
+		if (staff.getAccountID() != null && !staff.getAccountID().equals(""))
+			return staff.getAccountID();
+
+		// Check if student teacher or parent
+		if (staff.getFirstName().startsWith("TA-") || staff.isAlsoClient()) {
+			// All TA's and existing clients must already have an account
+			System.out.println("Staff account error: no account for " + staff.getFullName() + ", " + staff.getClientID()
+					+ ", " + staff.getSfClientID());
+			return null;
+		}
+
+		// Create account family name and check whether it already exists
+		String acctFamilyName = staff.getLastName() + " " + staff.getFirstName() + " Family";
+		Account account = ListUtilities.findAccountByName(acctFamilyName, sfAccounts);
+		if (account != null) {
+			// Account name already exists
+			System.out.println("Staff account error: already exists - " + staff.getFullName() + ", "
+					+ staff.getClientID() + ", " + staff.getSfClientID());
+			return null;
+		}
+		
+		// New volunteer/teacher: create an account
+		account = new Account();
+		account.setName(acctFamilyName);
+		account.setType("Family");
+//		if (!createAccountRecord(staff.getFirstName(), staff.getLastName(), Integer.parseInt(staff.getClientID()), account)) {
+//			System.out.println("Failed to create account for " + staff.getFullName() + ", " + staff.getClientID() + ", "
+//					+ staff.getSfClientID() + ", " + acctFamilyName);
+//			return null;
+//		}
+//
+//		// Now that account has been created, need to get account from SF again
+//		account = getRecords.getSalesForceAccountByName(acctFamilyName);
+//		if (account == null || account.getName().equals("")) {
+//			System.out.println("Failed to get account for " + staff.getFullName() + ", " + staff.getClientID() + ", "
+//					+ staff.getSfClientID() + ", " + acctFamilyName);
+//			return null;
+//		}
+//
+//		// Add to SF account list
+//		sfAccounts.add(account);
+		System.out.println("Created account for " + staff.getFullName() + ", " + staff.getClientID() + ", "
+				+ staff.getSfClientID() + ", " + acctFamilyName);
+		return account.getId();
 	}
 
 	private static String parsePhone(String origPhone) {

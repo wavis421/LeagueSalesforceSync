@@ -142,6 +142,15 @@ public class ListUtilities {
 		return account;
 	}
 
+	public static Account findAccountByName(String familyName, ArrayList<Account> acctList) {
+		for (Account a : acctList) {
+			if (familyName.equalsIgnoreCase(a.getName())) {
+				return a;
+			}
+		}
+		return null;
+	}
+
 	public static String getFirstNameInString(String nameString) {
 		String name1 = nameString.trim();
 		int idx = nameString.indexOf(',');
@@ -153,6 +162,15 @@ public class ListUtilities {
 
 	public static void fillInAccountID(ArrayList<StudentImportModel> clientList, ArrayList<Contact> contacts) {
 		for (StudentImportModel m : clientList) {
+			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(),
+					contacts);
+			if (c != null)
+				m.setAccountID(c.getAccountId());
+		}
+	}
+
+	public static void fillInAccountIDForStaff(ArrayList<StaffMemberModel> clientList, ArrayList<Contact> contacts) {
+		for (StaffMemberModel m : clientList) {
 			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(),
 					contacts);
 			if (c != null)
