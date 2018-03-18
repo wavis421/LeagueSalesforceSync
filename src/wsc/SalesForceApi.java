@@ -107,9 +107,9 @@ public class SalesForceApi {
 		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents();
 		ArrayList<SalesForceAttendanceModel> pike13Attendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 
-		if (pike13Attendance != null && dbAttendanceList != null && sfContactList != null) {
+		if (pike13Attendance != null && dbAttendanceList != null && sfContactList != null && sfAllContactList != null) {
 			// (2) Update attendance records
-			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList);
+			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList, sfAllContactList);
 
 			// (3) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate);

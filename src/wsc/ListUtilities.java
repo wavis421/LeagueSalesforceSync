@@ -81,7 +81,7 @@ public class ListUtilities {
 
 			if (accountMgrName.equalsIgnoreCase(m.getFullName())
 					&& dependents.contains(student.getFullName().toLowerCase())) {
-				if (m.getAccountID() == null || student.getAccountID().equals(m.getAccountID())) {
+				if (m.getAccountID() == null || m.getAccountID().equals(student.getAccountID())) {
 					return m;
 				} else {
 					partialMatch = m;

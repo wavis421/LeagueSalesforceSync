@@ -164,7 +164,7 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	public void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
-			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts) {
+			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 
 		try {
@@ -178,10 +178,15 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				// Report error if event name is blank
-				if (inputModel.getEventName() == null || inputModel.getEventName().equals(""))
-					sqlDb.insertLogData(LogDataModel.BLANK_EVENT_NAME_FOR_ATTENDANCE,
-							new StudentNameModel("", "", false), Integer.parseInt(inputModel.getClientID()),
-							" on " + inputModel.getServiceDate() + ", " + inputModel.getServiceName());
+				if (inputModel.getEventName() == null || inputModel.getEventName().equals("")) {
+					Contact cTemp = ListUtilities.findClientIDInList(-1, inputModel.getClientID(), "", allContacts);
+					if (cTemp.getContact_Type__c() != null && cTemp.getContact_Type__c().equals("Student")) {
+						sqlDb.insertLogData(LogDataModel.BLANK_EVENT_NAME_FOR_ATTENDANCE,
+								new StudentNameModel(inputModel.getFullName(), "", false),
+								Integer.parseInt(inputModel.getClientID()),
+								" on " + inputModel.getServiceDate() + ", " + inputModel.getServiceName());
+					}
+				}
 
 				Student_Attendance__c a = new Student_Attendance__c();
 				a.setContact__r(c);
