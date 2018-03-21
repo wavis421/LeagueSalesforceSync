@@ -31,6 +31,7 @@ import model.StudentNameModel;
 
 public class UpdateRecordsInSalesForce {
 	private static final int MAX_NUM_UPSERT_RECORDS = 200;
+	private static final int WEEKS_TO_UPDATE_WORKSHOP_GRADS = 2;
 
 	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
@@ -199,6 +200,8 @@ public class UpdateRecordsInSalesForce {
 	public void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
 			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
+		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
+		clientUpdateCount = 0;
 
 		try {
 			for (int i = 0; i < pike13Attendance.size(); i++) {
@@ -264,6 +267,9 @@ public class UpdateRecordsInSalesForce {
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
 
+				// Update contact's grad date for completed Intro to Java Workshop events
+				updateWorkshopGrad(workShopGrads, inputModel);
+
 				recordList.add(a);
 			}
 
@@ -311,6 +317,13 @@ public class UpdateRecordsInSalesForce {
 
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + attendanceUpsertCount + " records processed");
+
+		// Update modified clients to SalesForce
+		if (workShopGrads.size() > 0) {
+			upsertContactRecordList(workShopGrads, "WorkS grad");
+			sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+					", " + clientUpdateCount + " WorkShop grad records processed");
+		}
 	}
 
 	public void removeExtraAttendanceRecords(ArrayList<SalesForceAttendanceModel> pike13Attendance, String startDate,
@@ -640,6 +653,22 @@ public class UpdateRecordsInSalesForce {
 			upsertClientRecords(recordArray);
 	}
 
+	private void updateWorkshopGrad(ArrayList<Contact> workShopGrads, SalesForceAttendanceModel inputModel) {
+		// If event is Intro to Java Workshop and is completed, add to grad date list
+		if (inputModel.getEventName().contains("Intro to Java Workshop") && inputModel.getStatus().equals("completed")
+				&& inputModel.getServiceDate().compareTo(getDateInPastByWeeks(WEEKS_TO_UPDATE_WORKSHOP_GRADS)) > 0) {
+			Contact gradContact = new Contact();
+			gradContact.setFront_Desk_Id__c(inputModel.getClientID());
+			gradContact.setWorkshop_Grad_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
+
+			// Add record; if already in grad list, remove and replace with later grad date
+			Contact dupContact = ListUtilities.findClientIDInList(-1, inputModel.getClientID(), "", workShopGrads);
+			if (dupContact != null)
+				workShopGrads.remove(dupContact);
+			workShopGrads.add(gradContact);
+		}
+	}
+
 	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account) {
 		// Create contact and add fields
 		Contact c = new Contact();
@@ -949,5 +978,10 @@ public class UpdateRecordsInSalesForce {
 		Calendar cal = Calendar.getInstance();
 		cal.setTimeInMillis(date.getMillis());
 		return cal;
+	}
+
+	private static String getDateInPastByWeeks(int minusNumWeeks) {
+		DateTime date = new DateTime().minusWeeks(minusNumWeeks);
+		return date.toString("yyyy-MM-dd");
 	}
 }
