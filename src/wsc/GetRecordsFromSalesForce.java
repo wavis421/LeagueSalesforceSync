@@ -50,7 +50,8 @@ public class GetRecordsFromSalesForce {
 
 		try {
 			QueryResult queryResults = connection
-					.query("SELECT Front_Desk_ID__c, AccountId, Contact_Type__c FROM Contact WHERE Front_Desk_ID__c != null");
+					.query("SELECT Front_Desk_ID__c, AccountId, Contact_Type__c, FirstName, LastName "
+							+ "FROM Contact WHERE Front_Desk_ID__c != null");
 
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {

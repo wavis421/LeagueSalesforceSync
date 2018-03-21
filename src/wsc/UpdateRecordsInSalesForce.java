@@ -135,6 +135,12 @@ public class UpdateRecordsInSalesForce {
 				// Add each Pike13 client record to SalesForce list
 				StudentImportModel adult = pike13Adults.get(i);
 
+				// Ignore school clients!
+				if (adult.getFullName().equals("wilson Middle School") || adult.getFullName().equals("Sample Customer")
+						|| adult.getFullName().equals("barrio Logan College Institute")
+						|| adult.getFirstName().startsWith("HOLIDAY"))
+					continue;
+
 				// Get 1st dependent name, use this to get SalesForce Account
 				String dependentName = ListUtilities.getFirstNameInString(adult.getDependentNames());
 				Account account = ListUtilities.findAccountNameInList(dependentName, pike13Students, pike13Adults,
@@ -163,6 +169,32 @@ public class UpdateRecordsInSalesForce {
 				", " + clientUpdateCount + " adult records processed");
 	}
 
+	// TODO: Finish this. This method is not being called yet.
+	public void removeExtraContactRecords(ArrayList<StudentImportModel> pike13Clients,
+			ArrayList<StaffMemberModel> pike13Staff, ArrayList<Contact> sfContacts) {
+
+		ArrayList<String> deleteList = new ArrayList<String>();
+
+		for (Contact c : sfContacts) {
+			// Check whether contact record exists in Pike13
+			if (c.getContact_Type__c() == null) {
+				System.out.println("Contact record null for " + c.getFirstName() + " " + c.getLastName() + ", "
+						+ c.getFront_Desk_Id__c());
+				deleteList.add(c.getFront_Desk_Id__c());
+			}
+
+			else if (!ListUtilities.isClientIDInPike13List(c.getFront_Desk_Id__c(), pike13Clients)
+					&& ListUtilities.findStaffIDInList(-1, c.getFront_Desk_Id__c(), pike13Staff) == null) {
+				System.out.println("Remove client: " + c.getFirstName() + " " + c.getLastName() + ", "
+						+ c.getFront_Desk_Id__c() + ", " + c.getContact_Type__c());
+				deleteList.add(c.getFront_Desk_Id__c());
+
+			}
+		}
+
+		System.out.println("Deleted contact records: " + deleteList.size());
+	}
+
 	public void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
 			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
@@ -171,6 +203,10 @@ public class UpdateRecordsInSalesForce {
 			for (int i = 0; i < pike13Attendance.size(); i++) {
 				// Add each Pike13 attendance record to SalesForce list
 				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
+
+				// Skip guest account
+				if (inputModel.getFullName().startsWith("Guest"))
+					continue;
 
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE,
 						inputModel.getClientID(), null, contacts);
@@ -186,6 +222,15 @@ public class UpdateRecordsInSalesForce {
 								Integer.parseInt(inputModel.getClientID()),
 								" on " + inputModel.getServiceDate() + ", " + inputModel.getServiceName());
 					}
+				}
+
+				// Report error if location code is invalid
+				if (ListUtilities.findLocCodeInList(inputModel.getEventName()) == null) {
+					if (ListUtilities.getLocCodeFromString(inputModel.getEventName()) != null)
+						// Location code not valid but '@' character found
+						sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_INVALID,
+								new StudentNameModel(inputModel.getFullName(), "", false),
+								Integer.parseInt(inputModel.getClientID()), " for event " + inputModel.getEventName());
 				}
 
 				Student_Attendance__c a = new Student_Attendance__c();
@@ -346,14 +391,8 @@ public class UpdateRecordsInSalesForce {
 					// TODO: Add new contacts
 					accountID = getStaffAccountID(staff, sfAccounts);
 					if (accountID == null)
-						System.out.println("Failed to create staff account: " + staff.getFullName() + ", "
-								+ staff.getCategory() + ", is Staff=" + staff.isStaffMember() + ", is Board="
-								+ staff.isBoardMember() + staff.getClientID() + ", " + staff.getSfClientID());
-					else
-						System.out.println("New staff account: " + staff.getFullName() + ", " + staff.getCategory()
-								+ ", is Staff=" + staff.isStaffMember() + ", is Board=" + staff.isBoardMember() + ", "
-								+ staff.getClientID() + ", " + staff.getSfClientID() + ", " + accountID);
-					continue;
+						continue;
+
 				} else
 					accountID = c.getAccountId();
 
@@ -387,7 +426,8 @@ public class UpdateRecordsInSalesForce {
 				// Add each Pike13 staff hours record to SalesForce list
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
 
-				String staffID = ListUtilities.findStaffIDInList(inputModel.getClientID(), pike13StaffMembers);
+				String staffID = ListUtilities.findStaffIDInList(LogDataModel.MISSING_PIKE13_STAFF_MEMBER,
+						inputModel.getClientID(), pike13StaffMembers);
 				if (staffID == null)
 					continue;
 
@@ -755,10 +795,11 @@ public class UpdateRecordsInSalesForce {
 
 		// check the returned results for any errors
 		if (saveResults[0].isSuccess()) {
-			sqlDb.insertLogData(LogDataModel.CREATE_SF_ACCOUNT_FOR_CLIENT,
+			sqlDb.insertLogData(LogDataModel.CREATE_SALES_FORCE_ACCOUNT,
 					new StudentNameModel(firstName, lastName, false), clientID,
-					" " + firstName + " " + lastName + ": " + account.getName());
+					" for " + firstName + " " + lastName + ": " + account.getName());
 			return true;
+			
 		} else {
 			Error[] errors = saveResults[0].getErrors();
 			for (int j = 0; j < errors.length; j++) {
@@ -776,11 +817,11 @@ public class UpdateRecordsInSalesForce {
 		if (staff.getAccountID() != null && !staff.getAccountID().equals(""))
 			return staff.getAccountID();
 
-		// Check if student teacher or parent
+		// Check if student-teacher or parent
 		if (staff.getFirstName().startsWith("TA-") || staff.isAlsoClient()) {
 			// All TA's and existing clients must already have an account
-			System.out.println("Staff account error: no account for " + staff.getFullName() + ", " + staff.getClientID()
-					+ ", " + staff.getSfClientID());
+			sqlDb.insertLogData(LogDataModel.MISSING_ACCOUNT_FOR_TA_OR_PARENT,
+					new StudentNameModel(staff.getFullName(), "", false), 0, " " + staff.getFullName());
 			return null;
 		}
 
@@ -789,36 +830,27 @@ public class UpdateRecordsInSalesForce {
 		Account account = ListUtilities.findAccountByName(acctFamilyName, sfAccounts);
 		if (account != null) {
 			// Account name already exists
-			System.out.println("Staff account error: already exists - " + staff.getFullName() + ", "
-					+ staff.getClientID() + ", " + staff.getSfClientID());
-			return null;
+			return account.getId();
 		}
 
 		// New volunteer/teacher: create an account
 		account = new Account();
 		account.setName(acctFamilyName);
 		account.setType("Family");
-		// if (!createAccountRecord(staff.getFirstName(), staff.getLastName(),
-		// Integer.parseInt(staff.getClientID()), account)) {
-		// System.out.println("Failed to create account for " + staff.getFullName() + ",
-		// " + staff.getClientID() + ", "
-		// + staff.getSfClientID() + ", " + acctFamilyName);
-		// return null;
-		// }
-		//
-		// // Now that account has been created, need to get account from SF again
-		// account = getRecords.getSalesForceAccountByName(acctFamilyName);
-		// if (account == null || account.getName().equals("")) {
-		// System.out.println("Failed to get account for " + staff.getFullName() + ", "
-		// + staff.getClientID() + ", "
-		// + staff.getSfClientID() + ", " + acctFamilyName);
-		// return null;
-		// }
-		//
-		// // Add to SF account list
-		// sfAccounts.add(account);
-		System.out.println("Created account for " + staff.getFullName() + ", " + staff.getClientID() + ", "
-				+ staff.getSfClientID() + ", " + acctFamilyName);
+		if (!createAccountRecord(staff.getFirstName(), staff.getLastName(), Integer.parseInt(staff.getClientID()),
+				account))
+			return null;
+
+		// Now that account has been created, need to get account from SF again
+		account = getRecords.getSalesForceAccountByName(acctFamilyName);
+		if (account == null || account.getName().equals("")) {
+			sqlDb.insertLogData(LogDataModel.UPSERTED_ACCOUNT_RETRIEVAL_ERROR,
+					new StudentNameModel(staff.getFullName(), "", false), 0, " for " + acctFamilyName);
+			return null;
+		}
+
+		// Add to SF account list
+		sfAccounts.add(account);
 		return account.getId();
 	}
 

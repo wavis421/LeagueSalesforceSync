@@ -6,6 +6,7 @@ import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
 
 import model.AttendanceEventModel;
+import model.LocationModel;
 import model.LogDataModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
@@ -40,6 +41,19 @@ public class ListUtilities {
 		return null;
 	}
 
+	public static boolean isClientIDInPike13List(String clientIDString, ArrayList<StudentImportModel> clientList) {
+		if (!clientIDString.matches("\\d+"))
+			return false;
+
+		int clientID = Integer.parseInt(clientIDString);
+
+		for (StudentImportModel m : clientList) {
+			if (m.getClientID() == clientID)
+				return true;
+		}
+		return false;
+	}
+
 	public static boolean findVisitIdInList(String visitID, ArrayList<SalesForceAttendanceModel> attendanceList) {
 		for (SalesForceAttendanceModel a : attendanceList) {
 			if (a.getVisitID().equals(visitID)) {
@@ -61,14 +75,17 @@ public class ListUtilities {
 		return null;
 	}
 
-	public static String findStaffIDInList(String clientID, ArrayList<StaffMemberModel> staffList) {
+	public static String findStaffIDInList(int errorCode, String clientID, ArrayList<StaffMemberModel> staffList) {
 		for (StaffMemberModel s : staffList) {
 			if (s.getClientID().equals(clientID)) {
 				return s.getSfClientID();
 			}
 		}
-		sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_STAFF_MEMBER, new StudentNameModel("", "", false),
-				Integer.parseInt(clientID), " for ClientID " + clientID);
+
+		if (errorCode != -1) {
+			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
+					" for ClientID " + clientID);
+		}
 		return null;
 	}
 
@@ -176,5 +193,32 @@ public class ListUtilities {
 			if (c != null)
 				m.setAccountID(c.getAccountId());
 		}
+	}
+
+	public static String findLocCodeInList(String sourceString) {
+		int locPos;
+
+		for (int i = 0; i < LocationModel.getNumLocactions(); i++) {
+			locPos = sourceString.indexOf("@ " + LocationModel.getLocationCodeString(i));
+			if (locPos >= 0 && sourceString.length() > (locPos + 4))
+				return sourceString.substring(locPos + 2, locPos + 4);
+
+			locPos = sourceString.indexOf("@" + LocationModel.getLocationCodeString(i));
+			if (locPos >= 0 && sourceString.length() > (locPos + 3))
+				return sourceString.substring(locPos + 1, locPos + 3);
+		}
+		return null;
+	}
+
+	public static String getLocCodeFromString(String sourceString) {
+		int locPos = sourceString.indexOf("@ ");
+		if (locPos >= 0 && sourceString.length() > (locPos + 4))
+			return sourceString.substring(locPos + 2, locPos + 4);
+
+		locPos = sourceString.indexOf("@");
+		if (locPos >= 0 && sourceString.length() > (locPos + 3))
+			return sourceString.substring(locPos + 1, locPos + 3);
+
+		return null;
 	}
 }

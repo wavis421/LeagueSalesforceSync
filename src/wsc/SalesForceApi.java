@@ -84,11 +84,14 @@ public class SalesForceApi {
 		ArrayList<Contact> sfAllContactList = getRecords.getAllSalesForceContacts(); // + all adults
 		ArrayList<Account> sfAccountList = getRecords.getSalesForceAccounts();
 
+		ArrayList<StudentImportModel> pike13StudentContactList = null;
+		ArrayList<StudentImportModel> pike13AdultContactList = null;
+
 		// === UPDATE CLIENTS: Students & Parents ===
 		if (sfAllContactList != null && sfAccountList != null) {
 			// Get Pike13 clients and upsert to SalesForce
-			ArrayList<StudentImportModel> pike13StudentContactList = pike13Api.getClientsForSfImport(false);
-			ArrayList<StudentImportModel> pike13AdultContactList = pike13Api.getClientsForSfImport(true);
+			pike13StudentContactList = pike13Api.getClientsForSfImport(false);
+			pike13AdultContactList = pike13Api.getClientsForSfImport(true);
 
 			// Make sure Pike13 didn't have error getting data
 			if (pike13StudentContactList != null && pike13AdultContactList != null) {
@@ -128,6 +131,15 @@ public class SalesForceApi {
 			updateRecords.updateStaffMembers(pike13StaffMembers, sfAllContactList, sfAccountList);
 			updateRecords.updateStaffHours(pike13StaffMembers, pike13StaffHours, sfContactList);
 		}
+
+		// === REMOVE CONTACTS FROM SALESFORCE THAT ARE NOT IN PIKE13 (later) ==
+//		if (pike13StudentContactList != null && pike13AdultContactList != null && pike13StaffMembers != null
+//				&& sfAllContactList != null) {
+//			ArrayList<StudentImportModel> allPike13Contacts = new ArrayList<StudentImportModel>();
+//			allPike13Contacts.addAll(pike13StudentContactList);
+//			allPike13Contacts.addAll(pike13AdultContactList);
+//			updateRecords.removeExtraContactRecords(allPike13Contacts, pike13StaffMembers, sfAllContactList);
+//		}
 
 		exitProgram(-1, null); // -1 indicates no error
 	}
