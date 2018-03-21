@@ -7,7 +7,6 @@ import com.sforce.soap.enterprise.sobject.Contact;
 
 import model.AttendanceEventModel;
 import model.LocationModel;
-import model.LogDataModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
 import model.StaffMemberModel;
@@ -207,18 +206,6 @@ public class ListUtilities {
 			if (locPos >= 0 && sourceString.length() > (locPos + 3))
 				return sourceString.substring(locPos + 1, locPos + 3);
 		}
-		return null;
-	}
-
-	public static String getLocCodeFromString(String sourceString) {
-		int locPos = sourceString.indexOf("@ ");
-		if (locPos >= 0 && sourceString.length() > (locPos + 4))
-			return sourceString.substring(locPos + 2, locPos + 4);
-
-		locPos = sourceString.indexOf("@");
-		if (locPos >= 0 && sourceString.length() > (locPos + 3))
-			return sourceString.substring(locPos + 1, locPos + 3);
-
 		return null;
 	}
 }

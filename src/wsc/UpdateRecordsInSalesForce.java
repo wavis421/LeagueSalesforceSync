@@ -20,6 +20,7 @@ import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
 import com.sforce.ws.ConnectionException;
 
 import model.AttendanceEventModel;
+import model.LocationModel;
 import model.LogDataModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
@@ -225,12 +226,20 @@ public class UpdateRecordsInSalesForce {
 				}
 
 				// Report error if location code is invalid
-				if (ListUtilities.findLocCodeInList(inputModel.getEventName()) == null) {
-					if (ListUtilities.getLocCodeFromString(inputModel.getEventName()) != null)
-						// Location code not valid but '@' character found
+				String locCode = ListUtilities.findLocCodeInList(inputModel.getEventName());
+				if (locCode == null) {
+					// Location code not valid, report error if '@' in event name
+					if (inputModel.getEventName().contains("@"))
 						sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_INVALID,
 								new StudentNameModel(inputModel.getFullName(), "", false),
 								Integer.parseInt(inputModel.getClientID()), " for event " + inputModel.getEventName());
+
+				} else if (LocationModel.findLocationCodeMatch(locCode, inputModel.getLocation()) < 0) {
+					// Location code is valid, but does not match event location
+					sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_MISMATCH,
+							new StudentNameModel(inputModel.getFullName(), "", false),
+							Integer.parseInt(inputModel.getClientID()),
+							" for event " + inputModel.getEventName() + ", " + inputModel.getLocation());
 				}
 
 				Student_Attendance__c a = new Student_Attendance__c();
@@ -799,7 +808,7 @@ public class UpdateRecordsInSalesForce {
 					new StudentNameModel(firstName, lastName, false), clientID,
 					" for " + firstName + " " + lastName + ": " + account.getName());
 			return true;
-			
+
 		} else {
 			Error[] errors = saveResults[0].getErrors();
 			for (int j = 0; j < errors.length; j++) {
