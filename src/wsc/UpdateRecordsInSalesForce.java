@@ -408,13 +408,12 @@ public class UpdateRecordsInSalesForce {
 					clientID = staff.getSfClientID();
 				}
 
+				// Get account ID, create account if needed
 				Contact c = ListUtilities.findClientIDInList(-1, clientID, staff.getFullName(), sfContacts);
 				if (c == null) {
-					// TODO: Add new contacts
 					accountID = getStaffAccountID(staff, sfAccounts);
 					if (accountID == null)
 						continue;
-
 				} else
 					accountID = c.getAccountId();
 
