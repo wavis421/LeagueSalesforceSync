@@ -40,6 +40,8 @@ public class UpdateRecordsInSalesForce {
 	private int clientUpdateCount = 0;
 	private int attendanceUpsertCount = 0;
 	private int staffHoursUpsertCount = 0;
+	private int attendanceDeleteCount = 0;
+	private boolean attendanceUpsertError = false;
 
 	public UpdateRecordsInSalesForce(MySqlDatabase sqlDb, EnterpriseConnection connection,
 			GetRecordsFromSalesForce getRecords) {
@@ -333,6 +335,12 @@ public class UpdateRecordsInSalesForce {
 		QueryResult queryResult;
 		ArrayList<String> deleteList = new ArrayList<String>();
 
+		if (attendanceUpsertError) {
+			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP, new StudentNameModel("", "", false),
+					0, ", 0 records deleted: aborted due to attendance upsert error(s)");
+			return;
+		}
+
 		try {
 			queryResult = connection
 					.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c, Owner.Name "
@@ -375,7 +383,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP, new StudentNameModel("", "", false), 0,
-				", " + deleteList.size() + " records deleted");
+				", " + attendanceDeleteCount + " records deleted");
 	}
 
 	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts,
@@ -390,7 +398,7 @@ public class UpdateRecordsInSalesForce {
 
 				String firstName = staff.getFirstName();
 				String clientID = staff.getClientID();
-				String accountID;
+				String accountID, contactType = "Adult";
 
 				if (firstName.startsWith("TA-")) {
 					// Remove TA- from front of string
@@ -406,6 +414,7 @@ public class UpdateRecordsInSalesForce {
 
 					// TA's use SF Client ID
 					clientID = staff.getSfClientID();
+					contactType = "Student";
 				}
 
 				// Get account ID, create account if needed
@@ -418,7 +427,7 @@ public class UpdateRecordsInSalesForce {
 					accountID = c.getAccountId();
 
 				// Add to list
-				recordList.add(createStaffRecord(staff, firstName, clientID, accountID));
+				recordList.add(createStaffRecord(staff, firstName, clientID, accountID, contactType));
 			}
 
 			upsertContactRecordList(recordList, "staff");
@@ -548,6 +557,7 @@ public class UpdateRecordsInSalesForce {
 			upsertResults = connection.upsert("Visit_Id__c", records);
 
 		} catch (ConnectionException e) {
+			attendanceUpsertError = true;
 			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
 					0, ": " + e.getMessage());
 			return;
@@ -556,6 +566,7 @@ public class UpdateRecordsInSalesForce {
 		// check the returned results for any errors
 		for (int i = 0; i < upsertResults.length; i++) {
 			if (!upsertResults[i].isSuccess()) {
+				attendanceUpsertError = true;
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
 					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
@@ -587,7 +598,8 @@ public class UpdateRecordsInSalesForce {
 					sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
 							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
 				}
-			}
+			} else
+				attendanceDeleteCount++;
 		}
 	}
 
@@ -657,14 +669,18 @@ public class UpdateRecordsInSalesForce {
 		if (inputModel.getEventName().contains("Intro to Java Workshop") && inputModel.getStatus().equals("completed")
 				&& inputModel.getServiceDate().compareTo(getDateInPastByWeeks(WEEKS_TO_UPDATE_WORKSHOP_GRADS)) > 0) {
 			Contact gradContact = new Contact();
+			Calendar newGradCal = convertDateStringToCalendar(inputModel.getServiceDate());
 			gradContact.setFront_Desk_Id__c(inputModel.getClientID());
-			gradContact.setWorkshop_Grad_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
+			gradContact.setWorkshop_Grad_Date__c(newGradCal);
 
 			// Add record; if already in grad list, remove and replace with later grad date
 			Contact dupContact = ListUtilities.findClientIDInList(-1, inputModel.getClientID(), "", workShopGrads);
-			if (dupContact != null)
-				workShopGrads.remove(dupContact);
-			workShopGrads.add(gradContact);
+			if (dupContact != null && dupContact.getWorkshop_Grad_Date__c().compareTo(newGradCal) < 0)
+				// This client is already in list and older date, so update wshop grad date
+				dupContact.setWorkshop_Grad_Date__c(newGradCal);
+			else
+				// Not already in list, so add
+				workShopGrads.add(gradContact);
 		}
 	}
 
@@ -740,7 +756,8 @@ public class UpdateRecordsInSalesForce {
 		return c;
 	}
 
-	private Contact createStaffRecord(StaffMemberModel staff, String firstName, String clientID, String accountID) {
+	private Contact createStaffRecord(StaffMemberModel staff, String firstName, String clientID, String accountID,
+			String contactType) {
 		// Create contact and add fields
 		Contact c = new Contact();
 
@@ -748,6 +765,7 @@ public class UpdateRecordsInSalesForce {
 		c.setFront_Desk_Id__c(clientID);
 		c.setFirstName(firstName);
 		c.setLastName(staff.getLastName());
+		c.setContact_Type__c(contactType);
 		if (staff.getEmail() != null)
 			c.setEmail(staff.getEmail());
 		if (staff.getAlternateEmail() != null)

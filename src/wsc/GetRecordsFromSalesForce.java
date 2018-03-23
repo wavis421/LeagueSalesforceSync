@@ -55,8 +55,10 @@ public class GetRecordsFromSalesForce {
 
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
-					// Add contact to list
-					contactsList.add((Contact) queryResults.getRecords()[i]);
+					// Add contact to list if Front Desk ID is numeric
+					Contact c = (Contact) queryResults.getRecords()[i];
+					if (c.getFront_Desk_Id__c().matches("\\d+"))
+						contactsList.add(c);
 				}
 			}
 
