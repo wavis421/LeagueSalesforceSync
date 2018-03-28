@@ -34,23 +34,23 @@ public class ListUtilities {
 				sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
 						", ClientID " + clientID);
 			else
-				sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
+				sqlDb.insertLogData(errorCode, new StudentNameModel(clientName, "", false), Integer.parseInt(clientID),
 						", ClientID " + clientID + " " + clientName);
 		}
 		return null;
 	}
 
-	public static boolean isClientIDInPike13List(String clientIDString, ArrayList<StudentImportModel> clientList) {
-		if (!clientIDString.matches("\\d+"))
-			return false;
+	public static StudentImportModel findClientIDInPike13List(String clientIDString, ArrayList<StudentImportModel> clientList) {
+		if (!clientIDString.matches("\\d+") || clientList == null)
+			return null;
 
 		int clientID = Integer.parseInt(clientIDString);
 
 		for (StudentImportModel m : clientList) {
 			if (m.getClientID() == clientID)
-				return true;
+				return m;
 		}
-		return false;
+		return null;
 	}
 
 	public static boolean findVisitIdInList(String visitID, ArrayList<SalesForceAttendanceModel> attendanceList) {
@@ -74,7 +74,8 @@ public class ListUtilities {
 		return null;
 	}
 
-	public static String findStaffIDInList(int errorCode, String clientID, ArrayList<StaffMemberModel> staffList) {
+	public static String findStaffIDInList(int errorCode, String clientID, String name, String serviceDate,
+			String serviceName, ArrayList<StaffMemberModel> staffList) {
 		for (StaffMemberModel s : staffList) {
 			if (s.getClientID().equals(clientID)) {
 				return s.getSfClientID();
@@ -82,8 +83,14 @@ public class ListUtilities {
 		}
 
 		if (errorCode != -1) {
-			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
-					" for ClientID " + clientID);
+			// Truncate service name up to '@' character
+			if (serviceName != null) {
+				int pos = serviceName.indexOf('@');
+				if (pos > 0)
+					serviceName = serviceName.substring(0, pos);
+			}
+			sqlDb.insertLogData(errorCode, new StudentNameModel(name, "", false), Integer.parseInt(clientID),
+					" for " + serviceName + " on " + serviceDate);
 		}
 		return null;
 	}

@@ -115,7 +115,7 @@ public class SalesForceApi {
 			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList, sfAllContactList);
 
 			// (3) Delete canceled attendance records
-			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate);
+			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);
 		}
 
 		// === UPDATE STAFF MEMBERS AND HOURS ===

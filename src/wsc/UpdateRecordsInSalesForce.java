@@ -187,8 +187,8 @@ public class UpdateRecordsInSalesForce {
 				deleteList.add(c.getFront_Desk_Id__c());
 			}
 
-			else if (!ListUtilities.isClientIDInPike13List(c.getFront_Desk_Id__c(), pike13Clients)
-					&& ListUtilities.findStaffIDInList(-1, c.getFront_Desk_Id__c(), pike13Staff) == null) {
+			else if (ListUtilities.findClientIDInPike13List(c.getFront_Desk_Id__c(), pike13Clients) == null
+					&& ListUtilities.findStaffIDInList(-1, c.getFront_Desk_Id__c(), "", "", "", pike13Staff) == null) {
 				System.out.println("Remove client: " + c.getFirstName() + " " + c.getLastName() + ", "
 						+ c.getFront_Desk_Id__c() + ", " + c.getContact_Type__c());
 				deleteList.add(c.getFront_Desk_Id__c());
@@ -215,7 +215,7 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE,
-						inputModel.getClientID(), null, contacts);
+						inputModel.getClientID(), inputModel.getFullName(), contacts);
 				if (c == null)
 					continue;
 
@@ -329,7 +329,7 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	public void removeExtraAttendanceRecords(ArrayList<SalesForceAttendanceModel> pike13Attendance, String startDate,
-			String endDate) {
+			String endDate, ArrayList<StudentImportModel> studentList) {
 		String serviceDate;
 		boolean done = false;
 		QueryResult queryResult;
@@ -361,10 +361,17 @@ public class UpdateRecordsInSalesForce {
 									.toString("yyyy-MM-dd");
 							deleteList.add(a.getId());
 
-							sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
-									new StudentNameModel("", "", false), Integer.parseInt(a.getFront_Desk_ID__c()),
-									" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate
-											+ " for ClientID " + a.getFront_Desk_ID__c());
+							StudentImportModel student = ListUtilities.findClientIDInPike13List(a.getFront_Desk_ID__c(),
+									studentList);
+							if (student != null)
+								sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
+										new StudentNameModel(student.getFirstName(), student.getLastName(), false),
+										Integer.parseInt(a.getFront_Desk_ID__c()),
+										" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate);
+							else
+								sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
+										new StudentNameModel("", "", false), Integer.parseInt(a.getFront_Desk_ID__c()),
+										" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate);
 						}
 					}
 					if (queryResult.isDone())
@@ -457,7 +464,8 @@ public class UpdateRecordsInSalesForce {
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
 
 				String staffID = ListUtilities.findStaffIDInList(LogDataModel.MISSING_PIKE13_STAFF_MEMBER,
-						inputModel.getClientID(), pike13StaffMembers);
+						inputModel.getClientID(), inputModel.getFullName(), inputModel.getServiceDate(),
+						inputModel.getServiceName(), pike13StaffMembers);
 				if (staffID == null)
 					continue;
 
