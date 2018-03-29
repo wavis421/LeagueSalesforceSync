@@ -702,8 +702,10 @@ public class UpdateRecordsInSalesForce {
 		c.setLastName(contact.getLastName());
 		if (adult)
 			c.setContact_Type__c("Adult");
-		else
+		else {
 			c.setContact_Type__c("Student");
+			updateFamilyEmail(contact, c);
+		}
 		if (contact.getEmail() != null)
 			c.setEmail(contact.getEmail());
 		if (contact.getMobilePhone() != null)
@@ -1008,5 +1010,29 @@ public class UpdateRecordsInSalesForce {
 	private static String getDateInPastByWeeks(int minusNumWeeks) {
 		DateTime date = new DateTime().minusWeeks(minusNumWeeks);
 		return date.toString("yyyy-MM-dd");
+	}
+
+	private static void updateFamilyEmail(StudentImportModel model, Contact c) {
+		String emails = "";
+		
+		// Concatenate student email, account manager emails & emergency email
+		if (model.getEmail() != null && !model.getEmail().equals(""))
+			emails += model.getEmail();
+		if (model.getAccountMgrEmails() != null && !model.getAccountMgrEmails().equals("")
+				&& !emails.contains(model.getAccountMgrEmails())) {
+			if (!emails.equals(""))
+				emails += ", ";
+			emails += model.getAccountMgrEmails();
+		}
+		if (model.getEmergContactEmail() != null && !model.getEmergContactEmail().equals("")
+				&& !emails.contains(model.getEmergContactEmail())) {
+			if (!emails.equals(""))
+				emails += ", ";
+			emails += model.getEmergContactEmail();
+		}
+		
+		// Now add email string to SalesForce contact
+		if (!emails.equals(""))
+			c.setFamily_Email__c(emails);
 	}
 }
