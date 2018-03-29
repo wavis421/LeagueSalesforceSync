@@ -21,7 +21,7 @@ public class ListUtilities {
 	}
 
 	public static Contact findClientIDInList(int errorCode, String clientID, String clientName,
-			ArrayList<Contact> contactList) {
+			String eventName, ArrayList<Contact> contactList) {
 		for (Contact c : contactList) {
 			if (c.getFront_Desk_Id__c().equals(clientID)) {
 				return c;
@@ -33,6 +33,9 @@ public class ListUtilities {
 			if (clientName == null || clientName.startsWith("null"))
 				sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
 						", ClientID " + clientID);
+			else if (!eventName.equals(""))
+				sqlDb.insertLogData(errorCode, new StudentNameModel(clientName, "", false), Integer.parseInt(clientID),
+						", " + eventName);
 			else
 				sqlDb.insertLogData(errorCode, new StudentNameModel(clientName, "", false), Integer.parseInt(clientID),
 						", ClientID " + clientID + " " + clientName);
@@ -40,7 +43,8 @@ public class ListUtilities {
 		return null;
 	}
 
-	public static StudentImportModel findClientIDInPike13List(String clientIDString, ArrayList<StudentImportModel> clientList) {
+	public static StudentImportModel findClientIDInPike13List(String clientIDString,
+			ArrayList<StudentImportModel> clientList) {
 		if (!clientIDString.matches("\\d+") || clientList == null)
 			return null;
 
@@ -185,7 +189,7 @@ public class ListUtilities {
 
 	public static void fillInAccountID(ArrayList<StudentImportModel> clientList, ArrayList<Contact> contacts) {
 		for (StudentImportModel m : clientList) {
-			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(),
+			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(), "",
 					contacts);
 			if (c != null)
 				m.setAccountID(c.getAccountId());
@@ -194,7 +198,7 @@ public class ListUtilities {
 
 	public static void fillInAccountIDForStaff(ArrayList<StaffMemberModel> clientList, ArrayList<Contact> contacts) {
 		for (StaffMemberModel m : clientList) {
-			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(),
+			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(), "",
 					contacts);
 			if (c != null)
 				m.setAccountID(c.getAccountId());

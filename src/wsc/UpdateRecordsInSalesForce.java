@@ -215,13 +215,14 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE,
-						inputModel.getClientID(), inputModel.getFullName(), contacts);
+						inputModel.getClientID(), inputModel.getFullName(), inputModel.getEventName(), contacts);
 				if (c == null)
 					continue;
 
 				// Report error if event name is blank
 				if (inputModel.getEventName() == null || inputModel.getEventName().equals("")) {
-					Contact cTemp = ListUtilities.findClientIDInList(-1, inputModel.getClientID(), "", allContacts);
+					Contact cTemp = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
+							inputModel.getFullName(), "", allContacts);
 					if (cTemp.getContact_Type__c() != null && cTemp.getContact_Type__c().equals("Student")) {
 						sqlDb.insertLogData(LogDataModel.BLANK_EVENT_NAME_FOR_ATTENDANCE,
 								new StudentNameModel(inputModel.getFullName(), "", false),
@@ -425,7 +426,7 @@ public class UpdateRecordsInSalesForce {
 				}
 
 				// Get account ID, create account if needed
-				Contact c = ListUtilities.findClientIDInList(-1, clientID, staff.getFullName(), sfContacts);
+				Contact c = ListUtilities.findClientIDInList(-1, clientID, staff.getFullName(), "", sfContacts);
 				if (c == null) {
 					accountID = getStaffAccountID(staff, sfAccounts);
 					if (accountID == null)
@@ -470,7 +471,7 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SALES_FORCE_STAFF_MEMBER, staffID,
-						inputModel.getFullName(), contacts);
+						inputModel.getFullName(), "", contacts);
 				if (c == null)
 					continue;
 
@@ -682,7 +683,8 @@ public class UpdateRecordsInSalesForce {
 			gradContact.setWorkshop_Grad_Date__c(newGradCal);
 
 			// Add record; if already in grad list, remove and replace with later grad date
-			Contact dupContact = ListUtilities.findClientIDInList(-1, inputModel.getClientID(), "", workShopGrads);
+			Contact dupContact = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
+					inputModel.getFullName(), "", workShopGrads);
 			if (dupContact != null && dupContact.getWorkshop_Grad_Date__c().compareTo(newGradCal) < 0)
 				// This client is already in list and older date, so update wshop grad date
 				dupContact.setWorkshop_Grad_Date__c(newGradCal);
@@ -1014,7 +1016,7 @@ public class UpdateRecordsInSalesForce {
 
 	private static void updateFamilyEmail(StudentImportModel model, Contact c) {
 		String emails = "";
-		
+
 		// Concatenate student email, account manager emails & emergency email
 		if (model.getEmail() != null && !model.getEmail().equals(""))
 			emails += model.getEmail();
@@ -1030,7 +1032,7 @@ public class UpdateRecordsInSalesForce {
 				emails += ", ";
 			emails += model.getEmergContactEmail();
 		}
-		
+
 		// Now add email string to SalesForce contact
 		if (!emails.equals(""))
 			c.setFamily_Email__c(emails);
