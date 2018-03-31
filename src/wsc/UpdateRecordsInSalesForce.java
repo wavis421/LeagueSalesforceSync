@@ -32,6 +32,8 @@ import model.StudentNameModel;
 public class UpdateRecordsInSalesForce {
 	private static final int MAX_NUM_UPSERT_RECORDS = 200;
 	private static final int WEEKS_TO_UPDATE_WORKSHOP_GRADS = 2;
+	private static final String RECORD_TYPE_ID_STUDENT = "012o000000089x0AAA";
+	private static final String RECORD_TYPE_ID_ADULT = "012o000000089wzAAA";
 
 	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
@@ -463,6 +465,8 @@ public class UpdateRecordsInSalesForce {
 			for (int i = 0; i < pike13StaffHours.size(); i++) {
 				// Add each Pike13 staff hours record to SalesForce list
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
+				if (inputModel.getFullName().startsWith("Intro to Java"))
+					continue;
 
 				String staffID = ListUtilities.findStaffIDInList(LogDataModel.MISSING_PIKE13_STAFF_MEMBER,
 						inputModel.getClientID(), inputModel.getFullName(), inputModel.getServiceDate(),
@@ -702,10 +706,13 @@ public class UpdateRecordsInSalesForce {
 		c.setFront_Desk_Id__c(String.valueOf(contact.getClientID()));
 		c.setFirstName(contact.getFirstName());
 		c.setLastName(contact.getLastName());
-		if (adult)
+		if (adult) {
 			c.setContact_Type__c("Adult");
+			c.setRecordTypeId(RECORD_TYPE_ID_ADULT);
+		}
 		else {
 			c.setContact_Type__c("Student");
+			c.setRecordTypeId(RECORD_TYPE_ID_STUDENT);
 			updateFamilyEmail(contact, c);
 		}
 		if (contact.getEmail() != null)

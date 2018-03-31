@@ -47,18 +47,28 @@ public class GetRecordsFromSalesForce {
 
 	public ArrayList<Contact> getAllSalesForceContacts() {
 		ArrayList<Contact> contactsList = new ArrayList<Contact>();
+		int recordsProcessed = 0;
 
 		try {
 			QueryResult queryResults = connection
 					.query("SELECT Front_Desk_ID__c, AccountId, Contact_Type__c, FirstName, LastName "
 							+ "FROM Contact WHERE Front_Desk_ID__c != null");
 
-			if (queryResults.getSize() > 0) {
+			while (queryResults.getSize() > recordsProcessed) {
+				recordsProcessed += queryResults.getRecords().length;
+
+				// Get up to 2000 records at one time
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
 					// Add contact to list if Front Desk ID is numeric
 					Contact c = (Contact) queryResults.getRecords()[i];
 					if (c.getFront_Desk_Id__c().matches("\\d+"))
 						contactsList.add(c);
+				}
+
+				if (queryResults.getSize() > recordsProcessed) {
+					// Still more records to get
+					String queryLocator = queryResults.getQueryLocator();
+					queryResults = connection.queryMore(queryLocator);
 				}
 			}
 
