@@ -212,10 +212,6 @@ public class UpdateRecordsInSalesForce {
 				// Add each Pike13 attendance record to SalesForce list
 				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
 
-				// Skip guest account
-				if (inputModel.getFullName().startsWith("Guest"))
-					continue;
-
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE,
 						inputModel.getClientID(), inputModel.getFullName(), inputModel.getEventName(), contacts);
 				if (c == null)
@@ -709,8 +705,7 @@ public class UpdateRecordsInSalesForce {
 		if (adult) {
 			c.setContact_Type__c("Adult");
 			c.setRecordTypeId(RECORD_TYPE_ID_ADULT);
-		}
-		else {
+		} else {
 			c.setContact_Type__c("Student");
 			c.setRecordTypeId(RECORD_TYPE_ID_STUDENT);
 			updateFamilyEmail(contact, c);
