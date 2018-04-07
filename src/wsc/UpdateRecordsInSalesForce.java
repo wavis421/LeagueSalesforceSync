@@ -250,7 +250,11 @@ public class UpdateRecordsInSalesForce {
 				a.setContact__r(c);
 				a.setEvent_Name__c(inputModel.getEventName());
 				a.setService_Name__c(inputModel.getServiceName());
-				a.setEvent_Type__c(inputModel.getEventType());
+				if (inputModel.getEventType().length() > 6) {
+					a.setEvent_Type__c(inputModel.getEventType().substring(0, 5));
+					a.setEvent_Type_Sub__c(inputModel.getEventType().substring(6));
+				} else
+					a.setEvent_Type__c(inputModel.getEventType());
 				a.setStatus__c(inputModel.getStatus());
 				a.setSchedule_id__c(inputModel.getScheduleID());
 				a.setVisit_Id__c(inputModel.getVisitID());
