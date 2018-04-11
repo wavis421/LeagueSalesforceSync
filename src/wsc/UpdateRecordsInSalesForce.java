@@ -689,12 +689,15 @@ public class UpdateRecordsInSalesForce {
 			// Add record; if already in grad list, remove and replace with later grad date
 			Contact dupContact = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
 					inputModel.getFullName(), "", workShopGrads);
-			if (dupContact != null && dupContact.getWorkshop_Grad_Date__c().compareTo(newGradCal) < 0)
-				// This client is already in list and older date, so update wshop grad date
-				dupContact.setWorkshop_Grad_Date__c(newGradCal);
-			else
+
+			if (dupContact == null) {
 				// Not already in list, so add
 				workShopGrads.add(gradContact);
+				
+			} else if (dupContact.getWorkshop_Grad_Date__c().compareTo(newGradCal) < 0) {
+				// This client is already in list and older date, so update wshop grad date
+				dupContact.setWorkshop_Grad_Date__c(newGradCal);
+			}
 		}
 	}
 
