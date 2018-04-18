@@ -218,6 +218,7 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				// Report error if event name is blank
+				String locCode = null;
 				if (inputModel.getEventName() == null || inputModel.getEventName().equals("")) {
 					Contact cTemp = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
 							inputModel.getFullName(), "", allContacts);
@@ -227,13 +228,13 @@ public class UpdateRecordsInSalesForce {
 								Integer.parseInt(inputModel.getClientID()),
 								" on " + inputModel.getServiceDate() + ", " + inputModel.getServiceName());
 					}
-				}
+				} else
+					locCode = ListUtilities.findLocCodeInList(inputModel.getEventName());
 
 				// Report error if location code is invalid
-				String locCode = ListUtilities.findLocCodeInList(inputModel.getEventName());
 				if (locCode == null) {
 					// Location code not valid, report error if '@' in event name
-					if (inputModel.getEventName().contains("@"))
+					if (inputModel.getEventName() != null && inputModel.getEventName().contains("@"))
 						sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_INVALID,
 								new StudentNameModel(inputModel.getFullName(), "", false),
 								Integer.parseInt(inputModel.getClientID()), " for event " + inputModel.getEventName());
@@ -250,11 +251,15 @@ public class UpdateRecordsInSalesForce {
 				a.setContact__r(c);
 				a.setEvent_Name__c(inputModel.getEventName());
 				a.setService_Name__c(inputModel.getServiceName());
-				if (inputModel.getEventType().length() > 6) {
-					a.setEvent_Type__c(inputModel.getEventType().substring(0, 5));
-					a.setEvent_Type_Sub__c(inputModel.getEventType().substring(6));
-				} else
-					a.setEvent_Type__c(inputModel.getEventType());
+				if (inputModel.getEventType() != null) {
+					if (inputModel.getEventType().length() > 6) {
+						a.setEvent_Type__c(inputModel.getEventType().substring(0, 5));
+						a.setEvent_Type_Sub__c(inputModel.getEventType().substring(6));
+					} else {
+						a.setEvent_Type__c(inputModel.getEventType());
+						a.setEvent_Type_Sub__c("");
+					}
+				}
 				a.setStatus__c(inputModel.getStatus());
 				a.setSchedule_id__c(inputModel.getScheduleID());
 				a.setVisit_Id__c(inputModel.getVisitID());
@@ -678,6 +683,10 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	private void updateWorkshopGrad(ArrayList<Contact> workShopGrads, SalesForceAttendanceModel inputModel) {
+		// Check for null lists
+		if (inputModel.getEventName() == null || inputModel.getStatus() == null || inputModel.getServiceDate() == null)
+			return;
+
 		// If event is Intro to Java Workshop and is completed, add to grad date list
 		if (inputModel.getEventName().contains("Intro to Java Workshop") && inputModel.getStatus().equals("completed")
 				&& inputModel.getServiceDate().compareTo(getDateInPastByWeeks(WEEKS_TO_UPDATE_WORKSHOP_GRADS)) > 0) {
@@ -693,7 +702,7 @@ public class UpdateRecordsInSalesForce {
 			if (dupContact == null) {
 				// Not already in list, so add
 				workShopGrads.add(gradContact);
-				
+
 			} else if (dupContact.getWorkshop_Grad_Date__c().compareTo(newGradCal) < 0) {
 				// This client is already in list and older date, so update wshop grad date
 				dupContact.setWorkshop_Grad_Date__c(newGradCal);
