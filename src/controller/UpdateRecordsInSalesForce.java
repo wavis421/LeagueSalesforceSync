@@ -1,4 +1,4 @@
-package wsc;
+package controller;
 
 import java.util.ArrayList;
 import java.util.Calendar;
