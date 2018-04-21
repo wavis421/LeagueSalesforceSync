@@ -495,6 +495,15 @@ public class UpdateRecordsInSalesForce {
 				h.setPresent__c(inputModel.getCompleted());
 				h.setAbsent__c(inputModel.getNoShow());
 				h.setExcused__c(inputModel.getLateCanceled());
+				if (inputModel.getServiceCategory() != null) {
+					if (inputModel.getServiceCategory().length() > 6) {
+						h.setEvent_type__c(inputModel.getServiceCategory().substring(0, 5));
+						h.setEvent_type_sub__c(inputModel.getServiceCategory().substring(6));
+					} else {
+						h.setEvent_type__c(inputModel.getServiceCategory());
+						h.setEvent_type_sub__c("");
+					}
+				}
 
 				h.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				h.setService_Time__c(inputModel.getServiceTime());
