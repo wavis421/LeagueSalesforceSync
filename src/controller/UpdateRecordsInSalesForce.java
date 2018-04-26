@@ -119,7 +119,7 @@ public class UpdateRecordsInSalesForce {
 			upsertContactRecordList(recordList, "student");
 
 		} catch (Exception e) {
-			if (e.getMessage() == null) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
 				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
@@ -163,7 +163,7 @@ public class UpdateRecordsInSalesForce {
 			upsertContactRecordList(recordList, "adult");
 
 		} catch (Exception e) {
-			if (e.getMessage() == null) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
 				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
@@ -264,7 +264,6 @@ public class UpdateRecordsInSalesForce {
 				a.setSchedule_id__c(inputModel.getScheduleID());
 				a.setVisit_Id__c(inputModel.getVisitID());
 				a.setLocation__c(inputModel.getLocation());
-				a.setStaff__c(inputModel.getStaff());
 				AttendanceEventModel attend = ListUtilities.findAttendanceEventInList(inputModel.getVisitID(),
 						dbAttendance);
 				if (attend != null) {
@@ -316,7 +315,7 @@ public class UpdateRecordsInSalesForce {
 				upsertAttendanceRecords(recordArray);
 
 		} catch (Exception e) {
-			if (e.getMessage() == null) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
 				sqlDb.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
 						"");
 				e.printStackTrace();
@@ -448,7 +447,7 @@ public class UpdateRecordsInSalesForce {
 			upsertContactRecordList(recordList, "staff");
 
 		} catch (Exception e) {
-			if (e.getMessage() == null) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
 				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
@@ -558,18 +557,29 @@ public class UpdateRecordsInSalesForce {
 			upsertResults = connection.upsert("Front_Desk_ID__c", records);
 
 		} catch (ConnectionException e) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR, new StudentNameModel("", "", false), 0,
-					": " + e.getMessage());
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR, new StudentNameModel("", "", false),
+						0, "");
+				e.printStackTrace();
+			} else
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR, new StudentNameModel("", "", false),
+						0, ": " + e.getMessage());
 			return;
 		}
 
 		// check the returned results for any errors
 		for (int i = 0; i < upsertResults.length; i++) {
 			if (!upsertResults[i].isSuccess()) {
+				// If client ID is numeric, then use this in error log
+				int clientID = 0;
+				if (records[i].getFront_Desk_Id__c().matches("\\d+"))
+					clientID = Integer.parseInt(records[i].getFront_Desk_Id__c());
+
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
 					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR,
-							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
+							new StudentNameModel(records[i].getFirstName(), records[i].getLastName(), false), clientID,
+							": " + errors[j].getMessage());
 				}
 			} else
 				clientUpdateCount++;
@@ -585,8 +595,13 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (ConnectionException e) {
 			attendanceUpsertError = true;
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
-					0, ": " + e.getMessage());
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+						new StudentNameModel("", "", false), 0, "");
+				e.printStackTrace();
+			} else
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
 
@@ -612,8 +627,13 @@ public class UpdateRecordsInSalesForce {
 			deleteResults = connection.delete(records);
 
 		} catch (ConnectionException e) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR, new StudentNameModel("", "", false),
-					0, ": " + e.getMessage());
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+						new StudentNameModel("", "", false), 0, "");
+				e.printStackTrace();
+			} else
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
 
@@ -638,8 +658,13 @@ public class UpdateRecordsInSalesForce {
 			upsertResults = connection.upsert("schedule_client_ID__c", records);
 
 		} catch (ConnectionException e) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR, new StudentNameModel("", "", false),
-					0, ": " + e.getMessage());
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
+						new StudentNameModel("", "", false), 0, "");
+				e.printStackTrace();
+			} else
+				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
 
@@ -756,7 +781,7 @@ public class UpdateRecordsInSalesForce {
 		c.setFuture_Events__c((double) contact.getFutureVisits());
 		c.setSigned_Waiver__c(contact.isSignedWaiver());
 		c.setMembership__c(contact.getMembership());
-		if (contact.getPassOnFile() != null)
+		if (contact.getPassOnFile() != null && !contact.getPassOnFile().equals(""))
 			c.setPlan__c(contact.getPassOnFile());
 		if (contact.getHomeLocAsString() != null)
 			c.setHome_Location_Long__c(contact.getHomeLocAsString());
@@ -824,8 +849,6 @@ public class UpdateRecordsInSalesForce {
 			c.setPhone(parsePhone(staff.getPhone()));
 		if (staff.getHomePhone() != null)
 			c.setHomePhone(parsePhone(staff.getHomePhone()));
-		c.setBoard_Member_Active__c(staff.isBoardMember() ? "Active" : "");
-		c.setStaff__c(staff.isStaffMember() ? "Active" : "");
 		if (staff.getCategory() != null)
 			c.setStaff_Category__c(staff.getCategory());
 		if (staff.getRole() != null)
@@ -876,7 +899,7 @@ public class UpdateRecordsInSalesForce {
 			saveResults = connection.create(acctList);
 
 		} catch (ConnectionException e) {
-			if (e.getMessage() == null) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
 				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
 						new StudentNameModel(firstName, lastName, false), clientID, " for " + account.getName());
 				e.printStackTrace();

@@ -26,10 +26,9 @@ public class GetRecordsFromSalesForce {
 		try {
 			QueryResult queryResults = connection
 					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null "
-							+ "AND (Record_Type__c = 'Student' OR Teacher__c = 'Active' OR Teacher_Student__c = 'Active' "
-							+ "OR Volunteer__c = 'Active' OR Staff_Category__c = 'Vol Teacher' "
-							+ "OR Staff_Category__c = 'Teaching Staff' OR Staff_Category__c = 'Student TA'"
-							+ "OR Staff_Category__c = 'Volunteer')");
+							+ "AND (Record_Type__c = 'Student' OR Staff_Category__c = 'Vol Teacher' "
+							+ "OR Staff_Category__c = 'Teaching Staff' OR Staff_Category__c = 'Student TA' "
+							+ "OR Staff_Category__c = 'Volunteer' OR Staff_Category__c = 'Admin Staff')");
 
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
@@ -63,8 +62,7 @@ public class GetRecordsFromSalesForce {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
 					// Add contact to list if Front Desk ID is numeric
 					Contact c = (Contact) queryResults.getRecords()[i];
-					//if (c.getFront_Desk_Id__c().matches("\\d+"))
-						contactsList.add(c);
+					contactsList.add(c);
 				}
 
 				if (queryResults.getSize() > recordsProcessed) {
