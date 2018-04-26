@@ -52,7 +52,7 @@ public class GetRecordsFromSalesForce {
 
 		try {
 			QueryResult queryResults = connection
-					.query("SELECT Front_Desk_ID__c, AccountId, Contact_Type__c, FirstName, LastName "
+					.query("SELECT Front_Desk_ID__c, AccountId, Contact_Type__c, FirstName, LastName, Last_Class_Level__c "
 							+ "FROM Contact WHERE Front_Desk_ID__c != null");
 
 			while (queryResults.getSize() > recordsProcessed) {

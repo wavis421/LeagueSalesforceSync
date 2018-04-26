@@ -205,6 +205,7 @@ public class UpdateRecordsInSalesForce {
 			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
+		ArrayList<GradModel> classGrads = new ArrayList<GradModel>();
 		clientUpdateCount = 0;
 
 		try {
@@ -276,8 +277,9 @@ public class UpdateRecordsInSalesForce {
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
 
-				// Update contact's grad date for completed Intro to Java Workshop events
+				// Update contact's Intro to Java workshop grad dates & class levels
 				updateWorkshopGrad(workShopGrads, inputModel);
+				updateClassLevels(classGrads, inputModel);
 
 				recordList.add(a);
 			}
@@ -332,6 +334,12 @@ public class UpdateRecordsInSalesForce {
 			upsertContactRecordList(workShopGrads, "WorkS grad");
 			sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 					", " + clientUpdateCount + " WorkShop grad records processed");
+		}
+		if (classGrads.size() > 0) {
+			clientUpdateCount = 0;
+			upsertGradList(classGrads, allContacts);
+			sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+					", " + clientUpdateCount + " Class grad records processed");
 		}
 	}
 
@@ -744,6 +752,52 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
+	private void updateClassLevels(ArrayList<GradModel> graduates, SalesForceAttendanceModel inputModel) {
+		// If event is a regular class and is completed, add to grad list
+		if (inputModel.getEventName() != null && inputModel.getEventName().charAt(1) == '@'
+				&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '9'
+				&& inputModel.getStatus().equals("completed")) {
+
+			GradModel dupGrad = findGradInList(inputModel.getClientID(), graduates);
+
+			if (dupGrad == null) {
+				// Not already in list, so add
+				graduates.add(new GradModel(inputModel.getClientID(), inputModel.getEventName(),
+						inputModel.getServiceDate()));
+
+			} else if (inputModel.getServiceDate().compareTo(dupGrad.getServiceDate()) > 0) {
+				// This client is already in list and date is later, so update
+				dupGrad.setEventName(inputModel.getEventName());
+				dupGrad.setServiceDate(inputModel.getServiceDate());
+			}
+		}
+	}
+
+	private void upsertGradList(ArrayList<GradModel> gradList, ArrayList<Contact> contactList) {
+		ArrayList<Contact> gradContacts = new ArrayList<Contact>();
+
+		for (GradModel grad : gradList) {
+			// Get last level from SalesForce
+			String lastLevel = "";
+			Contact contact = ListUtilities.findClientIDInList(-1, grad.getClientID(), "", "", contactList);
+			if (contact != null && contact.getLast_Class_Level__c() != null)
+				lastLevel = contact.getLast_Class_Level__c();
+
+			// Update if different
+			if (lastLevel.equals("") || !lastLevel.equals(grad.getEventName().substring(0, 1))) {
+				// Create contact
+				Contact c = new Contact();
+				c.setFront_Desk_Id__c(grad.getClientID());
+				c.setCurrent_Level__c(grad.getEventName());
+
+				gradContacts.add(c);
+			}
+		}
+		if (gradContacts.size() > 0) {
+			upsertContactRecordList(gradContacts, "Class grad");
+		}
+	}
+
 	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account) {
 		// Create contact and add fields
 		Contact c = new Contact();
@@ -1086,5 +1140,44 @@ public class UpdateRecordsInSalesForce {
 		// Now add email string to SalesForce contact
 		if (!emails.equals(""))
 			c.setFamily_Email__c(emails);
+	}
+
+	private class GradModel {
+		String clientID, eventName, serviceDate;
+
+		GradModel(String clientID, String eventName, String serviceDate) {
+			this.clientID = clientID;
+			this.eventName = eventName;
+			this.serviceDate = serviceDate;
+		}
+
+		public String getClientID() {
+			return clientID;
+		}
+
+		public String getEventName() {
+			return eventName;
+		}
+
+		public String getServiceDate() {
+			return serviceDate;
+		}
+
+		public void setEventName(String eventName) {
+			this.eventName = eventName;
+		}
+
+		public void setServiceDate(String serviceDate) {
+			this.serviceDate = serviceDate;
+		}
+	}
+
+	public static GradModel findGradInList(String clientID, ArrayList<GradModel> gradList) {
+		for (GradModel g : gradList) {
+			if (g.getClientID().equals(clientID)) {
+				return g;
+			}
+		}
+		return null;
 	}
 }
