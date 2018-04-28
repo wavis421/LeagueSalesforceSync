@@ -765,9 +765,9 @@ public class UpdateRecordsInSalesForce {
 
 	private void updateClassLevel(ArrayList<ContactModel> graduates, SalesForceAttendanceModel inputModel) {
 		// If event is a regular class and is completed, add to grad list
-		if (inputModel.getEventName() != null && inputModel.getEventName().charAt(1) == '@'
+		if (inputModel.getEventName() != null && inputModel.getEventName().length() > 2
 				&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '9'
-				&& inputModel.getStatus().equals("completed")) {
+				&& inputModel.getEventName().charAt(1) == '@' && inputModel.getStatus().equals("completed")) {
 
 			ContactModel dupGrad = findFieldInContactList(inputModel.getClientID(), graduates);
 
