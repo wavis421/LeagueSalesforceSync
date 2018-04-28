@@ -20,8 +20,8 @@ public class ListUtilities {
 		sqlDb = db;
 	}
 
-	public static Contact findClientIDInList(int errorCode, String clientID, String clientName,
-			String eventName, ArrayList<Contact> contactList) {
+	public static Contact findClientIDInList(int errorCode, String clientID, String clientName, String eventName,
+			ArrayList<Contact> contactList) {
 		for (Contact c : contactList) {
 			if (c.getFront_Desk_Id__c().equals(clientID)) {
 				return c;
@@ -39,6 +39,15 @@ public class ListUtilities {
 			else
 				sqlDb.insertLogData(errorCode, new StudentNameModel(clientName, "", false), Integer.parseInt(clientID),
 						", ClientID " + clientID + " " + clientName);
+		}
+		return null;
+	}
+	
+	public static StaffMemberModel findStaffNameInList(String clientName, ArrayList<StaffMemberModel> staffList) {
+		for (StaffMemberModel s : staffList) {
+			if (clientName.equals(s.getFullName())) {
+				return s;
+			}
 		}
 		return null;
 	}

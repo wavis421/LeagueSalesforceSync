@@ -202,7 +202,8 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	public void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
-			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts) {
+			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts,
+			ArrayList<StaffMemberModel> staffMembers) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
 		ArrayList<ContactModel> classGrads = new ArrayList<ContactModel>();
@@ -276,6 +277,7 @@ public class UpdateRecordsInSalesForce {
 						updateRepoName(repoNames, inputModel, attend.getRepoName());
 					}
 				}
+				parseTeacherString(inputModel.getStaff(), a, staffMembers);
 
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
@@ -1147,6 +1149,32 @@ public class UpdateRecordsInSalesForce {
 		return mailAddr;
 	}
 
+	private void parseTeacherString(String teachers, Student_Attendance__c attend,
+			ArrayList<StaffMemberModel> staffList) {
+		if (teachers == null || teachers.equals(""))
+			return;
+
+		String[] values = teachers.split("\\s*,\\s*");
+		for (int i = 0; i < values.length; i++) {
+			StaffMemberModel staff = ListUtilities.findStaffNameInList(values[i], staffList);
+			if (staff == null)
+				continue;
+
+			if (staff.getCategory().equals("Teaching Staff")) {
+				if (attend.getTeacher_1__c() == null || attend.getTeacher_1__c().equals(""))
+					attend.setTeacher_1__c(values[i]);
+				else if (attend.getTeacher_2__c() == null || attend.getTeacher_2__c().equals(""))
+					attend.setTeacher_2__c(values[i]);
+
+			} else if (staff.getCategory().equals("Vol Teacher")) {
+				if (attend.getTeacher_3_Vol__c() == null || attend.getTeacher_3_Vol__c().equals(""))
+					attend.setTeacher_3_Vol__c(values[i]);
+				else if (attend.getTeacher_4_Vol__c() == null || attend.getTeacher_4_Vol__c().equals(""))
+					attend.setTeacher_4_Vol__c(values[i]);
+			}
+		}
+	}
+
 	private static Calendar convertDateStringToCalendar(String dateString) {
 		DateTime date = new DateTime(dateString);
 		Calendar cal = Calendar.getInstance();
@@ -1183,6 +1211,9 @@ public class UpdateRecordsInSalesForce {
 			c.setFamily_Email__c(emails);
 	}
 
+	/*
+	 * ~~~~ Contact Model Class used as an intermediary data structure ~~~~
+	 */
 	private class ContactModel {
 		// Model for storing temp data being upserted to SalesForce Contacts
 		String clientID, stringField, serviceDate;

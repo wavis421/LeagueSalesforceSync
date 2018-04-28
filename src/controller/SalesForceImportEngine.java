@@ -61,17 +61,18 @@ public class SalesForceImportEngine {
 		// (1) Get Github comments and Pike13 attendance; store in list
 		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents();
 		ArrayList<SalesForceAttendanceModel> pike13Attendance = pike13Api.getSalesForceAttendance(startDate, endDate);
+		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
 
-		if (pike13Attendance != null && dbAttendanceList != null && sfContactList != null && sfAllContactList != null) {
+		if (pike13Attendance != null && dbAttendanceList != null && sfContactList != null && sfAllContactList != null
+				&& pike13StaffMembers != null) {
 			// (2) Update attendance records
-			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList, sfAllContactList);
+			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList, sfAllContactList, pike13StaffMembers);
 
 			// (3) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);
 		}
 
 		// === UPDATE STAFF MEMBERS AND HOURS ===
-		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
 		ArrayList<SalesForceStaffHoursModel> pike13StaffHours = pike13Api.getSalesForceStaffHours(startDate, today);
 
 		if (pike13StaffMembers != null && pike13StaffHours != null && sfAllContactList != null && sfAccountList != null
