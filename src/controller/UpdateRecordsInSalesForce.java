@@ -278,6 +278,7 @@ public class UpdateRecordsInSalesForce {
 					}
 				}
 				parseTeacherString(inputModel.getStaff(), a, staffMembers);
+				a.setStaff__c(inputModel.getStaff());
 
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
