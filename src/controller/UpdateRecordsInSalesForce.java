@@ -34,6 +34,7 @@ public class UpdateRecordsInSalesForce {
 	private static final int WEEKS_TO_UPDATE_WORKSHOP_GRADS = 2;
 	private static final String RECORD_TYPE_ID_STUDENT = "012o000000089x0AAA";
 	private static final String RECORD_TYPE_ID_ADULT = "012o000000089wzAAA";
+	private static final String MAX_SALESFORCE_FIELD_LENGTH = 100;
 
 	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
@@ -278,7 +279,10 @@ public class UpdateRecordsInSalesForce {
 					}
 				}
 				parseTeacherString(inputModel.getStaff(), a, staffMembers);
-				a.setStaff__c(inputModel.getStaff());
+				if (inputModel.getStaff().length() > MAX_SALESFORCE_FIELD_LENGTH)
+					a.setStaff__c(inputModel.getStaff().substring(0, MAX_SALESFORCE_FIELD_LENGTH));
+				else
+					a.setStaff__c(inputModel.getStaff());
 
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
@@ -628,11 +632,17 @@ public class UpdateRecordsInSalesForce {
 		// check the returned results for any errors
 		for (int i = 0; i < upsertResults.length; i++) {
 			if (!upsertResults[i].isSuccess()) {
+				// If client ID is numeric, then use this in error log
+				Contact c = records[i].getContact__r();
+				int clientID = 0;
+				if (c != null && c.getFront_Desk_Id__c() != null && c.getFront_Desk_Id__c().matches("\\d+"))
+					clientID = Integer.parseInt(c.getFront_Desk_Id__c());
+
 				attendanceUpsertError = true;
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
 					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
-							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
+							new StudentNameModel("", "", false), clientID, ": " + errors[j].getMessage());
 				}
 			} else
 				attendanceUpsertCount++;
