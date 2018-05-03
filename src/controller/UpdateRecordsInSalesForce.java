@@ -34,7 +34,7 @@ public class UpdateRecordsInSalesForce {
 	private static final int WEEKS_TO_UPDATE_WORKSHOP_GRADS = 2;
 	private static final String RECORD_TYPE_ID_STUDENT = "012o000000089x0AAA";
 	private static final String RECORD_TYPE_ID_ADULT = "012o000000089wzAAA";
-	private static final String MAX_SALESFORCE_FIELD_LENGTH = 100;
+	private static final int MAX_SALESFORCE_FIELD_LENGTH = 100;
 
 	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
@@ -889,8 +889,12 @@ public class UpdateRecordsInSalesForce {
 		c.setFuture_Events__c((double) contact.getFutureVisits());
 		c.setSigned_Waiver__c(contact.isSignedWaiver());
 		c.setMembership__c(contact.getMembership());
-		if (contact.getPassOnFile() != null && !contact.getPassOnFile().equals(""))
-			c.setPlan__c(contact.getPassOnFile());
+		if (contact.getPassOnFile() != null && !contact.getPassOnFile().equals("")) {
+			if (contact.getPassOnFile().length() > 80)
+				c.setPlan__c(contact.getPassOnFile().substring(0, 80));
+			else
+				c.setPlan__c(contact.getPassOnFile());
+		}
 		if (contact.getHomeLocAsString() != null)
 			c.setHome_Location_Long__c(contact.getHomeLocAsString());
 		if (contact.getSchoolName() != null)
