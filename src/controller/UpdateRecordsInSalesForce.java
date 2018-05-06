@@ -1167,12 +1167,13 @@ public class UpdateRecordsInSalesForce {
 	private String parseTeacherString(String teachers, Student_Attendance__c attend,
 			ArrayList<StaffMemberModel> staffList) {
 
-		// Clear the old values in SalesForce record
-		attend.setTeacher_1__c("");
-		attend.setTeacher_2__c("");
-		attend.setTeacher_3_Vol__c("");
-		attend.setTeacher_4_Vol__c("");
-		
+		// Clear the old values in SalesForce record.
+		// Note: Set field won't work if string empty!
+		attend.setTeacher_1__c(" ");
+		attend.setTeacher_2__c(" ");
+		attend.setTeacher_3_Vol__c(" ");
+		attend.setTeacher_4_Vol__c(" ");
+
 		// Check for missing teacher record
 		if (teachers == null || teachers.equals(""))
 			return teachers;
@@ -1182,9 +1183,11 @@ public class UpdateRecordsInSalesForce {
 		String[] values = teachers.split("\\s*,\\s*");
 
 		for (int i = 0; i < values.length; i++) {
-			// Ignore unwanted field values
-			if (values[i].startsWith("League Admin") || values[i].startsWith("Summer Prog")
-					|| values[i].startsWith("Intro to Java") || values[i].startsWith("Padres"))
+			// Ignore unwanted field values (only want 'Sub Teacher')
+			String valueLowerCase = values[i].toLowerCase();
+			if (valueLowerCase.startsWith("league admin") || valueLowerCase.startsWith("summer prog")
+					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres")
+					|| valueLowerCase.startsWith("open lab"))
 				continue;
 
 			// Add teacher to new teachers string
@@ -1192,21 +1195,21 @@ public class UpdateRecordsInSalesForce {
 				newTeachers += ", ";
 			newTeachers += values[i];
 
-			// Only add staff members
+			// Only add staff members to teacher fields
 			StaffMemberModel staff = ListUtilities.findStaffNameInList(values[i], staffList);
 			if (staff == null)
 				continue;
 
 			if (staff.getCategory().equals("Teaching Staff")) {
-				if (attend.getTeacher_1__c().equals(""))
+				if (attend.getTeacher_1__c().trim().equals(""))
 					attend.setTeacher_1__c(values[i]);
-				else if (attend.getTeacher_2__c().equals(""))
+				else if (attend.getTeacher_2__c().trim().equals(""))
 					attend.setTeacher_2__c(values[i]);
 
 			} else if (staff.getCategory().equals("Vol Teacher")) {
-				if (attend.getTeacher_3_Vol__c().equals(""))
+				if (attend.getTeacher_3_Vol__c().trim().equals(""))
 					attend.setTeacher_3_Vol__c(values[i]);
-				else if (attend.getTeacher_4_Vol__c().equals(""))
+				else if (attend.getTeacher_4_Vol__c().trim().equals(""))
 					attend.setTeacher_4_Vol__c(values[i]);
 			}
 		}
