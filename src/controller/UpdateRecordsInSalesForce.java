@@ -93,7 +93,8 @@ public class UpdateRecordsInSalesForce {
 				}
 
 				// Find account in SalesForce
-				String acctFamilyName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
+				String acctFamilyName = camelCase(acctMgrModel.getLastName()) + " "
+						+ camelCase(acctMgrModel.getFirstName()) + " Family";
 				Account account = ListUtilities.findAccountInSalesForceList(acctFamilyName, acctMgrModel, sfAccounts);
 
 				if (account.getName().equals("")) {
@@ -942,7 +943,7 @@ public class UpdateRecordsInSalesForce {
 		c.setFirstName(firstName);
 		c.setLastName(staff.getLastName());
 		c.setContact_Type__c(contactType);
-		if (staff.getEmail() != null)
+		if (staff.getEmail() != null && contactType.equals("Adult"))
 			c.setEmail(staff.getEmail());
 		if (staff.getAlternateEmail() != null)
 			c.setAlternate_Email__c(staff.getAlternateEmail());
@@ -1055,7 +1056,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		// Create account family name and check whether it already exists
-		String acctFamilyName = staff.getLastName() + " " + staff.getFirstName() + " Family";
+		String acctFamilyName = camelCase(staff.getLastName()) + " " + camelCase(staff.getFirstName()) + " Family";
 		Account account = ListUtilities.findAccountByName(acctFamilyName, sfAccounts);
 		if (account != null) {
 			// Account name already exists
@@ -1234,23 +1235,39 @@ public class UpdateRecordsInSalesForce {
 
 		// Concatenate student email, account manager emails & emergency email
 		if (model.getEmail() != null && !model.getEmail().equals(""))
-			emails += model.getEmail();
+			emails += model.getEmail().toLowerCase();
 		if (model.getAccountMgrEmails() != null && !model.getAccountMgrEmails().equals("")
 				&& !emails.contains(model.getAccountMgrEmails())) {
 			if (!emails.equals(""))
 				emails += ", ";
-			emails += model.getAccountMgrEmails();
+			emails += model.getAccountMgrEmails().toLowerCase();
 		}
 		if (model.getEmergContactEmail() != null && !model.getEmergContactEmail().equals("")
 				&& !emails.contains(model.getEmergContactEmail())) {
 			if (!emails.equals(""))
 				emails += ", ";
-			emails += model.getEmergContactEmail();
+			emails += model.getEmergContactEmail().toLowerCase();
 		}
 
 		// Now add email string to SalesForce contact
 		if (!emails.equals(""))
 			c.setFamily_Email__c(emails);
+	}
+
+	public static ContactModel findFieldInContactList(String clientID, ArrayList<ContactModel> contactList) {
+		for (ContactModel c : contactList) {
+			if (c.getClientID().equals(clientID)) {
+				return c;
+			}
+		}
+		return null;
+	}
+
+	private String camelCase(String input) {
+		if (input.length() <= 1)
+			return input.toUpperCase();
+		else
+			return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
 	}
 
 	/*
@@ -1285,14 +1302,5 @@ public class UpdateRecordsInSalesForce {
 		public void setServiceDate(String serviceDate) {
 			this.serviceDate = serviceDate;
 		}
-	}
-
-	public static ContactModel findFieldInContactList(String clientID, ArrayList<ContactModel> contactList) {
-		for (ContactModel c : contactList) {
-			if (c.getClientID().equals(clientID)) {
-				return c;
-			}
-		}
-		return null;
 	}
 }
