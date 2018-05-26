@@ -93,8 +93,8 @@ public class UpdateRecordsInSalesForce {
 				}
 
 				// Find account in SalesForce
-				String acctFamilyName = camelCase(acctMgrModel.getLastName()) + " "
-						+ camelCase(acctMgrModel.getFirstName()) + " Family";
+				String acctFamilyName = camelCase(
+						acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family");
 				Account account = ListUtilities.findAccountInSalesForceList(acctFamilyName, acctMgrModel, sfAccounts);
 
 				if (account.getName().equals("")) {
@@ -1056,7 +1056,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		// Create account family name and check whether it already exists
-		String acctFamilyName = camelCase(staff.getLastName()) + " " + camelCase(staff.getFirstName()) + " Family";
+		String acctFamilyName = camelCase(staff.getLastName() + " " + staff.getFirstName() + " Family");
 		Account account = ListUtilities.findAccountByName(acctFamilyName, sfAccounts);
 		if (account != null) {
 			// Account name already exists
@@ -1264,10 +1264,24 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	private String camelCase(String input) {
-		if (input.length() <= 1)
-			return input.toUpperCase();
-		else
-			return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
+		// Capitalize first letter
+		int currIdx = 1, spaceIdx;
+		String output = input.substring(0, 1).toUpperCase() + input.substring(1);
+
+		while (true) {
+			// Find next space
+			spaceIdx = output.substring(currIdx).indexOf(' ');
+			if (spaceIdx < 0) {
+				break;
+			}
+
+			// Capitalize character after the space
+			currIdx += spaceIdx + 1;
+			output = output.substring(0, currIdx) + output.substring(currIdx, currIdx + 1).toUpperCase()
+					+ output.substring(currIdx + 1);
+			currIdx++;
+		}
+		return output;
 	}
 
 	/*
