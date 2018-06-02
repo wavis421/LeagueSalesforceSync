@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import com.sforce.soap.enterprise.Address;
 import com.sforce.soap.enterprise.DeleteResult;
@@ -1226,7 +1227,7 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	private static String getDateInPastByWeeks(int minusNumWeeks) {
-		DateTime date = new DateTime().minusWeeks(minusNumWeeks);
+		DateTime date = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusWeeks(minusNumWeeks);
 		return date.toString("yyyy-MM-dd");
 	}
 
