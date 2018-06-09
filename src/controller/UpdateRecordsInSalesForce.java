@@ -994,6 +994,8 @@ public class UpdateRecordsInSalesForce {
 			c.setShirt_Size__c(staff.getTShirt());
 		if (staff.getWhereDidYouHear() != null)
 			c.setHow_you_heard_about_us__c(staff.getWhereDidYouHear());
+		if (staff.getTitle() != null && !staff.getTitle().trim().equals(""))
+			c.setTItle__c(staff.getTitle());
 
 		// Convert dates
 		if (staff.getLiveScan() != null && !staff.getLiveScan().equals(""))
