@@ -36,6 +36,7 @@ public class UpdateRecordsInSalesForce {
 	private static final String RECORD_TYPE_ID_STUDENT = "012o000000089x0AAA";
 	private static final String RECORD_TYPE_ID_ADULT = "012o000000089wzAAA";
 	private static final int MAX_SALESFORCE_FIELD_LENGTH = 100;
+	private static final String ADMIN_STAFF_CLIENT_ID = "999999";
 
 	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
@@ -243,7 +244,8 @@ public class UpdateRecordsInSalesForce {
 					if (inputModel.getEventName() != null && inputModel.getEventName().contains("@"))
 						sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_INVALID,
 								new StudentNameModel(inputModel.getFullName(), "", false),
-								Integer.parseInt(inputModel.getClientID()), " for event " + inputModel.getEventName());
+								Integer.parseInt(inputModel.getClientID()),
+								" for event " + inputModel.getEventName() + " (" + inputModel.getServiceDate() + ")");
 
 				} else if (LocationModel.findLocationCodeMatch(locCode, inputModel.getLocation()) < 0) {
 					// Location code is valid, but does not match event location
@@ -488,6 +490,11 @@ public class UpdateRecordsInSalesForce {
 	public void updateStaffHours(ArrayList<StaffMemberModel> pike13StaffMembers,
 			ArrayList<SalesForceStaffHoursModel> pike13StaffHours, ArrayList<Contact> contacts) {
 		ArrayList<Staff_Hours__c> recordList = new ArrayList<Staff_Hours__c>();
+		ArrayList<Staff_Hours__c> adminHoursList = new ArrayList<Staff_Hours__c>();
+
+		// Get staff admin contact record for updating summary hours
+		Contact adminContact = ListUtilities.findClientIDInList(LogDataModel.MISSING_SALES_FORCE_STAFF_MEMBER,
+				ADMIN_STAFF_CLIENT_ID, "Staff Admin", "", contacts);
 
 		System.out.println(pike13StaffHours.size() + " Staff Hour records from Pike13");
 
@@ -498,42 +505,26 @@ public class UpdateRecordsInSalesForce {
 				if (inputModel.getFullName().startsWith("Intro to Java"))
 					continue;
 
-				String staffID = ListUtilities.findStaffIDInList(LogDataModel.MISSING_PIKE13_STAFF_MEMBER,
+				StaffMemberModel staff = ListUtilities.findStaffIDInList(LogDataModel.MISSING_PIKE13_STAFF_MEMBER,
 						inputModel.getClientID(), inputModel.getFullName(), inputModel.getServiceDate(),
-						inputModel.getServiceName(), pike13StaffMembers);
-				if (staffID == null)
+						inputModel.getEventName(), pike13StaffMembers);
+				if (staff == null)
 					continue;
 
-				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SALES_FORCE_STAFF_MEMBER, staffID,
-						inputModel.getFullName(), "", contacts);
+				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SALES_FORCE_STAFF_MEMBER,
+						staff.getSfClientID(), inputModel.getFullName(), "", contacts);
 				if (c == null)
 					continue;
 
-				Staff_Hours__c h = new Staff_Hours__c();
-				h.setStaff_Name__r(c);
-				h.setEvent_Name__c(inputModel.getEventName());
-				h.setService__c(inputModel.getServiceName());
-				h.setSchedule_ID__c(inputModel.getScheduleID());
-				h.setSchedule_client_ID__c(inputModel.getScheduleID() + inputModel.getClientID());
-				h.setLocation_Full__c(inputModel.getLocation());
-				h.setHours__c(inputModel.getHours());
-				h.setPresent__c(inputModel.getCompleted());
-				h.setAbsent__c(inputModel.getNoShow());
-				h.setExcused__c(inputModel.getLateCanceled());
-				if (inputModel.getServiceCategory() != null) {
-					if (inputModel.getServiceCategory().length() > 6) {
-						h.setEvent_type__c(inputModel.getServiceCategory().substring(0, 5));
-						h.setEvent_type_sub__c(inputModel.getServiceCategory().substring(6));
-					} else {
-						h.setEvent_type__c(inputModel.getServiceCategory());
-						h.setEvent_type_sub__c("");
-					}
-				}
-
-				h.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
-				h.setService_Time__c(inputModel.getServiceTime());
+				Staff_Hours__c h = createStaffHoursRecord(inputModel, c);
+				updateAdminHours(inputModel, staff.getCategory(), adminContact, adminHoursList);
 
 				recordList.add(h);
+			}
+
+			if (adminHoursList.size() > 0) {
+				System.out.println(adminHoursList.size() + " Admin Staff Hour records");
+				recordList.addAll(adminHoursList);
 			}
 
 			// Copy up to 200 records to array at a time (max allowed)
@@ -573,6 +564,86 @@ public class UpdateRecordsInSalesForce {
 
 		sqlDb.insertLogData(LogDataModel.SALES_FORCE_STAFF_HOURS_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + staffHoursUpsertCount + " records processed");
+	}
+
+	private Staff_Hours__c createStaffHoursRecord(SalesForceStaffHoursModel inputModel, Contact c) {
+		Staff_Hours__c h = new Staff_Hours__c();
+		h.setStaff_Name__r(c);
+		h.setEvent_Name__c(inputModel.getEventName());
+		h.setService__c(inputModel.getServiceName());
+		h.setSchedule_ID__c(inputModel.getScheduleID());
+		h.setSchedule_client_ID__c(inputModel.getScheduleID() + inputModel.getClientID());
+		h.setLocation_Full__c(inputModel.getLocation());
+		h.setHours__c(inputModel.getHours());
+		h.setPresent__c(inputModel.getCompleted());
+		h.setAbsent__c(inputModel.getNoShow());
+		h.setExcused__c(inputModel.getLateCanceled());
+		if (inputModel.getServiceCategory() != null) {
+			if (inputModel.getServiceCategory().length() > 6) {
+				h.setEvent_type__c(inputModel.getServiceCategory().substring(0, 5));
+				h.setEvent_type_sub__c(inputModel.getServiceCategory().substring(6));
+			} else {
+				h.setEvent_type__c(inputModel.getServiceCategory());
+				h.setEvent_type_sub__c("");
+			}
+		}
+
+		h.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
+		h.setService_Time__c(inputModel.getServiceTime());
+
+		return h;
+	}
+
+	private void updateAdminHours(SalesForceStaffHoursModel inputModel, String staffCategory, Contact adminContact,
+			ArrayList<Staff_Hours__c> adminHoursList) {
+
+		if (adminContact == null)
+			return;
+
+		Staff_Hours__c adminHours = null;
+		for (Staff_Hours__c a : adminHoursList) {
+			if (a.getSchedule_ID__c().equals(inputModel.getScheduleID())) {
+				adminHours = a;
+				break;
+			}
+		}
+
+		// This schedule ID not yet in the list, so create record and add
+		if (adminHours == null) {
+			adminHours = createAdminStaffHoursRecord(adminContact, inputModel);
+			if (adminHours == null)
+				return;
+
+			adminHoursList.add(adminHours);
+		}
+
+		// Update summary counts
+		if (staffCategory.equals("Student TA"))
+			adminHours.setStype_ta_sum__c(adminHours.getStype_ta_sum__c() + 1);
+		else if (staffCategory.equals("Teaching Staff"))
+			adminHours.setStype_staff_sum__c(adminHours.getStype_staff_sum__c() + 1);
+		else if (staffCategory.equals("Vol Teacher"))
+			adminHours.setStype_vol_sum__c(adminHours.getStype_vol_sum__c() + 1);
+	}
+
+	private Staff_Hours__c createAdminStaffHoursRecord(Contact c, SalesForceStaffHoursModel inputModel) {
+
+		// Create staff hours model from input
+		SalesForceStaffHoursModel model = new SalesForceStaffHoursModel(ADMIN_STAFF_CLIENT_ID, c.getFull_Name__c(),
+				inputModel.getServiceName(), inputModel.getServiceDate(), inputModel.getServiceTime(),
+				inputModel.getHours(), inputModel.getLocation(), inputModel.getCompleted(), inputModel.getNoShow(),
+				inputModel.getLateCanceled(), inputModel.getEventName(), inputModel.getScheduleID(),
+				inputModel.getServiceCategory());
+
+		// Create staff hours record for Staff Admin
+		Staff_Hours__c h = createStaffHoursRecord(model, c);
+
+		// Initialize SType
+		h.setStype_ta_sum__c(0.0);
+		h.setStype_staff_sum__c(0.0);
+		h.setStype_vol_sum__c(0.0);
+
+		return h;
 	}
 
 	private void upsertClientRecords(Contact[] records) {

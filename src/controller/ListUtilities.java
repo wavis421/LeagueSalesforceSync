@@ -87,23 +87,23 @@ public class ListUtilities {
 		return null;
 	}
 
-	public static String findStaffIDInList(int errorCode, String clientID, String name, String serviceDate,
-			String serviceName, ArrayList<StaffMemberModel> staffList) {
+	public static StaffMemberModel findStaffIDInList(int errorCode, String clientID, String name, String serviceDate,
+			String eventName, ArrayList<StaffMemberModel> staffList) {
 		for (StaffMemberModel s : staffList) {
 			if (s.getClientID().equals(clientID)) {
-				return s.getSfClientID();
+				return s;
 			}
 		}
 
 		if (errorCode != -1) {
 			// Truncate service name up to '@' character
-			if (serviceName != null) {
-				int pos = serviceName.indexOf('@');
+			if (eventName != null) {
+				int pos = eventName.indexOf('(');
 				if (pos > 0)
-					serviceName = serviceName.substring(0, pos);
+					eventName = eventName.substring(0, pos).trim();
 			}
 			sqlDb.insertLogData(errorCode, new StudentNameModel(name, "", false), Integer.parseInt(clientID),
-					" for " + serviceName + " on " + serviceDate);
+					" for " + eventName + " on " + serviceDate);
 		}
 		return null;
 	}
