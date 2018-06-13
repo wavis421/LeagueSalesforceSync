@@ -37,6 +37,7 @@ public class UpdateRecordsInSalesForce {
 	private static final String RECORD_TYPE_ID_ADULT = "012o000000089wzAAA";
 	private static final int MAX_SALESFORCE_FIELD_LENGTH = 100;
 	private static final String ADMIN_STAFF_CLIENT_ID = "999999";
+	private static final String ADMIN_STAFF_NAME = "Staff Admin";
 
 	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
@@ -494,7 +495,7 @@ public class UpdateRecordsInSalesForce {
 
 		// Get staff admin contact record for updating summary hours
 		Contact adminContact = ListUtilities.findClientIDInList(LogDataModel.MISSING_SALES_FORCE_STAFF_MEMBER,
-				ADMIN_STAFF_CLIENT_ID, "Staff Admin", "", contacts);
+				ADMIN_STAFF_CLIENT_ID, ADMIN_STAFF_NAME, "", contacts);
 
 		System.out.println(pike13StaffHours.size() + " Staff Hour records from Pike13");
 
@@ -629,7 +630,7 @@ public class UpdateRecordsInSalesForce {
 	private Staff_Hours__c createAdminStaffHoursRecord(Contact c, SalesForceStaffHoursModel inputModel) {
 
 		// Create staff hours model from input
-		SalesForceStaffHoursModel model = new SalesForceStaffHoursModel(ADMIN_STAFF_CLIENT_ID, c.getFull_Name__c(),
+		SalesForceStaffHoursModel model = new SalesForceStaffHoursModel(ADMIN_STAFF_CLIENT_ID, ADMIN_STAFF_NAME,
 				inputModel.getServiceName(), inputModel.getServiceDate(), inputModel.getServiceTime(),
 				inputModel.getHours(), inputModel.getLocation(), inputModel.getCompleted(), inputModel.getNoShow(),
 				inputModel.getLateCanceled(), inputModel.getEventName(), inputModel.getScheduleID(),
