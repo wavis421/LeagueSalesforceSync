@@ -778,7 +778,8 @@ public class UpdateRecordsInSalesForce {
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
 					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
-							new StudentNameModel("", "", false), 0,
+							new StudentNameModel("", "", false),
+							Integer.parseInt(records[i].getStaff_Name__r().getFront_Desk_Id__c()),
 							" (" + records[i].getSchedule_client_ID__c() + "): " + errors[j].getMessage());
 				}
 			} else
