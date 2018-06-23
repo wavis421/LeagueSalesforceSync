@@ -42,7 +42,7 @@ public class ListUtilities {
 		}
 		return null;
 	}
-	
+
 	public static StaffMemberModel findStaffNameInList(String clientName, ArrayList<StaffMemberModel> staffList) {
 		for (StaffMemberModel s : staffList) {
 			if (clientName.equals(s.getFullName())) {
@@ -218,13 +218,19 @@ public class ListUtilities {
 		int locPos;
 
 		for (int i = 0; i < LocationModel.getNumLocactions(); i++) {
-			locPos = sourceString.indexOf("@ " + LocationModel.getLocationCodeString(i));
-			if (locPos >= 0 && sourceString.length() > (locPos + 4))
-				return sourceString.substring(locPos + 2, locPos + 4);
+			String locCodeString = LocationModel.getLocationCodeString(i);
+			
+			locPos = sourceString.indexOf("@ " + locCodeString + " ");
+			if (locPos >= 0) {
+				String locSubString = sourceString.substring(locPos + 2);
+				return locSubString.substring(0, locSubString.indexOf(" "));
+			}
 
-			locPos = sourceString.indexOf("@" + LocationModel.getLocationCodeString(i));
-			if (locPos >= 0 && sourceString.length() > (locPos + 3))
-				return sourceString.substring(locPos + 1, locPos + 3);
+			locPos = sourceString.indexOf("@" + locCodeString + " ");
+			if (locPos >= 0) {
+				String locSubString = sourceString.substring(locPos + 1);
+				return locSubString.substring(0, locSubString.indexOf(" "));
+			}
 		}
 		return null;
 	}
