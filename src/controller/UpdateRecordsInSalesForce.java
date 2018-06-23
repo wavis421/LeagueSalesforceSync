@@ -1264,7 +1264,7 @@ public class UpdateRecordsInSalesForce {
 			String valueLowerCase = values[i].toLowerCase();
 			if (valueLowerCase.startsWith("league admin") || valueLowerCase.startsWith("summer prog")
 					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres")
-					|| valueLowerCase.startsWith("open lab"))
+					|| valueLowerCase.startsWith("open lab") || valueLowerCase.startsWith("make-up"))
 				continue;
 
 			// Add teacher to new teachers string
