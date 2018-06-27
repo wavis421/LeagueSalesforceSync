@@ -503,7 +503,8 @@ public class UpdateRecordsInSalesForce {
 			for (int i = 0; i < pike13StaffHours.size(); i++) {
 				// Add each Pike13 staff hours record to SalesForce list
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
-				if (inputModel.getFullName().startsWith("Intro to Java"))
+				if (inputModel.getFullName().startsWith("Intro to Java")
+						|| inputModel.getFullName().startsWith("Summer Programs"))
 					continue;
 
 				StaffMemberModel staff = ListUtilities.findStaffIDInList(LogDataModel.MISSING_PIKE13_STAFF_MEMBER,
