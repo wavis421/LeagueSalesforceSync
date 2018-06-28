@@ -12,6 +12,7 @@ import com.sforce.soap.enterprise.EnterpriseConnection;
 import com.sforce.ws.ConnectionException;
 import com.sforce.ws.ConnectorConfig;
 
+import model.LocationLookup;
 import model.LogDataModel;
 import model.MySqlDatabase;
 import model.StudentNameModel;
@@ -67,7 +68,9 @@ public class SalesForceApi {
 			exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
 		}
 
+		// Perform the update to SalesForce
 		SalesForceImportEngine importer = new SalesForceImportEngine(sqlDb, pike13Api, salesForceApi);
+		LocationLookup.setLocationData(sqlDb.getLocationList());
 		importer.updateSalesForce(today, startDate, endDate);
 
 		exitProgram(-1, null); // -1 indicates no error
