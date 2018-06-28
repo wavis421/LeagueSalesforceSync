@@ -6,6 +6,7 @@ import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
 
 import model.AttendanceEventModel;
+import model.LocationLookup;
 import model.LocationModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
@@ -217,8 +218,8 @@ public class ListUtilities {
 	public static String findLocCodeInList(String sourceString) {
 		int locPos;
 
-		for (int i = 0; i < LocationModel.getNumLocactions(); i++) {
-			String locCodeString = LocationModel.getLocationCodeString(i);
+		for (int i = 0; i < LocationLookup.getNumLocactions(); i++) {
+			String locCodeString = LocationLookup.getLocationCodeString(i);
 			
 			locPos = sourceString.indexOf("@ " + locCodeString + " ");
 			if (locPos >= 0) {

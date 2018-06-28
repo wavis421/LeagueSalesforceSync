@@ -21,6 +21,7 @@ import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
 import com.sforce.ws.ConnectionException;
 
 import model.AttendanceEventModel;
+import model.LocationLookup;
 import model.LocationModel;
 import model.LogDataModel;
 import model.MySqlDatabase;
@@ -248,7 +249,7 @@ public class UpdateRecordsInSalesForce {
 								Integer.parseInt(inputModel.getClientID()),
 								" for event " + inputModel.getEventName() + " (" + inputModel.getServiceDate() + ")");
 
-				} else if (LocationModel.findLocationCodeMatch(locCode, inputModel.getLocation()) < 0) {
+				} else if (!LocationLookup.findLocationCodeMatch(locCode, inputModel.getLocation())) {
 					// Location code is valid, but does not match event location
 					sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_MISMATCH,
 							new StudentNameModel(inputModel.getFullName(), "", false),

@@ -21,7 +21,7 @@ public class SalesForceApi {
 	private static final String SALES_FORCE_USERNAME = "leaguebot@jointheleague.org";
 	private static final String SALES_FORCE_PASSWORD = readFile("./sfPassword.txt");
 	private static final String AWS_PASSWORD = readFile("./awsPassword.txt");
-	private static final int DATE_RANGE_PAST_IN_DAYS = 30;
+	private static final int DATE_RANGE_PAST_IN_DAYS = 21;
 	private static final int DATE_RANGE_FUTURE_IN_DAYS = 45;
 
 	private static MySqlDatabase sqlDb;
