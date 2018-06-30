@@ -22,9 +22,9 @@ import com.sforce.ws.ConnectionException;
 
 import model.AttendanceEventModel;
 import model.LocationLookup;
-import model.LocationModel;
 import model.LogDataModel;
 import model.MySqlDatabase;
+import model.MySqlDbLogging;
 import model.SalesForceAttendanceModel;
 import model.SalesForceStaffHoursModel;
 import model.StaffMemberModel;
@@ -78,7 +78,7 @@ public class UpdateRecordsInSalesForce {
 				// Check for account manager names
 				if (student.getAccountMgrNames() == null || student.getAccountMgrNames().equals("")) {
 					// Student has no Pike13 account manager, so error
-					sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
+					MySqlDbLogging.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
 							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
 							student.getClientID(), " " + student.getFullName());
 					continue;
@@ -90,7 +90,7 @@ public class UpdateRecordsInSalesForce {
 						pike13Managers);
 				if (acctMgrModel == null) {
 					// Pike13 account manager not found? This should not happen!
-					sqlDb.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
+					MySqlDbLogging.insertLogData(LogDataModel.MISSING_PIKE13_ACCT_MGR_FOR_CLIENT,
 							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
 							student.getClientID(), " " + student.getFullName() + ", manager " + accountMgrName);
 					continue;
@@ -126,14 +126,15 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, ": " + e.getMessage());
 		}
 
-		sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + clientUpdateCount + " student records processed");
 	}
 
@@ -170,14 +171,15 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, ": " + e.getMessage());
 		}
 
-		sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + clientUpdateCount + " adult records processed");
 	}
 
@@ -232,7 +234,7 @@ public class UpdateRecordsInSalesForce {
 					Contact cTemp = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
 							inputModel.getFullName(), "", allContacts);
 					if (cTemp.getContact_Type__c() != null && cTemp.getContact_Type__c().equals("Student")) {
-						sqlDb.insertLogData(LogDataModel.BLANK_EVENT_NAME_FOR_ATTENDANCE,
+						MySqlDbLogging.insertLogData(LogDataModel.BLANK_EVENT_NAME_FOR_ATTENDANCE,
 								new StudentNameModel(inputModel.getFullName(), "", false),
 								Integer.parseInt(inputModel.getClientID()),
 								" on " + inputModel.getServiceDate() + ", " + inputModel.getServiceName());
@@ -244,14 +246,14 @@ public class UpdateRecordsInSalesForce {
 				if (locCode == null) {
 					// Location code not valid, report error if '@' in event name
 					if (inputModel.getEventName() != null && inputModel.getEventName().contains("@"))
-						sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_INVALID,
+						MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_INVALID,
 								new StudentNameModel(inputModel.getFullName(), "", false),
 								Integer.parseInt(inputModel.getClientID()),
 								" for event " + inputModel.getEventName() + " (" + inputModel.getServiceDate() + ")");
 
 				} else if (!LocationLookup.findLocationCodeMatch(locCode, inputModel.getLocation())) {
 					// Location code is valid, but does not match event location
-					sqlDb.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_MISMATCH,
+					MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_MISMATCH,
 							new StudentNameModel(inputModel.getFullName(), "", false),
 							Integer.parseInt(inputModel.getClientID()),
 							" for event " + inputModel.getEventName() + ", " + inputModel.getLocation());
@@ -334,33 +336,33 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						"");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR,
+						new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 		}
 
-		sqlDb.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + attendanceUpsertCount + " records processed");
+		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false),
+				0, ", " + attendanceUpsertCount + " records processed");
 
 		// Update modified clients to SalesForce
 		if (workShopGrads.size() > 0) {
 			upsertContactRecordList(workShopGrads, "WorkS grad");
-			sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 					", " + clientUpdateCount + " WorkShop grad records processed");
 		}
 		if (classGrads.size() > 0) {
 			clientUpdateCount = 0;
 			upsertGradList(classGrads, allContacts);
-			sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 					", " + clientUpdateCount + " Class grad records processed");
 		}
 		if (repoNames.size() > 0) {
 			clientUpdateCount = 0;
 			upsertRepoList(repoNames, allContacts);
-			sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 					", " + clientUpdateCount + " Last Repo records processed");
 		}
 	}
@@ -373,8 +375,9 @@ public class UpdateRecordsInSalesForce {
 		ArrayList<String> deleteList = new ArrayList<String>();
 
 		if (attendanceUpsertError) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP, new StudentNameModel("", "", false),
-					0, ", 0 records deleted: aborted due to attendance upsert error(s)");
+			MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP,
+					new StudentNameModel("", "", false), 0,
+					", 0 records deleted: aborted due to attendance upsert error(s)");
 			return;
 		}
 
@@ -401,12 +404,12 @@ public class UpdateRecordsInSalesForce {
 							StudentImportModel student = ListUtilities.findClientIDInPike13List(a.getFront_Desk_ID__c(),
 									studentList);
 							if (student != null)
-								sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
+								MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
 										new StudentNameModel(student.getFirstName(), student.getLastName(), false),
 										Integer.parseInt(a.getFront_Desk_ID__c()),
 										" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate);
 							else
-								sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
+								MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
 										new StudentNameModel("", "", false), Integer.parseInt(a.getFront_Desk_ID__c()),
 										" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate);
 						}
@@ -426,8 +429,8 @@ public class UpdateRecordsInSalesForce {
 			e.printStackTrace();
 		}
 
-		sqlDb.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP, new StudentNameModel("", "", false), 0,
-				", " + attendanceDeleteCount + " records deleted");
+		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP,
+				new StudentNameModel("", "", false), 0, ", " + attendanceDeleteCount + " records deleted");
 	}
 
 	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts,
@@ -450,7 +453,7 @@ public class UpdateRecordsInSalesForce {
 
 					// TA's must have valid SFClientID that is different from ClientID
 					if (clientID.equals(staff.getSfClientID())) {
-						sqlDb.insertLogData(LogDataModel.MISSING_SF_CLIENT_ID_FOR_TA,
+						MySqlDbLogging.insertLogData(LogDataModel.MISSING_SF_CLIENT_ID_FOR_TA,
 								new StudentNameModel(firstName, staff.getLastName(), false), Integer.parseInt(clientID),
 								" for " + staff.getFullName());
 						continue;
@@ -478,14 +481,15 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, ": " + e.getMessage());
 		}
 
-		sqlDb.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + clientUpdateCount + " staff records processed");
 	}
 
@@ -565,8 +569,8 @@ public class UpdateRecordsInSalesForce {
 			e.printStackTrace();
 		}
 
-		sqlDb.insertLogData(LogDataModel.SALES_FORCE_STAFF_HOURS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + staffHoursUpsertCount + " records processed");
+		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_STAFF_HOURS_UPDATED, new StudentNameModel("", "", false),
+				0, ", " + staffHoursUpsertCount + " records processed");
 	}
 
 	private Staff_Hours__c createStaffHoursRecord(SalesForceStaffHoursModel inputModel, Contact c) {
@@ -658,12 +662,12 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (ConnectionException e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR, new StudentNameModel("", "", false),
-						0, "");
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR,
+						new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR, new StudentNameModel("", "", false),
-						0, ": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
 
@@ -677,7 +681,7 @@ public class UpdateRecordsInSalesForce {
 
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
-					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR,
+					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_CLIENTS_ERROR,
 							new StudentNameModel(records[i].getFirstName(), records[i].getLastName(), false), clientID,
 							": " + errors[j].getMessage());
 				}
@@ -696,11 +700,11 @@ public class UpdateRecordsInSalesForce {
 		} catch (ConnectionException e) {
 			attendanceUpsertError = true;
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
 						new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
 						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
@@ -717,7 +721,7 @@ public class UpdateRecordsInSalesForce {
 				attendanceUpsertError = true;
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
-					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
 							new StudentNameModel("", "", false), clientID, ": " + errors[j].getMessage());
 				}
 			} else
@@ -734,11 +738,11 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (ConnectionException e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
 						new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
 						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
@@ -748,7 +752,7 @@ public class UpdateRecordsInSalesForce {
 			if (!deleteResults[i].isSuccess()) {
 				Error[] errors = deleteResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
-					sqlDb.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
+					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
 							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
 				}
 			} else
@@ -765,11 +769,11 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (ConnectionException e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
 						new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
 						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
@@ -779,7 +783,7 @@ public class UpdateRecordsInSalesForce {
 			if (!upsertResults[i].isSuccess()) {
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
-					sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
+					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_STAFF_HOURS_ERROR,
 							new StudentNameModel("", "", false),
 							Integer.parseInt(records[i].getStaff_Name__r().getFront_Desk_Id__c()),
 							" (" + records[i].getSchedule_client_ID__c() + "): " + errors[j].getMessage());
@@ -1091,11 +1095,11 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (ConnectionException e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
 						new StudentNameModel(firstName, lastName, false), clientID, " for " + account.getName());
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
 						new StudentNameModel(firstName, lastName, false), clientID,
 						" for " + account.getName() + ": " + e.getMessage());
 			return false;
@@ -1103,7 +1107,7 @@ public class UpdateRecordsInSalesForce {
 
 		// check the returned results for any errors
 		if (saveResults[0].isSuccess()) {
-			sqlDb.insertLogData(LogDataModel.CREATE_SALES_FORCE_ACCOUNT,
+			MySqlDbLogging.insertLogData(LogDataModel.CREATE_SALES_FORCE_ACCOUNT,
 					new StudentNameModel(firstName, lastName, false), clientID,
 					" for " + firstName + " " + lastName + ": " + account.getName());
 			return true;
@@ -1111,7 +1115,7 @@ public class UpdateRecordsInSalesForce {
 		} else {
 			Error[] errors = saveResults[0].getErrors();
 			for (int j = 0; j < errors.length; j++) {
-				sqlDb.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
 						new StudentNameModel(firstName, lastName, false), clientID,
 						" for " + account.getName() + ": " + errors[j].getMessage());
 			}
@@ -1128,7 +1132,7 @@ public class UpdateRecordsInSalesForce {
 		// Check if student-teacher or parent
 		if (staff.getFirstName().startsWith("TA-") || staff.isAlsoClient()) {
 			// All TA's and existing clients must already have an account
-			sqlDb.insertLogData(LogDataModel.MISSING_ACCOUNT_FOR_TA_OR_PARENT,
+			MySqlDbLogging.insertLogData(LogDataModel.MISSING_ACCOUNT_FOR_TA_OR_PARENT,
 					new StudentNameModel(staff.getFullName(), "", false), 0, " " + staff.getFullName());
 			return null;
 		}
@@ -1152,7 +1156,7 @@ public class UpdateRecordsInSalesForce {
 		// Now that account has been created, need to get account from SF again
 		account = getRecords.getSalesForceAccountByName(acctFamilyName);
 		if (account == null || account.getName().equals("")) {
-			sqlDb.insertLogData(LogDataModel.UPSERTED_ACCOUNT_RETRIEVAL_ERROR,
+			MySqlDbLogging.insertLogData(LogDataModel.UPSERTED_ACCOUNT_RETRIEVAL_ERROR,
 					new StudentNameModel(staff.getFullName(), "", false), 0, " for " + acctFamilyName);
 			return null;
 		}

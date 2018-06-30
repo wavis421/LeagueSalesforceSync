@@ -8,6 +8,7 @@ import com.sforce.soap.enterprise.sobject.Contact;
 import model.AttendanceEventModel;
 import model.LocationLookup;
 import model.MySqlDatabase;
+import model.MySqlDbLogging;
 import model.SalesForceAttendanceModel;
 import model.StaffMemberModel;
 import model.StudentImportModel;
@@ -31,14 +32,14 @@ public class ListUtilities {
 		// -1 indicates error not to be posted
 		if (errorCode >= 0) {
 			if (clientName == null || clientName.startsWith("null"))
-				sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
+				MySqlDbLogging.insertLogData(errorCode, new StudentNameModel("", "", false), Integer.parseInt(clientID),
 						", ClientID " + clientID);
 			else if (!eventName.equals(""))
-				sqlDb.insertLogData(errorCode, new StudentNameModel(clientName, "", false), Integer.parseInt(clientID),
-						", " + eventName);
+				MySqlDbLogging.insertLogData(errorCode, new StudentNameModel(clientName, "", false),
+						Integer.parseInt(clientID), ", " + eventName);
 			else
-				sqlDb.insertLogData(errorCode, new StudentNameModel(clientName, "", false), Integer.parseInt(clientID),
-						", ClientID " + clientID + " " + clientName);
+				MySqlDbLogging.insertLogData(errorCode, new StudentNameModel(clientName, "", false),
+						Integer.parseInt(clientID), ", ClientID " + clientID + " " + clientName);
 		}
 		return null;
 	}
@@ -102,7 +103,7 @@ public class ListUtilities {
 				if (pos > 0)
 					eventName = eventName.substring(0, pos).trim();
 			}
-			sqlDb.insertLogData(errorCode, new StudentNameModel(name, "", false), Integer.parseInt(clientID),
+			MySqlDbLogging.insertLogData(errorCode, new StudentNameModel(name, "", false), Integer.parseInt(clientID),
 					" for " + eventName + " on " + serviceDate);
 		}
 		return null;

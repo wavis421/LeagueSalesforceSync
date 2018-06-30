@@ -15,6 +15,7 @@ import com.sforce.ws.ConnectorConfig;
 import model.LocationLookup;
 import model.LogDataModel;
 import model.MySqlDatabase;
+import model.MySqlDbLogging;
 import model.StudentNameModel;
 
 public class SalesForceApi {
@@ -47,7 +48,9 @@ public class SalesForceApi {
 		today = t.toString("yyyy-MM-dd");
 		startDate = t.minusDays(DATE_RANGE_PAST_IN_DAYS).toString("yyyy-MM-dd");
 		endDate = t.plusDays(DATE_RANGE_FUTURE_IN_DAYS).toString("yyyy-MM-dd");
-		sqlDb.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
+
+		new MySqlDbLogging(sqlDb);
+		MySqlDbLogging.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
 				" from " + startDate + " to " + endDate + " ***");
 
 		// Connect to Pike13
@@ -96,13 +99,13 @@ public class SalesForceApi {
 	private static void exitProgram(int errorCode, String errorMessage) {
 		if (errorCode == -1) {
 			// Success
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_COMPLETE, new StudentNameModel("", "", false), 0,
-					" from " + startDate + " to " + endDate + " ***");
+			MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_IMPORT_COMPLETE, new StudentNameModel("", "", false),
+					0, " from " + startDate + " to " + endDate + " ***");
 		} else {
 			// Failure
-			sqlDb.insertLogData(errorCode, new StudentNameModel("", "", false), 0, ": " + errorMessage);
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_IMPORT_ABORTED, new StudentNameModel("", "", false), 0,
-					" from " + startDate + " to " + endDate + " ***");
+			MySqlDbLogging.insertLogData(errorCode, new StudentNameModel("", "", false), 0, ": " + errorMessage);
+			MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_IMPORT_ABORTED, new StudentNameModel("", "", false),
+					0, " from " + startDate + " to " + endDate + " ***");
 		}
 		sqlDb.disconnectDatabase();
 		System.exit(0);

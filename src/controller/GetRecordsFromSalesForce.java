@@ -9,6 +9,7 @@ import com.sforce.soap.enterprise.sobject.Contact;
 
 import model.LogDataModel;
 import model.MySqlDatabase;
+import model.MySqlDbLogging;
 import model.StudentNameModel;
 
 public class GetRecordsFromSalesForce {
@@ -38,8 +39,8 @@ public class GetRecordsFromSalesForce {
 			}
 
 		} catch (Exception e) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CONTACTS_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-					": " + e.getMessage());
+			MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_CONTACTS_IMPORT_ERROR,
+					new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return null;
 		}
 
@@ -73,8 +74,8 @@ public class GetRecordsFromSalesForce {
 			}
 
 		} catch (Exception e) {
-			sqlDb.insertLogData(LogDataModel.SALES_FORCE_CONTACTS_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-					": " + e.getMessage());
+			MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_CONTACTS_IMPORT_ERROR,
+					new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return null;
 		}
 
@@ -98,11 +99,12 @@ public class GetRecordsFromSalesForce {
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
 				e.printStackTrace();
-				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0, "");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, "");
 
 			} else
-				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, ": " + e.getMessage());
 			return null;
 		}
 
@@ -120,8 +122,8 @@ public class GetRecordsFromSalesForce {
 			if (queryResults.getSize() > 0) {
 				account = (Account) queryResults.getRecords()[0];
 				if (queryResults.getSize() > 1)
-					sqlDb.insertLogData(LogDataModel.DUPLICATE_SF_ACCOUNT_NAME, new StudentNameModel("", "", false), 0,
-							" '" + accountMgrName + "'");
+					MySqlDbLogging.insertLogData(LogDataModel.DUPLICATE_SF_ACCOUNT_NAME,
+							new StudentNameModel("", "", false), 0, " '" + accountMgrName + "'");
 			} else {
 				account = new Account();
 				account.setName("");
@@ -129,12 +131,12 @@ public class GetRecordsFromSalesForce {
 
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
-				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						" for " + accountMgrName);
+				MySqlDbLogging.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, " for " + accountMgrName);
 				e.printStackTrace();
 			} else
-				sqlDb.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
-						" for " + accountMgrName + ": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_ACCOUNT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, " for " + accountMgrName + ": " + e.getMessage());
 		}
 
 		return account;
