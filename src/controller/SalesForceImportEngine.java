@@ -28,7 +28,7 @@ public class SalesForceImportEngine {
 	public void updateSalesForce(String today, String startDate, String endDate) {
 		// Instantiate get & update classes
 		GetRecordsFromSalesForce getRecords = new GetRecordsFromSalesForce(sqlDb, salesForceApi);
-		UpdateRecordsInSalesForce updateRecords = new UpdateRecordsInSalesForce(sqlDb, salesForceApi, getRecords);
+		UpdateRecordsInSalesForce updateRecords = new UpdateRecordsInSalesForce(salesForceApi, getRecords);
 		ListUtilities.initDatabase(sqlDb);
 
 		// Get SF contacts and accounts and store in list
@@ -64,9 +64,10 @@ public class SalesForceImportEngine {
 		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
 
 		if (pike13Attendance != null && dbAttendanceList != null && sfContactList != null && sfAllContactList != null
-				&& pike13StaffMembers != null) {
+				&& pike13StudentContactList != null && pike13StaffMembers != null) {
 			// (2) Update attendance records
-			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList, sfAllContactList, pike13StaffMembers);
+			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList, sfAllContactList,
+					pike13StudentContactList, pike13StaffMembers);
 
 			// (3) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);

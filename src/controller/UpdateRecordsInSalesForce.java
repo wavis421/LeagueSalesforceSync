@@ -23,7 +23,6 @@ import com.sforce.ws.ConnectionException;
 import model.AttendanceEventModel;
 import model.LocationLookup;
 import model.LogDataModel;
-import model.MySqlDatabase;
 import model.MySqlDbLogging;
 import model.SalesForceAttendanceModel;
 import model.SalesForceStaffHoursModel;
@@ -37,10 +36,10 @@ public class UpdateRecordsInSalesForce {
 	private static final String RECORD_TYPE_ID_STUDENT = "012o000000089x0AAA";
 	private static final String RECORD_TYPE_ID_ADULT = "012o000000089wzAAA";
 	private static final int MAX_SALESFORCE_FIELD_LENGTH = 100;
+	private static final int MAX_BILLING_NOTES_FIELD_LENGTH = 100;
 	private static final String ADMIN_STAFF_CLIENT_ID = "999999";
 	private static final String ADMIN_STAFF_NAME = "Staff Admin";
 
-	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
 	private GetRecordsFromSalesForce getRecords;
 
@@ -50,9 +49,7 @@ public class UpdateRecordsInSalesForce {
 	private int attendanceDeleteCount = 0;
 	private boolean attendanceUpsertError = false;
 
-	public UpdateRecordsInSalesForce(MySqlDatabase sqlDb, EnterpriseConnection connection,
-			GetRecordsFromSalesForce getRecords) {
-		this.sqlDb = sqlDb;
+	public UpdateRecordsInSalesForce(EnterpriseConnection connection, GetRecordsFromSalesForce getRecords) {
 		this.connection = connection;
 		this.getRecords = getRecords;
 	}
@@ -211,12 +208,14 @@ public class UpdateRecordsInSalesForce {
 
 	public void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
 			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts,
-			ArrayList<StaffMemberModel> staffMembers) {
+			ArrayList<StudentImportModel> pike13Students, ArrayList<StaffMemberModel> staffMembers) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
 		ArrayList<ContactModel> classGrads = new ArrayList<ContactModel>();
 		ArrayList<ContactModel> repoNames = new ArrayList<ContactModel>();
 		clientUpdateCount = 0;
+		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
+				.toString("yyyy-MM-dd");
 
 		try {
 			for (int i = 0; i < pike13Attendance.size(); i++) {
@@ -284,6 +283,17 @@ public class UpdateRecordsInSalesForce {
 					if (attend.getRepoName() != null && !attend.getRepoName().equals("")) {
 						a.setRepo_Name__c(attend.getRepoName());
 						updateRepoName(repoNames, inputModel, attend.getRepoName());
+					}
+				}
+				if (inputModel.getServiceDate().compareTo(startBillingDate) >= 0) {
+					StudentImportModel student = ListUtilities.findClientIDInPike13List(inputModel.getClientID(),
+							pike13Students);
+					if (student != null) {
+						if (student.getFinancialAidPercent().length() > MAX_BILLING_NOTES_FIELD_LENGTH)
+							a.setBilling_Note__c(
+									student.getFinancialAidPercent().substring(0, MAX_BILLING_NOTES_FIELD_LENGTH));
+						else
+							a.setBilling_Note__c(student.getFinancialAidPercent());
 					}
 				}
 				String newStaff = parseTeacherString(inputModel.getStaff(), a, staffMembers);
@@ -939,8 +949,8 @@ public class UpdateRecordsInSalesForce {
 
 		c.setAccountId(account.getId());
 		c.setFront_Desk_Id__c(String.valueOf(contact.getClientID()));
-		c.setFirstName(contact.getFirstName());
-		c.setLastName(contact.getLastName());
+		c.setFirstName(camelCase(contact.getFirstName().trim()));
+		c.setLastName(camelCase(contact.getLastName().trim()));
 		if (adult) {
 			c.setContact_Type__c("Adult");
 			c.setRecordTypeId(RECORD_TYPE_ID_ADULT);
@@ -1020,8 +1030,8 @@ public class UpdateRecordsInSalesForce {
 
 		c.setAccountId(accountID);
 		c.setFront_Desk_Id__c(clientID);
-		c.setFirstName(firstName);
-		c.setLastName(staff.getLastName());
+		c.setFirstName(camelCase(firstName.trim()));
+		c.setLastName(camelCase(staff.getLastName().trim()));
 		c.setContact_Type__c(contactType);
 		if (staff.getEmail() != null && contactType.equals("Adult"))
 			c.setEmail(staff.getEmail());
@@ -1231,7 +1241,7 @@ public class UpdateRecordsInSalesForce {
 			return null;
 		}
 
-		mailAddr.setState(state);
+		mailAddr.setState("CA");
 		address = address.substring(idx + 1).trim();
 
 		// Find zip, make sure not to include country
