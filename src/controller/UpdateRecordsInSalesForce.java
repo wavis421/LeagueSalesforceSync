@@ -229,6 +229,7 @@ public class UpdateRecordsInSalesForce {
 
 				// Report error if event name is blank
 				String locCode = null;
+				String eventName2 = null;
 				if (inputModel.getEventName() == null || inputModel.getEventName().equals("")) {
 					Contact cTemp = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
 							inputModel.getFullName(), "", allContacts);
@@ -237,6 +238,7 @@ public class UpdateRecordsInSalesForce {
 								new StudentNameModel(inputModel.getFullName(), "", false),
 								Integer.parseInt(inputModel.getClientID()),
 								" on " + inputModel.getServiceDate() + ", " + inputModel.getServiceName());
+						eventName2 = inputModel.getServiceName();
 					}
 				} else
 					locCode = ListUtilities.findLocCodeInList(inputModel.getEventName());
@@ -260,7 +262,10 @@ public class UpdateRecordsInSalesForce {
 
 				Student_Attendance__c a = new Student_Attendance__c();
 				a.setContact__r(c);
-				a.setEvent_Name__c(inputModel.getEventName());
+				if (eventName2 != null)
+					a.setEvent_Name__c(eventName2);
+				else
+					a.setEvent_Name__c(inputModel.getEventName());
 				a.setService_Name__c(inputModel.getServiceName());
 				if (inputModel.getEventType() != null) {
 					if (inputModel.getEventType().length() > 6) {
