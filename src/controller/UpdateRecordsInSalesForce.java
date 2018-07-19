@@ -881,12 +881,13 @@ public class UpdateRecordsInSalesForce {
 			if (dupGrad == null) {
 				// Not already in list, so add
 				graduates.add(new ContactModel(inputModel.getClientID(), inputModel.getEventName(),
-						inputModel.getServiceDate()));
+						inputModel.getServiceDate(), inputModel.getServiceTime()));
 
 			} else if (inputModel.getServiceDate().compareTo(dupGrad.getServiceDate()) > 0) {
 				// This client is already in list and date is later, so update
 				dupGrad.setStringField(inputModel.getEventName());
 				dupGrad.setServiceDate(inputModel.getServiceDate());
+				dupGrad.setServiceTime(inputModel.getServiceTime());
 			}
 		}
 	}
@@ -923,12 +924,13 @@ public class UpdateRecordsInSalesForce {
 
 		if (dupContact == null) {
 			// Not already in list, so add
-			repoList.add(new ContactModel(inputModel.getClientID(), repoName, inputModel.getServiceDate()));
+			repoList.add(new ContactModel(inputModel.getClientID(), repoName, inputModel.getServiceDate(), inputModel.getServiceTime()));
 
 		} else if (inputModel.getServiceDate().compareTo(dupContact.getServiceDate()) > 0) {
 			// This client is already in list and date is later, so update
 			dupContact.setStringField(repoName);
 			dupContact.setServiceDate(inputModel.getServiceDate());
+			dupContact.setServiceTime(inputModel.getServiceTime());
 		}
 	}
 
@@ -940,6 +942,7 @@ public class UpdateRecordsInSalesForce {
 			Contact c = new Contact();
 			c.setFront_Desk_Id__c(repo.getClientID());
 			c.setLast_Repo_Commit__c(repo.getStringField());
+			c.setLast_Class_Visit_Time__c(repo.getServiceTime());
 
 			repoContacts.add(c);
 		}
@@ -1386,12 +1389,13 @@ public class UpdateRecordsInSalesForce {
 	 */
 	private class ContactModel {
 		// Model for storing temp data being upserted to SalesForce Contacts
-		String clientID, stringField, serviceDate;
+		String clientID, stringField, serviceDate, serviceTime;
 
-		ContactModel(String clientID, String field1, String serviceDate) {
+		ContactModel(String clientID, String field1, String serviceDate, String serviceTime) {
 			this.clientID = clientID;
 			this.stringField = field1;
 			this.serviceDate = serviceDate;
+			this.serviceTime = serviceTime;
 		}
 
 		public String getClientID() {
@@ -1406,12 +1410,20 @@ public class UpdateRecordsInSalesForce {
 			return serviceDate;
 		}
 
+		public String getServiceTime() {
+			return serviceTime;
+		}
+
 		public void setStringField(String field1) {
 			this.stringField = field1;
 		}
 
 		public void setServiceDate(String serviceDate) {
 			this.serviceDate = serviceDate;
+		}
+
+		public void setServiceTime(String serviceTime) {
+			this.serviceTime = serviceTime;
 		}
 	}
 }
