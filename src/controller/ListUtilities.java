@@ -7,7 +7,6 @@ import com.sforce.soap.enterprise.sobject.Contact;
 
 import model.AttendanceEventModel;
 import model.LocationLookup;
-import model.MySqlDatabase;
 import model.MySqlDbLogging;
 import model.SalesForceAttendanceModel;
 import model.StaffMemberModel;
@@ -15,11 +14,6 @@ import model.StudentImportModel;
 import model.StudentNameModel;
 
 public class ListUtilities {
-	private static MySqlDatabase sqlDb;
-
-	public static void initDatabase(MySqlDatabase db) {
-		sqlDb = db;
-	}
 
 	public static Contact findClientIDInList(int errorCode, String clientID, String clientName, String eventName,
 			ArrayList<Contact> contactList) {

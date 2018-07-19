@@ -29,7 +29,6 @@ public class SalesForceImportEngine {
 		// Instantiate get & update classes
 		GetRecordsFromSalesForce getRecords = new GetRecordsFromSalesForce(sqlDb, salesForceApi);
 		UpdateRecordsInSalesForce updateRecords = new UpdateRecordsInSalesForce(salesForceApi, getRecords);
-		ListUtilities.initDatabase(sqlDb);
 
 		// Get SF contacts and accounts and store in list
 		ArrayList<Contact> sfContactList = getRecords.getSalesForceContacts(); // Students & teachers
