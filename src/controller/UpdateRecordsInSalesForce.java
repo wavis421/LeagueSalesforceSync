@@ -213,6 +213,7 @@ public class UpdateRecordsInSalesForce {
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
 		ArrayList<ContactModel> classGrads = new ArrayList<ContactModel>();
 		ArrayList<ContactModel> repoNames = new ArrayList<ContactModel>();
+		ArrayList<ContactModel> serviceTimes = new ArrayList<ContactModel>();
 		clientUpdateCount = 0;
 		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
 				.toString("yyyy-MM-dd");
@@ -310,9 +311,11 @@ public class UpdateRecordsInSalesForce {
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
 
-				// Update contact's Intro to Java workshop grad dates & class levels
+				// Update contact's Intro to Java workshop grad dates, class levels & times
 				updateWorkshopGrad(workShopGrads, inputModel);
 				updateClassLevel(classGrads, inputModel);
+				if (attend != null && inputModel.getStatus().equals("completed"))
+					updateServiceTime(serviceTimes, inputModel);
 
 				recordList.add(a);
 			}
@@ -379,6 +382,10 @@ public class UpdateRecordsInSalesForce {
 			upsertRepoList(repoNames, allContacts);
 			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 					", " + clientUpdateCount + " Last Repo records processed");
+		}
+		if (serviceTimes.size() > 0) {
+			clientUpdateCount = 0;
+			upsertServiceTimeList(serviceTimes, allContacts);
 		}
 	}
 
@@ -924,7 +931,8 @@ public class UpdateRecordsInSalesForce {
 
 		if (dupContact == null) {
 			// Not already in list, so add
-			repoList.add(new ContactModel(inputModel.getClientID(), repoName, inputModel.getServiceDate(), inputModel.getServiceTime()));
+			repoList.add(new ContactModel(inputModel.getClientID(), repoName, inputModel.getServiceDate(),
+					inputModel.getServiceTime()));
 
 		} else if (inputModel.getServiceDate().compareTo(dupContact.getServiceDate()) > 0) {
 			// This client is already in list and date is later, so update
@@ -942,12 +950,45 @@ public class UpdateRecordsInSalesForce {
 			Contact c = new Contact();
 			c.setFront_Desk_Id__c(repo.getClientID());
 			c.setLast_Repo_Commit__c(repo.getStringField());
-			c.setLast_Class_Visit_Time__c(repo.getServiceTime());
 
 			repoContacts.add(c);
 		}
 		if (repoContacts.size() > 0) {
 			upsertContactRecordList(repoContacts, "Repo Names");
+		}
+	}
+
+	private void updateServiceTime(ArrayList<ContactModel> timeList, SalesForceAttendanceModel inputModel) {
+		// Store last Service Time for this student
+		ContactModel dupContact = findFieldInContactList(inputModel.getClientID(), timeList);
+
+		if (dupContact == null) {
+			// Not already in list, so add
+			timeList.add(new ContactModel(inputModel.getClientID(), "", inputModel.getServiceDate(),
+					inputModel.getServiceTime()));
+
+		} else if ((inputModel.getServiceDate().compareTo(dupContact.getServiceDate()) > 0)
+				|| (inputModel.getServiceDate().compareTo(dupContact.getServiceDate()) == 0
+						&& inputModel.getServiceTime().compareTo(dupContact.getServiceTime()) > 0)) {
+			// This client is already in list and date/time is later, so update
+			dupContact.setServiceDate(inputModel.getServiceDate());
+			dupContact.setServiceTime(inputModel.getServiceTime());
+		}
+	}
+
+	private void upsertServiceTimeList(ArrayList<ContactModel> timeList, ArrayList<Contact> contactList) {
+		ArrayList<Contact> timeContacts = new ArrayList<Contact>();
+
+		for (ContactModel contact : timeList) {
+			// Create contact
+			Contact c = new Contact();
+			c.setFront_Desk_Id__c(contact.getClientID());
+			c.setLast_Class_Visit_Time__c(contact.getServiceTime());
+
+			timeContacts.add(c);
+		}
+		if (timeContacts.size() > 0) {
+			upsertContactRecordList(timeContacts, "Service Time");
 		}
 	}
 
