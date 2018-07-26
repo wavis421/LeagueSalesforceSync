@@ -23,6 +23,7 @@ import com.sforce.ws.ConnectionException;
 import model.AttendanceEventModel;
 import model.LocationLookup;
 import model.LogDataModel;
+import model.MySqlDatabase;
 import model.MySqlDbLogging;
 import model.SalesForceAttendanceModel;
 import model.SalesForceStaffHoursModel;
@@ -40,6 +41,7 @@ public class UpdateRecordsInSalesForce {
 	private static final String ADMIN_STAFF_CLIENT_ID = "999999";
 	private static final String ADMIN_STAFF_NAME = "Staff Admin";
 
+	private MySqlDatabase mySqlDb;
 	private EnterpriseConnection connection;
 	private GetRecordsFromSalesForce getRecords;
 
@@ -49,7 +51,9 @@ public class UpdateRecordsInSalesForce {
 	private int attendanceDeleteCount = 0;
 	private boolean attendanceUpsertError = false;
 
-	public UpdateRecordsInSalesForce(EnterpriseConnection connection, GetRecordsFromSalesForce getRecords) {
+	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, EnterpriseConnection connection,
+			GetRecordsFromSalesForce getRecords) {
+		this.mySqlDb = mySqlDb;
 		this.connection = connection;
 		this.getRecords = getRecords;
 	}
@@ -372,6 +376,11 @@ public class UpdateRecordsInSalesForce {
 					", " + clientUpdateCount + " WorkShop grad records processed");
 		}
 		if (classGrads.size() > 0) {
+			// Update 'last class event' in SQL database for each student
+			for (ContactModel c : classGrads)
+				mySqlDb.updateLastEventName(Integer.parseInt(c.getClientID()), c.getStringField());
+
+			// Update grads in SF who have moved to different level
 			clientUpdateCount = 0;
 			upsertGradList(classGrads, allContacts);
 			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
