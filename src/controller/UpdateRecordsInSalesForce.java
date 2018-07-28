@@ -15,12 +15,14 @@ import com.sforce.soap.enterprise.SaveResult;
 import com.sforce.soap.enterprise.UpsertResult;
 import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
+import com.sforce.soap.enterprise.sobject.Contact_Diary__c;
 import com.sforce.soap.enterprise.sobject.SObject;
 import com.sforce.soap.enterprise.sobject.Staff_Hours__c;
 import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
 import com.sforce.ws.ConnectionException;
 
 import model.AttendanceEventModel;
+import model.GraduationModel;
 import model.LocationLookup;
 import model.LogDataModel;
 import model.MySqlDatabase;
@@ -136,7 +138,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " student records processed");
+				", " + clientUpdateCount + " student record(s) processed");
 	}
 
 	public void updateAdults(ArrayList<StudentImportModel> pike13Students, ArrayList<StudentImportModel> pike13Adults,
@@ -181,7 +183,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " adult records processed");
+				", " + clientUpdateCount + " adult record(s) processed");
 	}
 
 	// TODO: Finish this. This method is not being called yet.
@@ -215,7 +217,7 @@ public class UpdateRecordsInSalesForce {
 			ArrayList<StudentImportModel> pike13Students, ArrayList<StaffMemberModel> staffMembers) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
-		ArrayList<ContactModel> classGrads = new ArrayList<ContactModel>();
+		ArrayList<ContactModel> classLevelChanges = new ArrayList<ContactModel>();
 		ArrayList<ContactModel> repoNames = new ArrayList<ContactModel>();
 		ArrayList<ContactModel> serviceTimes = new ArrayList<ContactModel>();
 		clientUpdateCount = 0;
@@ -317,7 +319,7 @@ public class UpdateRecordsInSalesForce {
 
 				// Update contact's Intro to Java workshop grad dates, class levels & times
 				updateWorkshopGrad(workShopGrads, inputModel);
-				updateClassLevel(classGrads, inputModel);
+				updateClassLevel(classLevelChanges, inputModel);
 				if (attend != null && inputModel.getStatus().equals("completed"))
 					updateServiceTime(serviceTimes, inputModel);
 
@@ -367,30 +369,30 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false),
-				0, ", " + attendanceUpsertCount + " records processed");
+				0, ", " + attendanceUpsertCount + " record(s) processed");
 
 		// Update modified clients to SalesForce
 		if (workShopGrads.size() > 0) {
 			upsertContactRecordList(workShopGrads, "WorkS grad");
 			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-					", " + clientUpdateCount + " WorkShop grad records processed");
+					", " + clientUpdateCount + " WorkShop grad record(s) processed");
 		}
-		if (classGrads.size() > 0) {
+		if (classLevelChanges.size() > 0) {
 			// Update 'last class event' in SQL database for each student
-			for (ContactModel c : classGrads)
-				mySqlDb.updateLastEventName(Integer.parseInt(c.getClientID()), c.getStringField());
+			for (ContactModel c : classLevelChanges)
+				mySqlDb.updateLastEventNameByStudent(Integer.parseInt(c.getClientID()), c.getStringField());
 
-			// Update grads in SF who have moved to different level
+			// Update students in SF who have moved to different level
 			clientUpdateCount = 0;
-			upsertGradList(classGrads, allContacts);
+			upsertClassLevelChanges(classLevelChanges, allContacts);
 			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-					", " + clientUpdateCount + " Class grad records processed");
+					", " + clientUpdateCount + " Class level changes processed");
 		}
 		if (repoNames.size() > 0) {
 			clientUpdateCount = 0;
 			upsertRepoList(repoNames, allContacts);
 			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-					", " + clientUpdateCount + " Last Repo records processed");
+					", " + clientUpdateCount + " Last Repo record(s) processed");
 		}
 		if (serviceTimes.size() > 0) {
 			clientUpdateCount = 0;
@@ -464,6 +466,50 @@ public class UpdateRecordsInSalesForce {
 				new StudentNameModel("", "", false), 0, ", " + attendanceDeleteCount + " records deleted");
 	}
 
+	public void updateGraduates(ArrayList<GraduationModel> gradStudents, ArrayList<Contact> sfContacts) {
+		ArrayList<Contact_Diary__c> recordList = new ArrayList<Contact_Diary__c>();
+		clientUpdateCount = 0;
+
+		try {
+			for (int i = 0; i < gradStudents.size(); i++) {
+				// Add each graduate student to SalesForce list
+				GraduationModel student = gradStudents.get(i);
+				String clientIdString = ((Integer) student.getClientID()).toString();
+
+				// Check if student contact is in SalesForce
+				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_GRADUATION,
+						clientIdString, student.getStudentName(), "", sfContacts);
+				if (c == null)
+					continue;
+
+				// Create contact and add to list
+				Contact_Diary__c diaryEntry = new Contact_Diary__c();
+				diaryEntry.setStudent_Contact__r(c);
+				diaryEntry.setDiary_Type__c("Level");
+				diaryEntry.setDescription__c("XYZ TEST 9"); // ("Level " + student.getGradLevel());
+				diaryEntry.setScore__c(((Integer) student.getScore()).toString());
+				diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
+				diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
+
+				recordList.add(diaryEntry);
+			}
+
+			upsertDiaryRecordList(recordList);
+
+		} catch (Exception e) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, "");
+				e.printStackTrace();
+			} else
+				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+						0, ": " + e.getMessage());
+		}
+
+		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+				", " + clientUpdateCount + " graduation record(s) processed");
+	}
+
 	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts,
 			ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
@@ -521,7 +567,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " staff records processed");
+				", " + clientUpdateCount + " staff record(s) processed");
 	}
 
 	public void updateStaffHours(ArrayList<StaffMemberModel> pike13StaffMembers,
@@ -601,7 +647,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_STAFF_HOURS_UPDATED, new StudentNameModel("", "", false),
-				0, ", " + staffHoursUpsertCount + " records processed");
+				0, ", " + staffHoursUpsertCount + " record(s) processed");
 	}
 
 	private Staff_Hours__c createStaffHoursRecord(SalesForceStaffHoursModel inputModel, Contact c) {
@@ -858,6 +904,61 @@ public class UpdateRecordsInSalesForce {
 			upsertClientRecords(recordArray);
 	}
 
+	private void upsertDiaryRecordList(ArrayList<Contact_Diary__c> recordList) {
+		Contact_Diary__c[] recordArray = new Contact_Diary__c[recordList.size()];
+		UpsertResult[] upsertResults = null;
+
+		// Copy contact diary to record array
+		for (int i = 0; i < recordList.size(); i++) {
+			recordArray[i] = recordList.get(i);
+		}
+
+		try {
+			// Update the records in Salesforce.com
+			upsertResults = connection.upsert("Id", recordArray);
+
+		} catch (ConnectionException e) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_DIARY_ERROR,
+						new StudentNameModel("", "", false), 0, "");
+				e.printStackTrace();
+
+			} else
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_DIARY_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
+			return;
+		}
+
+		// check the returned results for any errors
+		for (int i = 0; i < upsertResults.length; i++) {
+			int clientID = 0;
+			String clientIdString = recordArray[i].getStudent_Contact__r().getFront_Desk_Id__c();
+
+			// If client ID is numeric, then use this in error log
+			if (clientIdString.matches("\\d+"))
+				clientID = Integer.parseInt(clientIdString);
+
+			if (upsertResults[i].isSuccess()) {
+				if (clientID > 0) {
+					// Graduation diary entry successfully added to SF, so update SQL DB flag
+					String level = recordArray[i].getDescription__c();
+					String graduateName = recordArray[i].getStudent_Contact__r().getFull_Name__c();
+					
+					mySqlDb.updateGraduationField(clientID, "", level.substring(level.length() - 1),
+							MySqlDatabase.GRAD_MODEL_IN_SF_FIELD, true);
+					clientUpdateCount++;
+				}
+
+			} else {
+				Error[] errors = upsertResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_DIARY_ERROR,
+							new StudentNameModel("", "", false), clientID, ": " + errors[j].getMessage());
+				}
+			}
+		}
+	}
+
 	private void updateWorkshopGrad(ArrayList<Contact> workShopGrads, SalesForceAttendanceModel inputModel) {
 		// Check for null lists
 		if (inputModel.getEventName() == null || inputModel.getStatus() == null || inputModel.getServiceDate() == null)
@@ -886,17 +987,17 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	private void updateClassLevel(ArrayList<ContactModel> graduates, SalesForceAttendanceModel inputModel) {
+	private void updateClassLevel(ArrayList<ContactModel> students, SalesForceAttendanceModel inputModel) {
 		// If event is a regular class and is completed, add to grad list
 		if (inputModel.getEventName() != null && inputModel.getEventName().length() > 2
 				&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '9'
 				&& inputModel.getEventName().charAt(1) == '@' && inputModel.getStatus().equals("completed")) {
 
-			ContactModel dupGrad = findFieldInContactList(inputModel.getClientID(), graduates);
+			ContactModel dupGrad = findFieldInContactList(inputModel.getClientID(), students);
 
 			if (dupGrad == null) {
 				// Not already in list, so add
-				graduates.add(new ContactModel(inputModel.getClientID(), inputModel.getEventName(),
+				students.add(new ContactModel(inputModel.getClientID(), inputModel.getEventName(),
 						inputModel.getServiceDate(), inputModel.getServiceTime()));
 
 			} else if (inputModel.getServiceDate().compareTo(dupGrad.getServiceDate()) > 0) {
@@ -908,10 +1009,11 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	private void upsertGradList(ArrayList<ContactModel> gradList, ArrayList<Contact> contactList) {
+	private void upsertClassLevelChanges(ArrayList<ContactModel> studentList, ArrayList<Contact> contactList) {
 		ArrayList<Contact> gradContacts = new ArrayList<Contact>();
 
-		for (ContactModel grad : gradList) {
+		// Update current level for student when class level changes
+		for (ContactModel grad : studentList) {
 			// Get last level from SalesForce
 			String lastLevel = "";
 			Contact contact = ListUtilities.findClientIDInList(-1, grad.getClientID(), "", "", contactList);
@@ -929,7 +1031,7 @@ public class UpdateRecordsInSalesForce {
 			}
 		}
 		if (gradContacts.size() > 0) {
-			upsertContactRecordList(gradContacts, "Class grad");
+			upsertContactRecordList(gradContacts, "Class level change");
 		}
 	}
 

@@ -7,6 +7,7 @@ import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
 
 import model.AttendanceEventModel;
+import model.GraduationModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
 import model.SalesForceStaffHoursModel;
@@ -70,6 +71,12 @@ public class SalesForceImportEngine {
 
 			// (3) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);
+		}
+		
+		// === UPDATE GRADUATION DIARY ENTRIES ===
+		ArrayList<GraduationModel> gradList = sqlDb.getAllGradRecords();
+		if (gradList != null && gradList.size() > 0) {
+			updateRecords.updateGraduates(gradList, sfContactList);
 		}
 
 		// === UPDATE STAFF MEMBERS AND HOURS ===
