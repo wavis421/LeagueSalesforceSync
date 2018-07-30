@@ -469,14 +469,18 @@ public class UpdateRecordsInSalesForce {
 	public void updateGraduates(ArrayList<GraduationModel> gradStudents, ArrayList<Contact> sfContacts) {
 		ArrayList<Contact_Diary__c> recordList = new ArrayList<Contact_Diary__c>();
 		clientUpdateCount = 0;
+		Calendar today = convertDateStringToCalendar(
+				new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd"));
 
 		try {
 			for (int i = 0; i < gradStudents.size(); i++) {
 				// Add each graduate student to SalesForce list
 				GraduationModel student = gradStudents.get(i);
-				String clientIdString = ((Integer) student.getClientID()).toString();
+				if (student.isSfUpdated())
+					continue;
 
 				// Check if student contact is in SalesForce
+				String clientIdString = ((Integer) student.getClientID()).toString();
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_GRADUATION,
 						clientIdString, student.getStudentName(), "", sfContacts);
 				if (c == null)
@@ -490,8 +494,12 @@ public class UpdateRecordsInSalesForce {
 				diaryEntry.setScore__c(((Integer) student.getScore()).toString());
 				diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
 				diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
+				diaryEntry.setDiary_Date__c(today);
 
 				recordList.add(diaryEntry);
+				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_GRADUATION,
+						new StudentNameModel(student.getStudentName(), "", false), student.getClientID(),
+						" Level " + student.getGradLevel() + " on " + student.getEndDate());
 			}
 
 			upsertDiaryRecordList(recordList);
@@ -912,6 +920,7 @@ public class UpdateRecordsInSalesForce {
 		for (int i = 0; i < recordList.size(); i++) {
 			recordArray[i] = recordList.get(i);
 		}
+		System.out.println(recordList.size() + " Graduation records");
 
 		try {
 			// Update the records in Salesforce.com
@@ -943,8 +952,8 @@ public class UpdateRecordsInSalesForce {
 					// Graduation diary entry successfully added to SF, so update SQL DB flag
 					String level = recordArray[i].getDescription__c();
 					String graduateName = recordArray[i].getStudent_Contact__r().getFull_Name__c();
-					
-					mySqlDb.updateGraduationField(clientID, "", level.substring(level.length() - 1),
+
+					mySqlDb.updateGraduationField(clientID, graduateName, level.substring(level.length() - 1),
 							MySqlDatabase.GRAD_MODEL_IN_SF_FIELD, true);
 					clientUpdateCount++;
 				}
