@@ -229,6 +229,10 @@ public class UpdateRecordsInSalesForce {
 				// Add each Pike13 attendance record to SalesForce list
 				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
 
+				// Check for Visit ID null or blank. Visit ID is main key for upsert.
+				if (checkForEventIdNull(inputModel))
+					continue;
+
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE,
 						inputModel.getClientID(), inputModel.getFullName(), inputModel.getEventName(), contacts);
 				if (c == null)
@@ -400,6 +404,19 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
+	private boolean checkForEventIdNull(SalesForceAttendanceModel inputModel) {
+		if (inputModel.getVisitID() == null || inputModel.getVisitID().equals("null")
+				|| inputModel.getVisitID().equals("")) {
+			// No Visit ID. Ignore this record if status not these accepted values.
+			// This will occur for wait-listed students (states waiting, expired, other?).
+			if (!inputModel.getStatus().equals("completed") && !inputModel.getStatus().equals("late_canceled")
+					&& !inputModel.getStatus().equals("registered") && !inputModel.getStatus().equals("noshowed")) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void removeExtraAttendanceRecords(ArrayList<SalesForceAttendanceModel> pike13Attendance, String startDate,
 			String endDate, ArrayList<StudentImportModel> studentList) {
 		String serviceDate;
@@ -489,8 +506,10 @@ public class UpdateRecordsInSalesForce {
 				// Create contact and add to list
 				Contact_Diary__c diaryEntry = new Contact_Diary__c();
 				diaryEntry.setStudent_Contact__r(c);
+				diaryEntry.setId(clientIdString + student.getGradLevel());
 				diaryEntry.setDiary_Type__c("Level");
-				diaryEntry.setDescription__c("XYZ TEST 9"); // ("Level " + student.getGradLevel());
+				// TODO: Temporary for testing. Later change "XYZ TEST " to "Level "
+				diaryEntry.setDescription__c("XYZ TEST " + student.getGradLevel());
 				diaryEntry.setScore__c(((Integer) student.getScore()).toString());
 				diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
 				diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
