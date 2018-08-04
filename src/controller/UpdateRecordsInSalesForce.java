@@ -532,7 +532,7 @@ public class UpdateRecordsInSalesForce {
 						0, ": " + e.getMessage());
 		}
 
-		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+		MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + clientUpdateCount + " graduation record(s) processed");
 	}
 
