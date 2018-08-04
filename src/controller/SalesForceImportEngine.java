@@ -76,7 +76,9 @@ public class SalesForceImportEngine {
 		// === UPDATE GRADUATION DIARY ENTRIES ===
 		ArrayList<GraduationModel> gradList = sqlDb.getAllGradRecords();
 		if (gradList != null && gradList.size() > 0) {
+			// Update records, then remove any processed records
 			updateRecords.updateGraduates(gradList, sfContactList);
+			sqlDb.removeProcessedGraduations();
 		}
 
 		// === UPDATE STAFF MEMBERS AND HOURS ===
