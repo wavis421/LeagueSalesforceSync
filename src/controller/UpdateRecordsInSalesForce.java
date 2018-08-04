@@ -506,10 +506,9 @@ public class UpdateRecordsInSalesForce {
 				// Create contact and add to list
 				Contact_Diary__c diaryEntry = new Contact_Diary__c();
 				diaryEntry.setStudent_Contact__r(c);
-				diaryEntry.setId(clientIdString + student.getGradLevel());
+				diaryEntry.setPike_13_ID_Level__c(clientIdString + student.getGradLevel());
 				diaryEntry.setDiary_Type__c("Level");
-				// TODO: Temporary for testing. Later change "XYZ TEST " to "Level "
-				diaryEntry.setDescription__c("XYZ TEST " + student.getGradLevel());
+				diaryEntry.setDescription__c("Level " + student.getGradLevel());
 				diaryEntry.setScore__c(((Integer) student.getScore()).toString());
 				diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
 				diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
