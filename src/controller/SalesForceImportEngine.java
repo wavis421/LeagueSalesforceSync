@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import com.sforce.soap.enterprise.EnterpriseConnection;
 import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
+import com.sforce.soap.enterprise.sobject.Contact_Diary__c;
 
 import model.AttendanceEventModel;
 import model.GraduationModel;
@@ -72,12 +73,14 @@ public class SalesForceImportEngine {
 			// (3) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);
 		}
-		
+
 		// === UPDATE GRADUATION DIARY ENTRIES ===
+		ArrayList<Contact_Diary__c> sfDiaryList = getRecords.getSalesForceDiary();
 		ArrayList<GraduationModel> gradList = sqlDb.getAllGradRecords();
+
 		if (gradList != null && gradList.size() > 0) {
 			// Update records, then remove any processed records
-			updateRecords.updateGraduates(gradList, sfContactList);
+			updateRecords.updateGraduates(gradList, sfContactList, sfDiaryList);
 			sqlDb.removeProcessedGraduations();
 		}
 

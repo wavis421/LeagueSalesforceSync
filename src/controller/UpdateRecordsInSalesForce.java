@@ -483,7 +483,8 @@ public class UpdateRecordsInSalesForce {
 				new StudentNameModel("", "", false), 0, ", " + attendanceDeleteCount + " records deleted");
 	}
 
-	public void updateGraduates(ArrayList<GraduationModel> gradStudents, ArrayList<Contact> sfContacts) {
+	public void updateGraduates(ArrayList<GraduationModel> gradStudents, ArrayList<Contact> sfContacts,
+			ArrayList<Contact_Diary__c> sfDiary) {
 		ArrayList<Contact_Diary__c> recordList = new ArrayList<Contact_Diary__c>();
 		clientUpdateCount = 0;
 		Calendar today = convertDateStringToCalendar(
@@ -504,9 +505,11 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				// Create contact and add to list
+				String clientLevelKey = clientIdString + student.getGradLevel();
 				Contact_Diary__c diaryEntry = new Contact_Diary__c();
 				diaryEntry.setStudent_Contact__r(c);
-				diaryEntry.setPike_13_ID_Level__c(clientIdString + student.getGradLevel());
+				diaryEntry.setId(ListUtilities.findDiaryIdInList(clientLevelKey, sfDiary));
+				diaryEntry.setPike_13_ID_Level__c(clientLevelKey);
 				diaryEntry.setDiary_Type__c("Level");
 				diaryEntry.setDescription__c("Level " + student.getGradLevel());
 				diaryEntry.setScore__c(((Integer) student.getScore()).toString());

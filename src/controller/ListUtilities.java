@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
+import com.sforce.soap.enterprise.sobject.Contact_Diary__c;
 
 import model.AttendanceEventModel;
 import model.LocationLookup;
@@ -225,6 +226,15 @@ public class ListUtilities {
 			if (locPos >= 0) {
 				String locSubString = sourceString.substring(locPos + 1);
 				return locSubString.substring(0, locSubString.indexOf(" "));
+			}
+		}
+		return null;
+	}
+	
+	public static String findDiaryIdInList(String clientLevelKey, ArrayList<Contact_Diary__c> diaryList) {
+		for (Contact_Diary__c d : diaryList) {
+			if (clientLevelKey.equals(d.getPike_13_ID_Level__c())) {
+				return d.getId();
 			}
 		}
 		return null;
