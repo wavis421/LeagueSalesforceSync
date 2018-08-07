@@ -508,12 +508,15 @@ public class UpdateRecordsInSalesForce {
 				String clientLevelKey = clientIdString + student.getGradLevel();
 				Contact_Diary__c diaryEntry = new Contact_Diary__c();
 				diaryEntry.setStudent_Contact__r(c);
-				diaryEntry.setId(ListUtilities.findDiaryIdInList(clientLevelKey, sfDiary));
+				String id = ListUtilities.findDiaryIdInList(clientLevelKey, sfDiary);
+				if (id != null)
+					diaryEntry.setId(id);
 				diaryEntry.setPike_13_ID_Level__c(clientLevelKey);
 				diaryEntry.setDiary_Type__c("Level");
 				diaryEntry.setDescription__c("Level " + student.getGradLevel());
 				diaryEntry.setScore__c(((Integer) student.getScore()).toString());
-				diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
+				if (student.getStartDate() != null && !student.getStartDate().equals(""))
+					diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
 				diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
 				diaryEntry.setDiary_Date__c(today);
 
@@ -527,11 +530,11 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
 						0, "");
 				e.printStackTrace();
 			} else
-				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
 						0, ": " + e.getMessage());
 		}
 
