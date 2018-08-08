@@ -218,8 +218,6 @@ public class UpdateRecordsInSalesForce {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
 		ArrayList<ContactModel> classLevelChanges = new ArrayList<ContactModel>();
-		ArrayList<ContactModel> repoNames = new ArrayList<ContactModel>();
-		ArrayList<ContactModel> serviceTimes = new ArrayList<ContactModel>();
 		clientUpdateCount = 0;
 		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
 				.toString("yyyy-MM-dd");
@@ -296,10 +294,8 @@ public class UpdateRecordsInSalesForce {
 				if (attend != null) {
 					if (!attend.getGithubComments().equals(""))
 						a.setNote__c(attend.getGithubComments());
-					if (attend.getRepoName() != null && !attend.getRepoName().equals("")) {
+					if (attend.getRepoName() != null && !attend.getRepoName().equals(""))
 						a.setRepo_Name__c(attend.getRepoName());
-						updateRepoName(repoNames, inputModel, attend.getRepoName());
-					}
 				}
 				if (inputModel.getServiceDate().compareTo(startBillingDate) >= 0) {
 					StudentImportModel student = ListUtilities.findClientIDInPike13List(inputModel.getClientID(),
@@ -324,8 +320,6 @@ public class UpdateRecordsInSalesForce {
 				// Update contact's Intro to Java workshop grad dates, class levels & times
 				updateWorkshopGrad(workShopGrads, inputModel);
 				updateClassLevel(classLevelChanges, inputModel);
-				if (attend != null && inputModel.getStatus().equals("completed"))
-					updateServiceTime(serviceTimes, inputModel);
 
 				recordList.add(a);
 			}
@@ -385,22 +379,6 @@ public class UpdateRecordsInSalesForce {
 			// Update 'last class event' in SQL database for each student
 			for (ContactModel c : classLevelChanges)
 				mySqlDb.updateLastEventNameByStudent(Integer.parseInt(c.getClientID()), c.getStringField());
-
-			// Update students in SF who have moved to different level
-			clientUpdateCount = 0;
-			upsertClassLevelChanges(classLevelChanges, allContacts);
-			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-					", " + clientUpdateCount + " Class level changes processed");
-		}
-		if (repoNames.size() > 0) {
-			clientUpdateCount = 0;
-			upsertRepoList(repoNames, allContacts);
-			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-					", " + clientUpdateCount + " Last Repo record(s) processed");
-		}
-		if (serviceTimes.size() > 0) {
-			clientUpdateCount = 0;
-			upsertServiceTimeList(serviceTimes, allContacts);
 		}
 	}
 
@@ -1031,108 +1009,13 @@ public class UpdateRecordsInSalesForce {
 			if (dupGrad == null) {
 				// Not already in list, so add
 				students.add(new ContactModel(inputModel.getClientID(), inputModel.getEventName(),
-						inputModel.getServiceDate(), inputModel.getServiceTime()));
+						inputModel.getServiceDate()));
 
 			} else if (inputModel.getServiceDate().compareTo(dupGrad.getServiceDate()) > 0) {
 				// This client is already in list and date is later, so update
 				dupGrad.setStringField(inputModel.getEventName());
 				dupGrad.setServiceDate(inputModel.getServiceDate());
-				dupGrad.setServiceTime(inputModel.getServiceTime());
 			}
-		}
-	}
-
-	private void upsertClassLevelChanges(ArrayList<ContactModel> studentList, ArrayList<Contact> contactList) {
-		ArrayList<Contact> gradContacts = new ArrayList<Contact>();
-
-		// Update current level for student when class level changes
-		for (ContactModel grad : studentList) {
-			// Get last level from SalesForce
-			String lastLevel = "";
-			Contact contact = ListUtilities.findClientIDInList(-1, grad.getClientID(), "", "", contactList);
-			if (contact != null && contact.getLast_Class_Level__c() != null)
-				lastLevel = contact.getLast_Class_Level__c();
-
-			// Update if different
-			if (lastLevel.equals("") || !lastLevel.equals(grad.getStringField().substring(0, 1))) {
-				// Create contact
-				Contact c = new Contact();
-				c.setFront_Desk_Id__c(grad.getClientID());
-				c.setCurrent_Level__c(grad.getStringField());
-
-				gradContacts.add(c);
-			}
-		}
-		if (gradContacts.size() > 0) {
-			upsertContactRecordList(gradContacts, "Class level change");
-		}
-	}
-
-	private void updateRepoName(ArrayList<ContactModel> repoList, SalesForceAttendanceModel inputModel,
-			String repoName) {
-		// Store latest repo name for this student
-		ContactModel dupContact = findFieldInContactList(inputModel.getClientID(), repoList);
-
-		if (dupContact == null) {
-			// Not already in list, so add
-			repoList.add(new ContactModel(inputModel.getClientID(), repoName, inputModel.getServiceDate(),
-					inputModel.getServiceTime()));
-
-		} else if (inputModel.getServiceDate().compareTo(dupContact.getServiceDate()) > 0) {
-			// This client is already in list and date is later, so update
-			dupContact.setStringField(repoName);
-			dupContact.setServiceDate(inputModel.getServiceDate());
-			dupContact.setServiceTime(inputModel.getServiceTime());
-		}
-	}
-
-	private void upsertRepoList(ArrayList<ContactModel> repoList, ArrayList<Contact> contactList) {
-		ArrayList<Contact> repoContacts = new ArrayList<Contact>();
-
-		for (ContactModel repo : repoList) {
-			// Create contact
-			Contact c = new Contact();
-			c.setFront_Desk_Id__c(repo.getClientID());
-			c.setLast_Repo_Commit__c(repo.getStringField());
-
-			repoContacts.add(c);
-		}
-		if (repoContacts.size() > 0) {
-			upsertContactRecordList(repoContacts, "Repo Names");
-		}
-	}
-
-	private void updateServiceTime(ArrayList<ContactModel> timeList, SalesForceAttendanceModel inputModel) {
-		// Store last Service Time for this student
-		ContactModel dupContact = findFieldInContactList(inputModel.getClientID(), timeList);
-
-		if (dupContact == null) {
-			// Not already in list, so add
-			timeList.add(new ContactModel(inputModel.getClientID(), "", inputModel.getServiceDate(),
-					inputModel.getServiceTime()));
-
-		} else if ((inputModel.getServiceDate().compareTo(dupContact.getServiceDate()) > 0)
-				|| (inputModel.getServiceDate().compareTo(dupContact.getServiceDate()) == 0
-						&& inputModel.getServiceTime().compareTo(dupContact.getServiceTime()) > 0)) {
-			// This client is already in list and date/time is later, so update
-			dupContact.setServiceDate(inputModel.getServiceDate());
-			dupContact.setServiceTime(inputModel.getServiceTime());
-		}
-	}
-
-	private void upsertServiceTimeList(ArrayList<ContactModel> timeList, ArrayList<Contact> contactList) {
-		ArrayList<Contact> timeContacts = new ArrayList<Contact>();
-
-		for (ContactModel contact : timeList) {
-			// Create contact
-			Contact c = new Contact();
-			c.setFront_Desk_Id__c(contact.getClientID());
-			c.setLast_Class_Visit_Time__c(contact.getServiceTime());
-
-			timeContacts.add(c);
-		}
-		if (timeContacts.size() > 0) {
-			upsertContactRecordList(timeContacts, "Service Time");
 		}
 	}
 
@@ -1574,13 +1457,12 @@ public class UpdateRecordsInSalesForce {
 	 */
 	private class ContactModel {
 		// Model for storing temp data being upserted to SalesForce Contacts
-		String clientID, stringField, serviceDate, serviceTime;
+		String clientID, stringField, serviceDate;
 
-		ContactModel(String clientID, String field1, String serviceDate, String serviceTime) {
+		ContactModel(String clientID, String field1, String serviceDate) {
 			this.clientID = clientID;
 			this.stringField = field1;
 			this.serviceDate = serviceDate;
-			this.serviceTime = serviceTime;
 		}
 
 		public String getClientID() {
@@ -1595,20 +1477,12 @@ public class UpdateRecordsInSalesForce {
 			return serviceDate;
 		}
 
-		public String getServiceTime() {
-			return serviceTime;
-		}
-
 		public void setStringField(String field1) {
 			this.stringField = field1;
 		}
 
 		public void setServiceDate(String serviceDate) {
 			this.serviceDate = serviceDate;
-		}
-
-		public void setServiceTime(String serviceTime) {
-			this.serviceTime = serviceTime;
 		}
 	}
 }
