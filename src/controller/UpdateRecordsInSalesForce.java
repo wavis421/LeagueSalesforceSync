@@ -1054,7 +1054,7 @@ public class UpdateRecordsInSalesForce {
 		}
 		c.setPast_Events__c((double) contact.getCompletedVisits());
 		c.setFuture_Events__c((double) contact.getFutureVisits());
-		c.setSigned_Waiver__c(contact.isSignedWaiver());
+		//c.setSigned_Waiver__c(contact.isSignedWaiver());
 		c.setMembership__c(contact.getMembership());
 		if (contact.getPassOnFile() != null && !contact.getPassOnFile().equals("")) {
 			if (contact.getPassOnFile().length() > MAX_SALESFORCE_FIELD_LENGTH)
