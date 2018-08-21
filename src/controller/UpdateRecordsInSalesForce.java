@@ -495,9 +495,12 @@ public class UpdateRecordsInSalesForce {
 				diaryEntry.setDescription__c("Level " + student.getGradLevel());
 				if (student.getScore() != null && !student.getScore().equals(""))
 					diaryEntry.setScore__c(student.getScore());
+				if (student.isTestedOut())
+					diaryEntry.setSkipped_Level__c(true);
+				else
+					diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
 				if (student.getStartDate() != null && !student.getStartDate().equals(""))
 					diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
-				diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
 				diaryEntry.setDiary_Date__c(today);
 
 				recordList.add(diaryEntry);
