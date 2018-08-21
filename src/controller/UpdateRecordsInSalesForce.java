@@ -483,16 +483,18 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				// Create contact and add to list
-				String clientLevelKey = clientIdString + student.getGradLevel();
+				String clientLevelKey = clientIdString + student.getGradLevelString();
 				Contact_Diary__c diaryEntry = new Contact_Diary__c();
 				diaryEntry.setStudent_Contact__r(c);
 				String id = ListUtilities.findDiaryIdInList(clientLevelKey, sfDiary);
 				if (id != null)
 					diaryEntry.setId(id);
 				diaryEntry.setPike_13_ID_Level__c(clientLevelKey);
+				diaryEntry.setLevel__c(student.getGradLevelString());
 				diaryEntry.setDiary_Type__c("Level");
 				diaryEntry.setDescription__c("Level " + student.getGradLevel());
-				diaryEntry.setScore__c(((Integer) student.getScore()).toString());
+				if (student.getScore() != null && !student.getScore().equals(""))
+					diaryEntry.setScore__c(student.getScore());
 				if (student.getStartDate() != null && !student.getStartDate().equals(""))
 					diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
 				diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
@@ -508,12 +510,12 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
-						0, "");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						"");
 				e.printStackTrace();
 			} else
-				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
-						0, ": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
 		}
 
 		MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_UPDATED, new StudentNameModel("", "", false), 0,
@@ -952,10 +954,8 @@ public class UpdateRecordsInSalesForce {
 			if (upsertResults[i].isSuccess()) {
 				if (clientID > 0) {
 					// Graduation diary entry successfully added to SF, so update SQL DB flag
-					String level = recordArray[i].getDescription__c();
 					String graduateName = recordArray[i].getStudent_Contact__r().getFull_Name__c();
-
-					mySqlDb.updateGraduationField(clientID, graduateName, level.substring(level.length() - 1),
+					mySqlDb.updateGraduationField(clientID, graduateName, recordArray[i].getLevel__c(),
 							MySqlDatabase.GRAD_MODEL_IN_SF_FIELD, true);
 					clientUpdateCount++;
 				}
@@ -1054,7 +1054,7 @@ public class UpdateRecordsInSalesForce {
 		}
 		c.setPast_Events__c((double) contact.getCompletedVisits());
 		c.setFuture_Events__c((double) contact.getFutureVisits());
-		//c.setSigned_Waiver__c(contact.isSignedWaiver());
+		// c.setSigned_Waiver__c(contact.isSignedWaiver());
 		c.setMembership__c(contact.getMembership());
 		if (contact.getPassOnFile() != null && !contact.getPassOnFile().equals("")) {
 			if (contact.getPassOnFile().length() > MAX_SALESFORCE_FIELD_LENGTH)
