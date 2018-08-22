@@ -275,6 +275,7 @@ public class UpdateRecordsInSalesForce {
 					a.setEvent_Name__c(eventName2);
 				else
 					a.setEvent_Name__c(inputModel.getEventName());
+
 				a.setService_Name__c(inputModel.getServiceName());
 				if (inputModel.getEventType() != null) {
 					if (inputModel.getEventType().length() > 6) {
@@ -289,6 +290,7 @@ public class UpdateRecordsInSalesForce {
 				a.setSchedule_id__c(inputModel.getScheduleID());
 				a.setVisit_Id__c(inputModel.getVisitID());
 				a.setLocation__c(inputModel.getLocation());
+
 				AttendanceEventModel attend = ListUtilities.findAttendanceEventInList(inputModel.getVisitID(),
 						dbAttendance);
 				if (attend != null) {
@@ -297,6 +299,7 @@ public class UpdateRecordsInSalesForce {
 					if (attend.getRepoName() != null && !attend.getRepoName().equals(""))
 						a.setRepo_Name__c(attend.getRepoName());
 				}
+
 				if (inputModel.getServiceDate().compareTo(startBillingDate) >= 0) {
 					StudentImportModel student = ListUtilities.findClientIDInPike13List(inputModel.getClientID(),
 							pike13Students);
@@ -308,11 +311,19 @@ public class UpdateRecordsInSalesForce {
 							a.setBilling_Note__c(student.getFinancialAidPercent());
 					}
 				}
+
 				String newStaff = parseTeacherString(inputModel.getStaff(), a, staffMembers);
 				if (newStaff.length() > MAX_SALESFORCE_FIELD_LENGTH)
 					a.setStaff__c(newStaff.substring(0, MAX_SALESFORCE_FIELD_LENGTH));
 				else
 					a.setStaff__c(newStaff);
+
+				// Extract level from event name, store in 'internal level'
+				// TODO: Do the same for class jslam/jlab
+				if (inputModel.getStatus().equals("completed") && inputModel.getEventType().startsWith("class java")
+						&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '9') {
+					a.setInternal_level__c(inputModel.getEventName().substring(0, 1));
+				}
 
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
@@ -495,7 +506,7 @@ public class UpdateRecordsInSalesForce {
 				diaryEntry.setDescription__c("Level " + student.getGradLevel());
 				if (student.getScore() != null && !student.getScore().equals(""))
 					diaryEntry.setScore__c(student.getScore());
-				if (student.isTestedOut())
+				if (student.isSkipLevel())
 					diaryEntry.setSkipped_Level__c(true);
 				else
 					diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
