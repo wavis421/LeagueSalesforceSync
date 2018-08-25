@@ -409,7 +409,7 @@ public class UpdateRecordsInSalesForce {
 			AttendanceEventModel dbAttend) {
 
 		// Failed to find attendance record in Tracker DB: this should not happen!
-		if (dbAttend == null)
+		if (dbAttend == null && inputModel.getEventName() != null && !inputModel.getEventName().equals(""))
 			MySqlDbLogging.insertLogData(LogDataModel.MISSING_VISIT_ID_FOR_SF_IMPORT,
 					new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
 					Integer.parseInt(inputModel.getClientID()), ": Visit ID " + inputModel.getVisitID() + " for "
@@ -445,12 +445,10 @@ public class UpdateRecordsInSalesForce {
 					} else
 						// TODO: how to input non-standard level changes
 						MySqlDbLogging.insertLogData(LogDataModel.ATTEND_LEVEL_NOT_UPDATED,
-								new StudentNameModel(
-										contactWithData.getFirstName(), contactWithData.getLastName(), false),
-								Integer.parseInt(inputModel.getClientID()),
-								": Visit ID " + inputModel.getVisitID() + " for " + inputModel.getEventName() + " on "
-										+ inputModel.getServiceDate() + ", graduated level "
-										+ contactWithData.getInternal_Level__c());
+								new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(),
+										false),
+								Integer.parseInt(inputModel.getClientID()), ": Visit ID " + inputModel.getVisitID()
+										+ " for " + inputModel.getEventName() + " on " + inputModel.getServiceDate());
 				}
 			}
 		}
