@@ -218,6 +218,7 @@ public class UpdateRecordsInSalesForce {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
 		ArrayList<ContactModel> classLevelChanges = new ArrayList<ContactModel>();
+		ArrayList<AttendanceEventModel> attendLevelChanges = new ArrayList<AttendanceEventModel>();
 		clientUpdateCount = 0;
 		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
 				.toString("yyyy-MM-dd");
@@ -228,21 +229,25 @@ public class UpdateRecordsInSalesForce {
 				SalesForceAttendanceModel inputModel = pike13Attendance.get(i);
 
 				// Check for Visit ID null or blank. Visit ID is main key for upsert.
-				if (checkForEventIdNull(inputModel))
+				if (checkForVisitIdNull(inputModel))
 					continue;
 
+				// Cannot add attendance for contacts that do not exist!
 				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ATTENDANCE,
 						inputModel.getClientID(), inputModel.getFullName(), inputModel.getEventName(), contacts);
 				if (c == null)
 					continue;
 
+				// Get contacts with required data fields
+				Contact contactWithData = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
+						inputModel.getFullName(), "", allContacts);
+
 				// Report error if event name is blank
 				String locCode = null;
 				String eventName2 = null;
 				if (inputModel.getEventName() == null || inputModel.getEventName().equals("")) {
-					Contact cTemp = ListUtilities.findClientIDInList(-1, inputModel.getClientID(),
-							inputModel.getFullName(), "", allContacts);
-					if (cTemp.getContact_Type__c() != null && cTemp.getContact_Type__c().equals("Student")) {
+					if (contactWithData.getContact_Type__c() != null
+							&& contactWithData.getContact_Type__c().equals("Student")) {
 						MySqlDbLogging.insertLogData(LogDataModel.BLANK_EVENT_NAME_FOR_ATTENDANCE,
 								new StudentNameModel(inputModel.getFullName(), "", false),
 								Integer.parseInt(inputModel.getClientID()),
@@ -291,13 +296,13 @@ public class UpdateRecordsInSalesForce {
 				a.setVisit_Id__c(inputModel.getVisitID());
 				a.setLocation__c(inputModel.getLocation());
 
-				AttendanceEventModel attend = ListUtilities.findAttendanceEventInList(inputModel.getVisitID(),
+				AttendanceEventModel dbAttend = ListUtilities.findAttendanceEventInList(inputModel.getVisitID(),
 						dbAttendance);
-				if (attend != null) {
-					if (!attend.getGithubComments().equals(""))
-						a.setNote__c(attend.getGithubComments());
-					if (attend.getRepoName() != null && !attend.getRepoName().equals(""))
-						a.setRepo_Name__c(attend.getRepoName());
+				if (dbAttend != null) {
+					if (!dbAttend.getGithubComments().equals(""))
+						a.setNote__c(dbAttend.getGithubComments());
+					if (dbAttend.getRepoName() != null && !dbAttend.getRepoName().equals(""))
+						a.setRepo_Name__c(dbAttend.getRepoName());
 				}
 
 				if (inputModel.getServiceDate().compareTo(startBillingDate) >= 0) {
@@ -319,10 +324,8 @@ public class UpdateRecordsInSalesForce {
 					a.setStaff__c(newStaff);
 
 				// Extract level from event name, store in 'internal level'
-				// TODO: Do the same for class jslam/jlab
-				if (inputModel.getStatus().equals("completed") && inputModel.getEventType().startsWith("class java")
-						&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '9') {
-					a.setInternal_level__c(inputModel.getEventName().substring(0, 1));
+				if (inputModel.getStatus().equals("completed")) {
+					updateAttendLevel(attendLevelChanges, inputModel, contactWithData, a, dbAttend);
 				}
 
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
@@ -367,7 +370,9 @@ public class UpdateRecordsInSalesForce {
 			if (arrayIdx > 0)
 				upsertAttendanceRecords(recordArray);
 
-		} catch (Exception e) {
+		} catch (
+
+		Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR,
 						new StudentNameModel("", "", false), 0, "");
@@ -391,9 +396,67 @@ public class UpdateRecordsInSalesForce {
 			for (ContactModel c : classLevelChanges)
 				mySqlDb.updateLastEventNameByStudent(Integer.parseInt(c.getClientID()), c.getStringField());
 		}
+		System.out.println(attendLevelChanges.size() + " Attend Level changes");
+		if (attendLevelChanges.size() > 0) {
+			// Update attendance level changes
+			for (AttendanceEventModel a : attendLevelChanges)
+				mySqlDb.updateAttendLevelChanges(a.getVisitID(), a.getState());
+		}
 	}
 
-	private boolean checkForEventIdNull(SalesForceAttendanceModel inputModel) {
+	private void updateAttendLevel(ArrayList<AttendanceEventModel> attendLevelChanges,
+			SalesForceAttendanceModel inputModel, Contact contactWithData, Student_Attendance__c newAttendRecord,
+			AttendanceEventModel dbAttend) {
+
+		// Failed to find attendance record in Tracker DB: this should not happen!
+		if (dbAttend == null)
+			MySqlDbLogging.insertLogData(LogDataModel.MISSING_VISIT_ID_FOR_SF_IMPORT,
+					new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
+					Integer.parseInt(inputModel.getClientID()), ": Visit ID " + inputModel.getVisitID() + " for "
+							+ inputModel.getEventName() + " on " + inputModel.getServiceDate());
+
+		// Insert current level into attendance for all class java, jslam, jlab
+		if (inputModel.getEventType().startsWith("class java")) {
+			// For java class, extract class level from event name
+			newAttendRecord.setInternal_level__c(inputModel.getEventName().substring(0, 1));
+			if (dbAttend != null && !dbAttend.getState().equals(dbAttend.getLastSFState()))
+				attendLevelChanges.add(dbAttend);
+
+		} else if (inputModel.getEventType().startsWith("class j")) {
+			// class jlab or jslam
+			if (dbAttend != null && dbAttend.getState().equals("completed")
+					&& !dbAttend.getState().equals(dbAttend.getLastSFState())) {
+				// DB state just transitioned state to completed
+				if (contactWithData.getInternal_Level__c() == null) {
+					// If SF level is null, assume this is level 0
+					newAttendRecord.setInternal_level__c("0");
+					attendLevelChanges.add(dbAttend);
+
+				} else {
+					// For now, only process simple case where values are separated by at most 1
+					int delta = contactWithData.getLast_Class_Level__c().charAt(0)
+							- contactWithData.getInternal_Level__c().charAt(0);
+					if (delta == 0 || delta == 1) {
+						// Level is last level graduated + 1
+						newAttendRecord.setInternal_level__c(
+								Character.toString((char) (contactWithData.getInternal_Level__c().charAt(0) + 1)));
+						attendLevelChanges.add(dbAttend);
+
+					} else
+						// TODO: how to input non-standard level changes
+						MySqlDbLogging.insertLogData(LogDataModel.ATTEND_LEVEL_NOT_UPDATED,
+								new StudentNameModel(
+										contactWithData.getFirstName(), contactWithData.getLastName(), false),
+								Integer.parseInt(inputModel.getClientID()),
+								": Visit ID " + inputModel.getVisitID() + " for " + inputModel.getEventName() + " on "
+										+ inputModel.getServiceDate() + ", graduated level "
+										+ contactWithData.getInternal_Level__c());
+				}
+			}
+		}
+	}
+
+	private boolean checkForVisitIdNull(SalesForceAttendanceModel inputModel) {
 		if (inputModel.getVisitID() == null || inputModel.getVisitID().equals("null")
 				|| inputModel.getVisitID().equals("")) {
 			// No Visit ID. Ignore this record if status not these accepted values.
