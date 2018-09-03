@@ -433,22 +433,19 @@ public class UpdateRecordsInSalesForce {
 					attendLevelChanges.add(dbAttend);
 
 				} else {
-					// For now, only process simple case where values are separated by at most 1
+					// Normal case is where values are separated by at most 1
 					int delta = contactWithData.getLast_Class_Level__c().charAt(0)
 							- contactWithData.getInternal_Level__c().charAt(0);
 					if (delta == 0 || delta == 1) {
 						// Level is last level graduated + 1
 						newAttendRecord.setInternal_level__c(
 								Character.toString((char) (contactWithData.getInternal_Level__c().charAt(0) + 1)));
-						attendLevelChanges.add(dbAttend);
+					} else {
+						// Classes taken out-of-order, so use last Class Level
+						newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
+					}
 
-					} else
-						// TODO: how to input non-standard level changes
-						MySqlDbLogging.insertLogData(LogDataModel.ATTEND_LEVEL_NOT_UPDATED,
-								new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(),
-										false),
-								Integer.parseInt(inputModel.getClientID()), ": Visit ID " + inputModel.getVisitID()
-										+ " for " + inputModel.getEventName() + " on " + inputModel.getServiceDate());
+					attendLevelChanges.add(dbAttend);
 				}
 			}
 		}
