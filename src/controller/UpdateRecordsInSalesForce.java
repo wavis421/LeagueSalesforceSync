@@ -534,8 +534,6 @@ public class UpdateRecordsInSalesForce {
 			ArrayList<Contact_Diary__c> sfDiary) {
 		ArrayList<Contact_Diary__c> recordList = new ArrayList<Contact_Diary__c>();
 		clientUpdateCount = 0;
-		Calendar today = convertDateStringToCalendar(
-				new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd"));
 
 		try {
 			for (int i = 0; i < gradStudents.size(); i++) {
@@ -564,13 +562,16 @@ public class UpdateRecordsInSalesForce {
 				diaryEntry.setDescription__c("Level " + student.getGradLevel());
 				if (student.getScore() != null && !student.getScore().equals(""))
 					diaryEntry.setScore__c(student.getScore());
-				if (student.isSkipLevel())
-					diaryEntry.setSkipped_Level__c(true);
-				else
-					diaryEntry.setEnd_Date__c(convertDateStringToCalendar(student.getEndDate()));
+
+				Calendar endDate = convertDateStringToCalendar(student.getEndDate());
+				diaryEntry.setEnd_Date__c(endDate);
+				diaryEntry.setDiary_Date__c(endDate);
 				if (student.getStartDate() != null && !student.getStartDate().equals(""))
 					diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
-				diaryEntry.setDiary_Date__c(today);
+				if (student.isSkipLevel()) {
+					diaryEntry.setSkipped_Level__c(true);
+					diaryEntry.setStart_Date__c(endDate);
+				}
 
 				recordList.add(diaryEntry);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_GRADUATION,
