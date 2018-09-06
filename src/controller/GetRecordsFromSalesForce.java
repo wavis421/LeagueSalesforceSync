@@ -146,15 +146,14 @@ public class GetRecordsFromSalesForce {
 
 		return account;
 	}
-	
+
 	public ArrayList<Contact_Diary__c> getSalesForceDiary() {
 		ArrayList<Contact_Diary__c> diaryList = new ArrayList<Contact_Diary__c>();
 
 		try {
 			// Get all SalesForce diary entries with non-null 'clientID + level' key
 			QueryResult queryResults = connection
-					.query("SELECT Id, Pike_13_ID_Level__c FROM Contact_Diary__c "
-							+ "WHERE Pike_13_ID_Level__c != null");
+					.query("SELECT Id, Pike_13_ID_Level__c FROM Contact_Diary__c WHERE Pike_13_ID_Level__c != null");
 
 			if (queryResults.getSize() > 0) {
 				for (int i = 0; i < queryResults.getRecords().length; i++) {
@@ -166,12 +165,12 @@ public class GetRecordsFromSalesForce {
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
 				e.printStackTrace();
-				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
-						0, "");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						"");
 
 			} else
-				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
-						0, ": " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
 		}
 
 		return diaryList;

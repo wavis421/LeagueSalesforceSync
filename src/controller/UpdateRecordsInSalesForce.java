@@ -573,10 +573,13 @@ public class UpdateRecordsInSalesForce {
 					diaryEntry.setStart_Date__c(endDate);
 				}
 
+				int numClasses = getNumClassesByLevel(student.getClientID(), student.getGradLevelString());
+				diaryEntry.setNum_Classes__c((double) numClasses);
+
 				recordList.add(diaryEntry);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_GRADUATION,
-						new StudentNameModel(student.getStudentName(), "", false), student.getClientID(),
-						" Level " + student.getGradLevel() + " on " + student.getEndDate());
+						new StudentNameModel(student.getStudentName(), "", false), student.getClientID(), " Level "
+								+ student.getGradLevel() + " on " + student.getEndDate() + ", # Classes " + numClasses);
 			}
 
 			upsertDiaryRecordList(recordList);
@@ -1493,6 +1496,27 @@ public class UpdateRecordsInSalesForce {
 		// Now add email string to SalesForce contact
 		if (!emails.equals(""))
 			c.setFamily_Email__c(emails);
+	}
+
+	private int getNumClassesByLevel(int clientID, String level) {
+		try {
+			// Get all SalesForce diary entries with non-null 'clientID + level' key
+			QueryResult queryResults = connection
+					.query("SELECT Front_Desk_Id__c, Internal_Level__c FROM Student_Attendance__c "
+							+ "WHERE Front_Desk_Id__c = '" + clientID + "' AND Internal_Level__c = '" + level + "'");
+			return queryResults.getSize();
+
+		} catch (Exception e) {
+			if (e.getMessage() == null) {
+				e.printStackTrace();
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
+						clientID, " for Level");
+
+			} else
+				MySqlDbLogging.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR,
+						new StudentNameModel("", "", false), clientID, " for Level: " + e.getMessage());
+		}
+		return 0;
 	}
 
 	public static ContactModel findFieldInContactList(String clientID, ArrayList<ContactModel> contactList) {
