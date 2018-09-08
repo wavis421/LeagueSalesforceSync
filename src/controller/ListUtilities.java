@@ -62,6 +62,15 @@ public class ListUtilities {
 		return null;
 	}
 
+	public static Contact findStudentContactInPike13List(String studentName, String accountID,
+			ArrayList<StudentImportModel> students) {
+		for (StudentImportModel s : students) {
+			if (s.getAccountID().equals(accountID) && s.getFullName().equals(studentName))
+				return (Contact) s.getSfContact();
+		}
+		return null;
+	}
+
 	public static boolean findVisitIdInList(String visitID, ArrayList<SalesForceAttendanceModel> attendanceList) {
 		for (SalesForceAttendanceModel a : attendanceList) {
 			if (a.getVisitID().equals(visitID)) {
@@ -196,8 +205,10 @@ public class ListUtilities {
 		for (StudentImportModel m : clientList) {
 			Contact c = ListUtilities.findClientIDInList(-1, String.valueOf(m.getClientID()), m.getFullName(), "",
 					contacts);
-			if (c != null)
+			if (c != null) {
 				m.setAccountID(c.getAccountId());
+				m.setSfContact(c);
+			}
 		}
 	}
 
@@ -230,7 +241,7 @@ public class ListUtilities {
 		}
 		return null;
 	}
-	
+
 	public static String findDiaryIdInList(String clientLevelKey, ArrayList<Contact_Diary__c> diaryList) {
 		for (Contact_Diary__c d : diaryList) {
 			if (clientLevelKey.equals(d.getPike_13_ID_Level__c())) {

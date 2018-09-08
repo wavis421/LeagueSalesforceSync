@@ -123,7 +123,7 @@ public class UpdateRecordsInSalesForce {
 				}
 
 				// Create contact and add to list
-				recordList.add(createContactRecord(false, student, account));
+				recordList.add(createContactRecord(false, student, account, pike13Students, null));
 			}
 
 			upsertContactRecordList(recordList, "student");
@@ -145,6 +145,7 @@ public class UpdateRecordsInSalesForce {
 	public void updateAdults(ArrayList<StudentImportModel> pike13Students, ArrayList<StudentImportModel> pike13Adults,
 			ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
+		ArrayList<Contact> dependentUpdates = new ArrayList<Contact>();
 		clientUpdateCount = 0;
 
 		try {
@@ -169,7 +170,7 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				// Create contact and add to list
-				recordList.add(createContactRecord(true, adult, account));
+				recordList.add(createContactRecord(true, adult, account, pike13Students, dependentUpdates));
 			}
 
 			upsertContactRecordList(recordList, "adult");
@@ -183,6 +184,10 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
 						0, ": " + e.getMessage());
 		}
+
+		// Update modified clients to SalesForce
+		if (dependentUpdates.size() > 0)
+			upsertContactRecordList(dependentUpdates, "Thank and Hear From");
 
 		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + clientUpdateCount + " adult record(s) processed");
@@ -1098,7 +1103,8 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account) {
+	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account,
+			ArrayList<StudentImportModel> pike13Students, ArrayList<Contact> dependents) {
 		// Create contact and add fields
 		Contact c = new Contact();
 
@@ -1157,12 +1163,12 @@ public class UpdateRecordsInSalesForce {
 			c.setEmergency_Email__c(contact.getEmergContactEmail());
 		if (contact.getCurrGrade() != null)
 			c.setGrade__c(contact.getCurrGrade());
-		if (contact.getHearAboutUs() != null)
-			c.setHow_you_heard_about_us__c(contact.getHearAboutUs());
+		if (adult && contact.getHearAboutUs() != null && !contact.getHearAboutUs().trim().equals(""))
+			updateWhereDidYouHear(contact, c, pike13Students, dependents);
 		if (contact.getGradYearString() != null)
 			c.setGrad_Year__c(contact.getGradYearString());
-		if (contact.getWhoToThank() != null)
-			c.setWho_can_we_thank__c(contact.getWhoToThank());
+		if (adult && contact.getWhoToThank() != null && !contact.getWhoToThank().trim().equals(""))
+			updateWhoToThank(contact, c, pike13Students, dependents);
 		if (contact.getGithubName() != null)
 			c.setGIT_HUB_acct_name__c(contact.getGithubName());
 		if (contact.getGrantInfo() != null)
@@ -1500,6 +1506,74 @@ public class UpdateRecordsInSalesForce {
 		// Now add email string to SalesForce contact
 		if (!emails.equals(""))
 			c.setFamily_Email__c(emails);
+	}
+
+	private void updateWhoToThank(StudentImportModel contact, Contact c, ArrayList<StudentImportModel> pike13Students,
+			ArrayList<Contact> dependents) {
+		
+		// Set field for adult
+		c.setWho_can_we_thank__c(contact.getWhoToThank());
+
+		if (contact.getDependentNames() != null) {
+			// Parse dependents string and update field for each dependent
+			String[] values = contact.getDependentNames().split("\\s*,\\s*");
+			for (int i = 0; i < values.length; i++) {
+				// Get each dependent by Name and Account ID
+				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(),
+						pike13Students);
+				if (dep == null)
+					continue;
+				
+				// See if contact already in list
+				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), 
+						null, null, dependents);
+				
+				if (duplicate == null) {
+					// Not already in list, so add
+					Contact newContact = new Contact();
+					newContact.setFront_Desk_Id__c(dep.getFront_Desk_Id__c());
+					newContact.setWho_can_we_thank__c(contact.getWhoToThank());
+					dependents.add(newContact);
+					
+				} else {
+					duplicate.setWho_can_we_thank__c(contact.getWhoToThank());
+				}
+			}
+		}
+	}
+	
+	private void updateWhereDidYouHear(StudentImportModel contact, Contact c, ArrayList<StudentImportModel> pike13Students,
+			ArrayList<Contact> dependents) {
+		
+		// Set field for adult
+		c.setHow_you_heard_about_us__c(contact.getHearAboutUs());
+
+		if (contact.getDependentNames() != null) {
+			// Parse dependents string and update field for each dependent
+			String[] values = contact.getDependentNames().split("\\s*,\\s*");
+			for (int i = 0; i < values.length; i++) {
+				// Get each dependent by Name and Account ID
+				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(),
+						pike13Students);
+				if (dep == null)
+					continue;
+				
+				// See if contact already in list
+				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), 
+						null, null, dependents);
+				
+				if (duplicate == null) {
+					// Not already in list, so add
+					Contact newContact = new Contact();
+					newContact.setFront_Desk_Id__c(dep.getFront_Desk_Id__c());
+					newContact.setHow_you_heard_about_us__c(contact.getHearAboutUs());
+					dependents.add(newContact);
+					
+				} else {
+					duplicate.setHow_you_heard_about_us__c(contact.getHearAboutUs());
+				}
+			}
+		}
 	}
 
 	private int getNumClassesByLevel(int clientID, String level) {
