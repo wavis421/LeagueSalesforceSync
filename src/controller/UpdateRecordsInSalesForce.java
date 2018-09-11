@@ -185,12 +185,12 @@ public class UpdateRecordsInSalesForce {
 						0, ": " + e.getMessage());
 		}
 
+		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
+				", " + clientUpdateCount + " adult record(s) processed");
+
 		// Update modified clients to SalesForce
 		if (dependentUpdates.size() > 0)
 			upsertContactRecordList(dependentUpdates, "Thank and Hear From");
-
-		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " adult record(s) processed");
 	}
 
 	// TODO: Finish this. This method is not being called yet.
@@ -1510,7 +1510,7 @@ public class UpdateRecordsInSalesForce {
 
 	private void updateWhoToThank(StudentImportModel contact, Contact c, ArrayList<StudentImportModel> pike13Students,
 			ArrayList<Contact> dependents) {
-		
+
 		// Set field for adult
 		c.setWho_can_we_thank__c(contact.getWhoToThank());
 
@@ -1519,32 +1519,31 @@ public class UpdateRecordsInSalesForce {
 			String[] values = contact.getDependentNames().split("\\s*,\\s*");
 			for (int i = 0; i < values.length; i++) {
 				// Get each dependent by Name and Account ID
-				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(),
-						pike13Students);
+				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(), pike13Students);
 				if (dep == null)
 					continue;
-				
+
 				// See if contact already in list
-				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), 
-						null, null, dependents);
-				
+				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), null, null,
+						dependents);
+
 				if (duplicate == null) {
 					// Not already in list, so add
 					Contact newContact = new Contact();
 					newContact.setFront_Desk_Id__c(dep.getFront_Desk_Id__c());
 					newContact.setWho_can_we_thank__c(contact.getWhoToThank());
 					dependents.add(newContact);
-					
+
 				} else {
 					duplicate.setWho_can_we_thank__c(contact.getWhoToThank());
 				}
 			}
 		}
 	}
-	
-	private void updateWhereDidYouHear(StudentImportModel contact, Contact c, ArrayList<StudentImportModel> pike13Students,
-			ArrayList<Contact> dependents) {
-		
+
+	private void updateWhereDidYouHear(StudentImportModel contact, Contact c,
+			ArrayList<StudentImportModel> pike13Students, ArrayList<Contact> dependents) {
+
 		// Set field for adult
 		c.setHow_you_heard_about_us__c(contact.getHearAboutUs());
 
@@ -1553,22 +1552,21 @@ public class UpdateRecordsInSalesForce {
 			String[] values = contact.getDependentNames().split("\\s*,\\s*");
 			for (int i = 0; i < values.length; i++) {
 				// Get each dependent by Name and Account ID
-				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(),
-						pike13Students);
+				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(), pike13Students);
 				if (dep == null)
 					continue;
-				
+
 				// See if contact already in list
-				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), 
-						null, null, dependents);
-				
+				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), null, null,
+						dependents);
+
 				if (duplicate == null) {
 					// Not already in list, so add
 					Contact newContact = new Contact();
 					newContact.setFront_Desk_Id__c(dep.getFront_Desk_Id__c());
 					newContact.setHow_you_heard_about_us__c(contact.getHearAboutUs());
 					dependents.add(newContact);
-					
+
 				} else {
 					duplicate.setHow_you_heard_about_us__c(contact.getHearAboutUs());
 				}
