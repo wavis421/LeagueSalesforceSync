@@ -416,45 +416,81 @@ public class UpdateRecordsInSalesForce {
 			AttendanceEventModel dbAttend) {
 
 		// Failed to find attendance record in Tracker DB: this should not happen!
-		if (dbAttend == null && inputModel.getEventName() != null && !inputModel.getEventName().equals(""))
+		if (dbAttend == null && inputModel.getEventName() != null && !inputModel.getEventName().equals("")) {
 			MySqlDbLogging.insertLogData(LogDataModel.MISSING_VISIT_ID_FOR_SF_IMPORT,
 					new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
 					Integer.parseInt(inputModel.getClientID()), ": Visit ID " + inputModel.getVisitID() + " for "
 							+ inputModel.getEventName() + " on " + inputModel.getServiceDate());
+			return;
+		}
 
 		// Insert current level into attendance for all class java, jslam, jlab
-		if (inputModel.getEventType().startsWith("class java")) {
-			// For java class, extract class level from event name
-			newAttendRecord.setInternal_level__c(inputModel.getEventName().substring(0, 1));
-			if (dbAttend != null && !dbAttend.getState().equals(dbAttend.getLastSFState()))
-				attendLevelChanges.add(dbAttend);
-
-		} else if (inputModel.getEventType().startsWith("class j")) {
-			// class jlab or jslam
-			if (dbAttend != null && dbAttend.getState().equals("completed")
-					&& !dbAttend.getState().equals(dbAttend.getLastSFState())) {
-				// DB state just transitioned state to completed
+		if (inputModel.getEventType().startsWith("class j") && dbAttend.getState().equals("completed")) {
+			// jclass, jlab or jslam
+			if (!dbAttend.getState().equals(dbAttend.getLastSFState())) {
+				// Only update when DB state just transitioned to complete
 				if (contactWithData.getInternal_Level__c() == null) {
 					// If SF level is null, assume this is level 0
 					newAttendRecord.setInternal_level__c("0");
-					attendLevelChanges.add(dbAttend);
 
 				} else {
-					// Normal case is where values are separated by at most 1
+					// Normal case is where values are separated by 1
 					int delta = contactWithData.getLast_Class_Level__c().charAt(0)
 							- contactWithData.getInternal_Level__c().charAt(0);
-					if (delta == 0 || delta == 1) {
-						// Level is last level graduated + 1
-						newAttendRecord.setInternal_level__c(
-								Character.toString((char) (contactWithData.getInternal_Level__c().charAt(0) + 1)));
-					} else {
-						// Classes taken out-of-order, so use last Class Level
-						newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
-					}
 
-					attendLevelChanges.add(dbAttend);
+					if (delta < 0)
+						// Classes taken out-of-order, use last class level
+						newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
+					else {
+						// Delta of 1 is OK, anything else is an error
+						if (delta != 1)
+							MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
+									new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(),
+											false),
+									Integer.parseInt(inputModel.getClientID()),
+									" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+											+ ", last grad level " + contactWithData.getInternal_Level__c());
+
+						if (delta > 1)
+							// Student may have skipped a class, so use last class
+							// Error flagged in case this is wrong!
+							newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
+						else
+							// Level is last level graduated + 1
+							newAttendRecord.setInternal_level__c(
+									Character.toString((char) (contactWithData.getInternal_Level__c().charAt(0) + 1)));
+					}
+				}
+				attendLevelChanges.add(dbAttend);
+
+				// Check that github repo name matches attendance level
+				if (newAttendRecord.getRepo_Name__c() != null) {
+					checkRepoLevelMatch(contactWithData, newAttendRecord, dbAttend);
 				}
 			}
+		}
+	}
+
+	private void checkRepoLevelMatch(Contact contactWithData, Student_Attendance__c newAttendRecord,
+			AttendanceEventModel dbAttend) {
+
+		// Check if github repo matches classroom naming for level
+		String levelString = null;
+		if (newAttendRecord.getRepo_Name__c().toLowerCase().startsWith("level-")
+				|| newAttendRecord.getRepo_Name__c().toLowerCase().startsWith("level_"))
+			levelString = newAttendRecord.getRepo_Name__c().substring(6, 7);
+		else if (newAttendRecord.getRepo_Name__c().toLowerCase().startsWith("level"))
+			levelString = newAttendRecord.getRepo_Name__c().substring(5, 6);
+
+		// Found github classroom, now match with internal level
+		if (levelString != null && levelString.compareTo("0") >= 0 && levelString.compareTo("9") <= 0
+				&& !levelString.equals(newAttendRecord.getInternal_level__c())) {
+			// Github repo level does not match internal level
+			MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
+					new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
+					dbAttend.getClientID(),
+					" for repo '" + newAttendRecord.getRepo_Name__c() + "' on " + dbAttend.getServiceDateString()
+							+ ", expected class level " + newAttendRecord.getInternal_level__c());
 		}
 	}
 
