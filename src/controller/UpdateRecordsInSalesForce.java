@@ -449,6 +449,7 @@ public class UpdateRecordsInSalesForce {
 											false),
 									Integer.parseInt(inputModel.getClientID()),
 									" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+											+ ", last class level " + contactWithData.getLast_Class_Level__c() 
 											+ ", last grad level " + contactWithData.getInternal_Level__c());
 
 						if (delta > 1)
