@@ -2,6 +2,9 @@ package controller;
 
 import java.util.ArrayList;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
 import com.sforce.soap.enterprise.EnterpriseConnection;
 import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
@@ -11,6 +14,7 @@ import model.AttendanceEventModel;
 import model.GraduationModel;
 import model.MySqlDatabase;
 import model.SalesForceAttendanceModel;
+import model.SalesForceEnrollStatsModel;
 import model.SalesForceStaffHoursModel;
 import model.StaffMemberModel;
 import model.StudentImportModel;
@@ -27,7 +31,7 @@ public class SalesForceImportEngine {
 		this.salesForceApi = salesForceApi;
 	}
 
-	public void updateSalesForce(String today, String startDate, String endDate) {
+	public void updateSalesForce(String today, String startDate, String endDate, int enrollCountDays) {
 		// Instantiate get & update classes
 		GetRecordsFromSalesForce getRecords = new GetRecordsFromSalesForce(sqlDb, salesForceApi);
 		UpdateRecordsInSalesForce updateRecords = new UpdateRecordsInSalesForce(sqlDb, salesForceApi, getRecords);
@@ -72,6 +76,17 @@ public class SalesForceImportEngine {
 
 			// (3) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);
+		}
+
+		// === UPDATE ENROLLMENT STATISTICS for yesterday ===
+		DateTime t = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles"));
+		ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats = pike13Api.getSalesForceEnrollStats(
+				t.minusDays(enrollCountDays + 1).toString("yyyy-MM-dd"),
+				t.plusDays(enrollCountDays - 1).toString("yyyy-MM-dd"));
+
+		if (pike13EnrollStats != null && sfContactList != null) {
+			updateRecords.updateEnrollStats(pike13EnrollStats, t.minusDays(1).toString("dd"),
+					t.minusDays(1).toString("yyyyMM"), sfContactList);
 		}
 
 		// === UPDATE GRADUATION DIARY ENTRIES ===

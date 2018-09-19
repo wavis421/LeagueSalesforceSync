@@ -25,6 +25,7 @@ public class SalesForceApi {
 	private static final String AWS_PASSWORD = readFile("./awsPassword.txt");
 	private static final int DATE_RANGE_PAST_IN_DAYS = 21;
 	private static final int DATE_RANGE_FUTURE_IN_DAYS = 45;
+	private static final int DATE_RANGE_ENROLL_STATS_DAYS = 20;
 
 	private static MySqlDatabase sqlDb;
 	private static Pike13Api pike13Api;
@@ -74,7 +75,7 @@ public class SalesForceApi {
 		// Perform the update to SalesForce
 		SalesForceImportEngine importer = new SalesForceImportEngine(sqlDb, pike13Api, salesForceApi);
 		LocationLookup.setLocationData(sqlDb.getLocationList());
-		importer.updateSalesForce(today, startDate, endDate);
+		importer.updateSalesForce(today, startDate, endDate, DATE_RANGE_ENROLL_STATS_DAYS);
 
 		exitProgram(-1, null); // -1 indicates no error
 	}
