@@ -80,13 +80,13 @@ public class SalesForceImportEngine {
 
 		// === UPDATE ENROLLMENT STATISTICS for yesterday ===
 		DateTime t = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles"));
+		String statsStart = t.minusDays(enrollCountDays + 1).toString("yyyy-MM-dd");
+		String statsEnd = t.plusDays(enrollCountDays - 1).toString("yyyy-MM-dd");
 		ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats = pike13Api.getSalesForceEnrollStats(
-				t.minusDays(enrollCountDays + 1).toString("yyyy-MM-dd"),
-				t.plusDays(enrollCountDays - 1).toString("yyyy-MM-dd"));
+				statsStart, statsEnd);
 
 		if (pike13EnrollStats != null && sfContactList != null) {
-			updateRecords.updateEnrollStats(pike13EnrollStats, t.minusDays(1).toString("dd"),
-					t.minusDays(1).toString("yyyyMM"), sfContactList);
+			updateRecords.updateEnrollStats(pike13EnrollStats, t.minusDays(1), statsStart, statsEnd, sfContactList);
 		}
 
 		// === UPDATE GRADUATION DIARY ENTRIES ===

@@ -414,10 +414,12 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	public void updateEnrollStats(ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats, String dayOfMonth,
-			String yearMonth, ArrayList<Contact> contacts) {
+	public void updateEnrollStats(ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats, DateTime middleDate,
+			String startDayString, String endDayString, ArrayList<Contact> contacts) {
 		ArrayList<Enrollment_Stats__c> recordList = new ArrayList<Enrollment_Stats__c>();
 		enrollStatsUpsertCount = 0;
+		String dayOfMonth = middleDate.toString("dd");
+		String yearMonth = middleDate.toString("yyyyMM");
 
 		try {
 			for (int i = 0; i < pike13EnrollStats.size(); i++) {
@@ -482,7 +484,7 @@ public class UpdateRecordsInSalesForce {
 		}
 
 		MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLLMENT_STATS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + enrollStatsUpsertCount + " record(s) processed");
+				", " + enrollStatsUpsertCount + " records processed (" + startDayString + " to " + endDayString + ")");
 	}
 
 	private void setEnrollStatsField(String dayOfMonth, double value, Enrollment_Stats__c statsRecord) {
@@ -570,14 +572,14 @@ public class UpdateRecordsInSalesForce {
 				String repoLevel = getRepoLevelString(newAttendRecord);
 
 				// Only update when DB state just transitioned to complete!
-				if (contactWithData.getInternal_Level__c() == null) {
+				if (contactWithData.getHighest_Level__c() == null) {
 					// If SF level is null, assume this is level 0
 					newAttendRecord.setInternal_level__c("0");
 
 				} else {
 					// Normal case is where values are separated by 1
-					int delta = contactWithData.getLast_Class_Level__c().charAt(0)
-							- contactWithData.getInternal_Level__c().charAt(0);
+					int highestLevel = (int) ((double) contactWithData.getHighest_Level__c());
+					int delta = (contactWithData.getLast_Class_Level__c().charAt(0) - '0') - highestLevel;
 
 					if (delta != 1)
 						// Delta of 1 is OK, anything else is an error
@@ -587,7 +589,7 @@ public class UpdateRecordsInSalesForce {
 								Integer.parseInt(inputModel.getClientID()),
 								" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
 										+ ", SF last = " + contactWithData.getLast_Class_Level__c() + ", SF grad = "
-										+ contactWithData.getInternal_Level__c());
+										+ highestLevel);
 
 					if (delta < 0 || delta > 1) {
 						// Classes taken out-of-order, use current class level if possible
@@ -599,8 +601,7 @@ public class UpdateRecordsInSalesForce {
 							newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
 					} else {
 						// Delta is 0 or 1, so use last grad level + 1
-						newAttendRecord.setInternal_level__c(
-								Character.toString((char) (contactWithData.getInternal_Level__c().charAt(0) + 1)));
+						newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
 					}
 				}
 				attendLevelChanges.add(dbAttend);
