@@ -80,7 +80,7 @@ public class SalesForceImportEngine {
 
 		// === UPDATE ENROLLMENT STATISTICS for yesterday ===
 		DateTime t = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles"));
-		String statsStart = t.minusDays(enrollCountDays + 1).toString("yyyy-MM-dd");
+		String statsStart = t.minusDays(enrollCountDays + 2).toString("yyyy-MM-dd");
 		String statsEnd = t.plusDays(enrollCountDays - 1).toString("yyyy-MM-dd");
 		ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats = pike13Api.getSalesForceEnrollStats(
 				statsStart, statsEnd);
