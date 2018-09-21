@@ -581,27 +581,33 @@ public class UpdateRecordsInSalesForce {
 					int highestLevel = (int) ((double) contactWithData.getHighest_Level__c());
 					int delta = (contactWithData.getLast_Class_Level__c().charAt(0) - '0') - highestLevel;
 
-					if (delta != 1)
-						// Delta of 1 is OK, anything else is an error
-						MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
-								new StudentNameModel(
-										contactWithData.getFirstName(), contactWithData.getLastName(), false),
-								Integer.parseInt(inputModel.getClientID()),
-								" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
-										+ ", SF last = " + contactWithData.getLast_Class_Level__c() + ", SF grad = "
-										+ highestLevel);
+					// Special case: classes out-of-order (avoid error)
+					if (delta < 0 && repoLevel != null && (Integer.parseInt(repoLevel) == (highestLevel + 1)))
+						newAttendRecord.setInternal_level__c(repoLevel);
 
-					if (delta < 0 || delta > 1) {
-						// Classes taken out-of-order, use current class level if possible
-						if (repoLevel != null)
-							newAttendRecord.setInternal_level__c(repoLevel);
-						else if (inputModel.getEventType().startsWith("class java"))
-							newAttendRecord.setInternal_level__c(inputModel.getEventName().substring(0, 1));
-						else
-							newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
-					} else {
-						// Delta is 0 or 1, so use last grad level + 1
-						newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
+					else {
+						if (delta != 1)
+							// Delta of 1 is OK, anything else is an error
+							MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
+									new StudentNameModel(
+											contactWithData.getFirstName(), contactWithData.getLastName(), false),
+									Integer.parseInt(inputModel.getClientID()),
+									" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+											+ ", SF last = " + contactWithData.getLast_Class_Level__c() + ", SF grad = "
+											+ highestLevel);
+
+						if (delta < 0 || delta > 1) {
+							// Classes taken out-of-order, use current class level if possible
+							if (repoLevel != null)
+								newAttendRecord.setInternal_level__c(repoLevel);
+							else if (inputModel.getEventType().startsWith("class java"))
+								newAttendRecord.setInternal_level__c(inputModel.getEventName().substring(0, 1));
+							else
+								newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
+						} else {
+							// Delta is 0 or 1, so use last grad level + 1
+							newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
+						}
 					}
 				}
 				attendLevelChanges.add(dbAttend);
