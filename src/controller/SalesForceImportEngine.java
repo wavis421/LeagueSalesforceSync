@@ -64,7 +64,7 @@ public class SalesForceImportEngine {
 
 		// === UPDATE ATTENDANCE ===
 		// (1) Get Github comments and Pike13 attendance; store in list
-		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents();
+		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents(startDate);
 		ArrayList<SalesForceAttendanceModel> pike13Attendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
 
