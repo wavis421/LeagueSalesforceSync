@@ -86,7 +86,8 @@ public class SalesForceImportEngine {
 				statsStart, statsEnd);
 
 		if (pike13EnrollStats != null && sfContactList != null) {
-			updateRecords.updateEnrollStats(pike13EnrollStats, t.minusDays(1), statsStart, statsEnd, sfContactList);
+			updateRecords.updateEnrollStats(pike13EnrollStats, t.minusDays(1), statsStart, statsEnd,
+					pike13StudentContactList, sfContactList);
 		}
 
 		// === UPDATE GRADUATION DIARY ENTRIES ===

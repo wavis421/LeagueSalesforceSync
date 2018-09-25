@@ -2,6 +2,7 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -415,30 +416,59 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	public void updateEnrollStats(ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats, DateTime middleDate,
-			String startDayString, String endDayString, ArrayList<Contact> contacts) {
+			String startDayString, String endDayString, ArrayList<StudentImportModel> pike13Students,
+			ArrayList<Contact> contacts) {
 		ArrayList<Enrollment_Stats__c> recordList = new ArrayList<Enrollment_Stats__c>();
 		enrollStatsUpsertCount = 0;
 		String dayOfMonth = middleDate.toString("dd");
 		String yearMonth = middleDate.toString("yyyyMM");
+		int lastClientID = 0, thisID = 0, stats = 0;
+		Contact thisContact = null;
+
+		// Sort list by Client ID so Attendance is grouped
+		Collections.sort(pike13EnrollStats);
 
 		try {
-			for (int i = 0; i < pike13EnrollStats.size(); i++) {
+			for (SalesForceEnrollStatsModel inputModel : pike13EnrollStats) {
 				// Add each Pike13 stats record to SalesForce list
-				SalesForceEnrollStatsModel inputModel = pike13EnrollStats.get(i);
+				thisID = inputModel.getClientID();
 
-				// Cannot add stats for contacts that do not exist!
-				Contact c = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ENROLL_STATS,
-						((Integer) inputModel.getClientID()).toString(), "", "", contacts);
-				if (c == null)
-					continue;
+				if (thisID != lastClientID) {
+					if (thisContact != null)
+						// Save stats accumulated for last client
+						recordList.add(createEnrollStatsRecord(dayOfMonth, yearMonth, stats, thisContact));
 
-				Enrollment_Stats__c statsRecord = new Enrollment_Stats__c();
-				statsRecord.setPike_13_ID__r(c);
-				statsRecord.setEnrollment_Id__c(c.getFront_Desk_Id__c() + yearMonth);
-				statsRecord.setYear_month__c(yearMonth);
-				setEnrollStatsField(dayOfMonth, (double) inputModel.getEnrollStats(), statsRecord);
+					// Cannot add stats for contacts that do not exist!
+					thisContact = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ENROLL_STATS,
+							((Integer) thisID).toString(), "", "", contacts);
+					if (thisContact == null)
+						continue;
 
-				recordList.add(statsRecord);
+					StudentImportModel model = ListUtilities.findClientIDInPike13List(thisID, pike13Students);
+					if (model != null)
+						model.setStatsUpdated(true);
+					lastClientID = thisID;
+					stats = 0;
+				}
+				stats++;
+			}
+
+			if (thisContact != null)
+				// Save stats accumulated for last client processed
+				recordList.add(createEnrollStatsRecord(dayOfMonth, yearMonth, stats, thisContact));
+
+			// Now update stats to 0 for any students with no attendance
+			for (StudentImportModel student : pike13Students) {
+				if (!student.isStatsUpdated()) {
+					// Cannot add stats for contacts that do not exist!
+					thisContact = ListUtilities.findClientIDInList(-1, ((Integer) student.getClientID()).toString(), "",
+							"", contacts);
+					if (thisContact == null)
+						continue;
+
+					// Set stats to zero
+					recordList.add(createEnrollStatsRecord(dayOfMonth, yearMonth, 0, thisContact));
+				}
 			}
 
 			// Copy up to 200 records to array at a time (max allowed)
@@ -485,6 +515,16 @@ public class UpdateRecordsInSalesForce {
 
 		MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLLMENT_STATS_UPDATED, new StudentNameModel("", "", false), 0,
 				", " + enrollStatsUpsertCount + " records processed (" + startDayString + " to " + endDayString + ")");
+	}
+
+	private Enrollment_Stats__c createEnrollStatsRecord(String dayOfMonth, String yearMonth, int stats, Contact c) {
+		Enrollment_Stats__c statsRecord = new Enrollment_Stats__c();
+		statsRecord.setPike_13_ID__r(c);
+		statsRecord.setEnrollment_Id__c(c.getFront_Desk_Id__c() + yearMonth);
+		statsRecord.setYear_month__c(yearMonth);
+		setEnrollStatsField(dayOfMonth, (double) stats, statsRecord);
+
+		return statsRecord;
 	}
 
 	private void setEnrollStatsField(String dayOfMonth, double value, Enrollment_Stats__c statsRecord) {
@@ -582,7 +622,7 @@ public class UpdateRecordsInSalesForce {
 					int delta = (contactWithData.getLast_Class_Level__c().charAt(0) - '0') - highestLevel;
 
 					// Special case: classes out-of-order (avoid error)
-					if (delta < 0 && repoLevel != null && (Integer.parseInt(repoLevel) == (highestLevel + 1)))
+					if (delta > 1 && repoLevel != null && (Integer.parseInt(repoLevel) == (highestLevel + 1)))
 						newAttendRecord.setInternal_level__c(repoLevel);
 
 					else {

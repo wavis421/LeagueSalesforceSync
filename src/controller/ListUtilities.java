@@ -62,10 +62,18 @@ public class ListUtilities {
 		return null;
 	}
 
+	public static StudentImportModel findClientIDInPike13List(int clientID, ArrayList<StudentImportModel> clientList) {
+		for (StudentImportModel m : clientList) {
+			if (m.getClientID() == clientID)
+				return m;
+		}
+		return null;
+	}
+
 	public static Contact findStudentContactInPike13List(String studentName, String accountID,
 			ArrayList<StudentImportModel> students) {
 		for (StudentImportModel s : students) {
-			if (s.getAccountID().equals(accountID) && s.getFullName().equals(studentName))
+			if (s.getAccountID() != null && s.getAccountID().equals(accountID) && s.getFullName().equals(studentName))
 				return (Contact) s.getSfContact();
 		}
 		return null;
