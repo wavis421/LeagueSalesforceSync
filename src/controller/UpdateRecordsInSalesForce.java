@@ -444,9 +444,6 @@ public class UpdateRecordsInSalesForce {
 					if (thisContact == null)
 						continue;
 
-					StudentImportModel model = ListUtilities.findClientIDInPike13List(thisID, pike13Students);
-					if (model != null)
-						model.setStatsUpdated(true);
 					lastClientID = thisID;
 					stats = 0;
 				}
@@ -456,20 +453,6 @@ public class UpdateRecordsInSalesForce {
 			if (thisContact != null)
 				// Save stats accumulated for last client processed
 				recordList.add(createEnrollStatsRecord(dayOfMonth, yearMonth, stats, thisContact));
-
-			// Now update stats to 0 for any students with no attendance
-			for (StudentImportModel student : pike13Students) {
-				if (!student.isStatsUpdated()) {
-					// Cannot add stats for contacts that do not exist!
-					thisContact = ListUtilities.findClientIDInList(-1, ((Integer) student.getClientID()).toString(), "",
-							"", contacts);
-					if (thisContact == null)
-						continue;
-
-					// Set stats to zero
-					recordList.add(createEnrollStatsRecord(dayOfMonth, yearMonth, 0, thisContact));
-				}
-			}
 
 			// Copy up to 200 records to array at a time (max allowed)
 			Enrollment_Stats__c[] recordArray;
