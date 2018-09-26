@@ -604,9 +604,16 @@ public class UpdateRecordsInSalesForce {
 					int highestLevel = (int) ((double) contactWithData.getHighest_Level__c());
 					int delta = (contactWithData.getLast_Class_Level__c().charAt(0) - '0') - highestLevel;
 
-					// Special case: classes out-of-order (avoid error)
-					if (delta > 1 && repoLevel != null && (Integer.parseInt(repoLevel) == (highestLevel + 1)))
-						newAttendRecord.setInternal_level__c(repoLevel);
+					// Extract class level from event name
+					String eventNameSubstring = null;
+					if (inputModel.getEventType().startsWith("class java"))
+						eventNameSubstring = inputModel.getEventName().substring(0, 1);
+
+					// Special case: classes out-of-order or Level 9 (avoid error)
+					if (delta > 1 && eventNameSubstring != null
+							&& (Integer.parseInt(eventNameSubstring) == (highestLevel + 1)
+									|| eventNameSubstring.equals("9")))
+						newAttendRecord.setInternal_level__c(eventNameSubstring);
 
 					else {
 						if (delta != 1)
@@ -623,8 +630,8 @@ public class UpdateRecordsInSalesForce {
 							// Classes taken out-of-order, use current class level if possible
 							if (repoLevel != null)
 								newAttendRecord.setInternal_level__c(repoLevel);
-							else if (inputModel.getEventType().startsWith("class java"))
-								newAttendRecord.setInternal_level__c(inputModel.getEventName().substring(0, 1));
+							else if (eventNameSubstring != null)
+								newAttendRecord.setInternal_level__c(eventNameSubstring);
 							else
 								newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
 						} else {
