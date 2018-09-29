@@ -705,8 +705,8 @@ public class UpdateRecordsInSalesForce {
 
 		try {
 			queryResult = connection
-					.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c, Owner.Name "
-							+ "FROM Student_Attendance__c WHERE Owner.Name = 'League Bot' AND Visit_Id__c != NULL "
+					.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c, CreatedBy.Name "
+							+ "FROM Student_Attendance__c WHERE CreatedBy.Name = 'League Bot' AND Visit_Id__c != NULL "
 							+ "AND Service_Date__c >= " + startDate + " AND Service_Date__c <= " + endDate
 							+ " ORDER BY Visit_Id__c ASC");
 			System.out.println(queryResult.getSize() + " Salesforce attendance records for League Bot");
