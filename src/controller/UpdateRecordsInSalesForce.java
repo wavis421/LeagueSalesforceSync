@@ -1429,7 +1429,9 @@ public class UpdateRecordsInSalesForce {
 		c.setLeave_Reason__c(contact.getLeaveReason());
 		c.setStop_Email__c(contact.isStopEmail());
 		c.setScholarship__c(contact.isFinancialAid());
-		if (contact.getFinancialAidPercent() != null)
+		if (contact.getFinancialAidPercent() == null || contact.getFinancialAidPercent() == "")
+			c.setScholarship_Percentage__c(" ");
+		else
 			c.setScholarship_Percentage__c(contact.getFinancialAidPercent());
 		if (contact.getBirthDate() != null && !contact.getBirthDate().equals(""))
 			c.setDate_of_Birth__c(convertDateStringToCalendar(contact.getBirthDate()));
