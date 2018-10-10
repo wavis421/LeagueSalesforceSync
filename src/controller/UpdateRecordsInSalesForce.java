@@ -609,10 +609,8 @@ public class UpdateRecordsInSalesForce {
 					if (inputModel.getEventType().startsWith("class java"))
 						eventNameSubstring = inputModel.getEventName().substring(0, 1);
 
-					// Special case: classes out-of-order or Level 9 (avoid error)
-					if (delta > 1 && eventNameSubstring != null
-							&& (Integer.parseInt(eventNameSubstring) == (highestLevel + 1)
-									|| eventNameSubstring.equals("9")))
+					// Special case: always accept Level 9 (avoid error)
+					if (eventNameSubstring != null && eventNameSubstring.equals("9"))
 						newAttendRecord.setInternal_level__c(eventNameSubstring);
 
 					else {
@@ -1697,7 +1695,7 @@ public class UpdateRecordsInSalesForce {
 			if (valueLowerCase.startsWith("league admin") || valueLowerCase.startsWith("summer prog")
 					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres")
 					|| valueLowerCase.startsWith("open lab") || valueLowerCase.startsWith("make-up")
-					|| valueLowerCase.startsWith("need assist"))
+					|| valueLowerCase.startsWith("need assist") || valueLowerCase.startsWith("league workshop"))
 				continue;
 
 			// Add teacher to new teachers string
