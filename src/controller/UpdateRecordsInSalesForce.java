@@ -75,10 +75,12 @@ public class UpdateRecordsInSalesForce {
 				StudentImportModel student = pike13Students.get(i);
 
 				// Ignore school clients!
-				if (student.getFullName().equals("gompers Prep") || student.getFullName().equals("wilson Middle School")
-						|| student.getFullName().equals("nativity Prep Academy")
-						|| student.getFullName().equals("Sample Customer")
-						|| student.getFullName().equals("barrio Logan College Institute")
+				if (student.getFullName().equalsIgnoreCase("gompers prep")
+						|| student.getFullName().equalsIgnoreCase("wilson middle school")
+						|| student.getFullName().equalsIgnoreCase("nativity prep academy")
+						|| student.getFullName().equalsIgnoreCase("sample customer")
+						|| student.getFullName().equalsIgnoreCase("barrio logan college institute")
+						|| student.getFullName().equalsIgnoreCase("monroe middle school")
 						|| student.getFirstName().startsWith("HOLIDAY")
 						|| student.getFullName().startsWith("Need Assistant"))
 					continue;
@@ -157,10 +159,9 @@ public class UpdateRecordsInSalesForce {
 				// Add each Pike13 client record to SalesForce list
 				StudentImportModel adult = pike13Adults.get(i);
 
-				// Ignore school clients!
-				if (adult.getFullName().equals("wilson Middle School") || adult.getFullName().equals("Sample Customer")
-						|| adult.getFullName().equals("barrio Logan College Institute")
-						|| adult.getFirstName().startsWith("HOLIDAY")
+				// Ignore test accounts
+				if (adult.getFirstName().startsWith("HOLIDAY")
+						|| adult.getFullName().equalsIgnoreCase("sample customer")
 						|| adult.getFullName().startsWith("Need Assistant"))
 					continue;
 
@@ -170,7 +171,7 @@ public class UpdateRecordsInSalesForce {
 						sfAccounts);
 
 				if (account.getName().equals(""))
-					// Dependent is either hidden/deleted or this is test account
+					// Dependent is either hidden/deleted or this is test account or school
 					continue;
 
 				// Create contact and add to list
