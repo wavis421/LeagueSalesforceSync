@@ -610,23 +610,14 @@ public class UpdateRecordsInSalesForce {
 					if (inputModel.getEventType().startsWith("class java"))
 						eventNameSubstring = inputModel.getEventName().substring(0, 1);
 
-					// Special case: always accept Level 9 (avoid error)
-					if (eventNameSubstring != null && eventNameSubstring.equals("9"))
+					// Special case: always accept Levels 8 & 9 (avoid error)
+					if (eventNameSubstring != null
+							&& (eventNameSubstring.equals("9") || eventNameSubstring.equals("8")))
 						newAttendRecord.setInternal_level__c(eventNameSubstring);
 
 					else {
-						if (delta != 1)
-							// Delta of 1 is OK, anything else is an error
-							MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
-									new StudentNameModel(
-											contactWithData.getFirstName(), contactWithData.getLastName(), false),
-									Integer.parseInt(inputModel.getClientID()),
-									" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
-											+ ", SF last = " + contactWithData.getLast_Class_Level__c() + ", SF grad = "
-											+ highestLevel);
-
 						if (delta < 0 || delta > 1) {
-							// Classes taken out-of-order, use current class level if possible
+							// Classes taken out-of-order; use last class level if nothing else works
 							if (repoLevel != null)
 								newAttendRecord.setInternal_level__c(repoLevel);
 							else if (eventNameSubstring != null)
@@ -637,6 +628,17 @@ public class UpdateRecordsInSalesForce {
 							// Delta is 0 or 1, so use last grad level + 1
 							newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
 						}
+
+						if (delta != 1)
+							// Delta of 1 is OK, anything else is an error
+							MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
+									new StudentNameModel(
+											contactWithData.getFirstName(), contactWithData.getLastName(), false),
+									Integer.parseInt(inputModel.getClientID()),
+									" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+											+ ", SF last = " + contactWithData.getLast_Class_Level__c() + ", SF grad = "
+											+ highestLevel + " (set to " + newAttendRecord.getInternal_level__c()
+											+ ")");
 					}
 				}
 				attendLevelChanges.add(dbAttend);
