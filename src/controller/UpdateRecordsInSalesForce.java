@@ -345,7 +345,7 @@ public class UpdateRecordsInSalesForce {
 
 				// Update contact's Intro to Java workshop grad dates, class levels & times
 				updateWorkshopGrad(workShopGrads, inputModel);
-				updateClassLevel(classLevelChanges, inputModel);
+				updateClassLevel(classLevelChanges, inputModel, a.getRepo_Name__c());
 
 				recordList.add(a);
 			}
@@ -406,7 +406,8 @@ public class UpdateRecordsInSalesForce {
 		if (classLevelChanges.size() > 0) {
 			// Update 'last class event' in SQL database for each student
 			for (ContactModel c : classLevelChanges)
-				mySqlDb.updateLastEventNameByStudent(Integer.parseInt(c.getClientID()), c.getStringField());
+				mySqlDb.updateLastEventNameByStudent(Integer.parseInt(c.getClientID()), c.getEventName(),
+						c.getRepoName());
 		}
 		System.out.println(attendLevelChanges.size() + " Attend Level changes");
 		if (attendLevelChanges.size() > 0) {
@@ -1336,23 +1337,25 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	private void updateClassLevel(ArrayList<ContactModel> students, SalesForceAttendanceModel inputModel) {
+	private void updateClassLevel(ArrayList<ContactModel> students, SalesForceAttendanceModel inputModel,
+			String repoName) {
 		// If event is a regular class and is completed, add to grad list
 		if (inputModel.getEventName() != null && inputModel.getEventName().length() > 2
 				&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '9'
 				&& inputModel.getEventName().charAt(1) == '@' && inputModel.getStatus().equals("completed")) {
 
-			ContactModel dupGrad = findFieldInContactList(inputModel.getClientID(), students);
+			ContactModel dupStudent = findFieldInContactList(inputModel.getClientID(), students);
 
-			if (dupGrad == null) {
+			if (dupStudent == null) {
 				// Not already in list, so add
 				students.add(new ContactModel(inputModel.getClientID(), inputModel.getEventName(),
-						inputModel.getServiceDate()));
+						inputModel.getServiceDate(), repoName));
 
-			} else if (inputModel.getServiceDate().compareTo(dupGrad.getServiceDate()) > 0) {
+			} else if (inputModel.getServiceDate().compareTo(dupStudent.getServiceDate()) > 0) {
 				// This client is already in list and date is later, so update
-				dupGrad.setStringField(inputModel.getEventName());
-				dupGrad.setServiceDate(inputModel.getServiceDate());
+				dupStudent.setEventName(inputModel.getEventName());
+				dupStudent.setServiceDate(inputModel.getServiceDate());
+				dupStudent.setRepoName(repoName);
 			}
 		}
 	}
@@ -1886,32 +1889,41 @@ public class UpdateRecordsInSalesForce {
 	 */
 	private class ContactModel {
 		// Model for storing temp data being upserted to SalesForce Contacts
-		String clientID, stringField, serviceDate;
+		String clientID, eventName, serviceDate, repoName;
 
-		ContactModel(String clientID, String field1, String serviceDate) {
+		ContactModel(String clientID, String eventName, String serviceDate, String repoName) {
 			this.clientID = clientID;
-			this.stringField = field1;
+			this.eventName = eventName;
 			this.serviceDate = serviceDate;
+			this.repoName = repoName;
 		}
 
 		public String getClientID() {
 			return clientID;
 		}
 
-		public String getStringField() {
-			return stringField;
+		public String getEventName() {
+			return eventName;
 		}
 
 		public String getServiceDate() {
 			return serviceDate;
 		}
 
-		public void setStringField(String field1) {
-			this.stringField = field1;
+		public String getRepoName() {
+			return repoName;
+		}
+
+		public void setEventName(String name) {
+			this.eventName = name;
 		}
 
 		public void setServiceDate(String serviceDate) {
 			this.serviceDate = serviceDate;
+		}
+
+		public void setRepoName(String repoName) {
+			this.repoName = repoName;
 		}
 	}
 }
