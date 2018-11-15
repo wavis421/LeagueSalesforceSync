@@ -144,9 +144,6 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
 						0, ": " + e.getMessage());
 		}
-
-		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " student record(s) processed");
 	}
 
 	public void updateAdults(ArrayList<StudentImportModel> pike13Students, ArrayList<StudentImportModel> pike13Adults,
@@ -190,9 +187,6 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
 						0, ": " + e.getMessage());
 		}
-
-		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " adult record(s) processed");
 
 		// Update modified clients to SalesForce
 		if (dependentUpdates.size() > 0)
@@ -369,14 +363,9 @@ public class UpdateRecordsInSalesForce {
 						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 		}
 
-		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_ATTENDANCE_UPDATED, new StudentNameModel("", "", false),
-				0, ", " + attendanceUpsertCount + " record(s) processed");
-
 		// Update modified clients to SalesForce
 		if (workShopGrads.size() > 0) {
 			upsertContactRecordList(workShopGrads, "WorkS grad");
-			MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-					", " + clientUpdateCount + " WorkShop grad record(s) processed");
 		}
 		if (classLevelChanges.size() > 0) {
 			// Update 'last class event' in SQL database for each student
@@ -470,9 +459,6 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLL_STATS_IMPORT_ERROR,
 						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 		}
-
-		MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLLMENT_STATS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + enrollStatsUpsertCount + " records processed (" + startDayString + " to " + endDayString + ")");
 	}
 
 	private Enrollment_Stats__c createEnrollStatsRecord(String dayOfMonth, String yearMonth, int stats, Contact c) {
@@ -725,9 +711,6 @@ public class UpdateRecordsInSalesForce {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_CANCELED_ATTEND_CLEANUP,
-				new StudentNameModel("", "", false), 0, ", " + attendanceDeleteCount + " records deleted");
 	}
 
 	public void updateGraduates(ArrayList<GraduationModel> gradStudents, ArrayList<Contact> sfContacts,
@@ -793,9 +776,6 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e.getMessage());
 		}
-
-		MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " graduation record(s) processed");
 	}
 
 	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts,
@@ -853,9 +833,6 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
 						0, ": " + e.getMessage());
 		}
-
-		MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENTS_UPDATED, new StudentNameModel("", "", false), 0,
-				", " + clientUpdateCount + " staff record(s) processed");
 	}
 
 	public void updateStaffHours(ArrayList<StaffMemberModel> pike13StaffMembers,
@@ -934,9 +911,6 @@ public class UpdateRecordsInSalesForce {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_STAFF_HOURS_UPDATED, new StudentNameModel("", "", false),
-				0, ", " + staffHoursUpsertCount + " record(s) processed");
 	}
 
 	private Staff_Hours__c createStaffHoursRecord(SalesForceStaffHoursModel inputModel, Contact c) {
