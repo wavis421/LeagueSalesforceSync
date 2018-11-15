@@ -82,8 +82,8 @@ public class SalesForceImportEngine {
 		DateTime t = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles"));
 		String statsStart = t.minusDays(enrollCountDays + 2).toString("yyyy-MM-dd");
 		String statsEnd = t.plusDays(enrollCountDays - 1).toString("yyyy-MM-dd");
-		ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats = pike13Api.getSalesForceEnrollStats(
-				statsStart, statsEnd);
+		ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats = pike13Api.getSalesForceEnrollStats(statsStart,
+				statsEnd);
 
 		if (pike13EnrollStats != null && sfContactList != null) {
 			updateRecords.updateEnrollStats(pike13EnrollStats, t.minusDays(1), statsStart, statsEnd,
@@ -112,14 +112,5 @@ public class SalesForceImportEngine {
 			updateRecords.updateStaffMembers(pike13StaffMembers, sfAllContactList, sfAccountList);
 			updateRecords.updateStaffHours(pike13StaffMembers, pike13StaffHours, sfContactList);
 		}
-
-		// === REMOVE CONTACTS FROM SALESFORCE THAT ARE NOT IN PIKE13 (later) ==
-//		if (pike13StudentContactList != null && pike13AdultContactList != null && pike13StaffMembers != null
-//				&& sfAllContactList != null) {
-//			ArrayList<StudentImportModel> allPike13Contacts = new ArrayList<StudentImportModel>();
-//			allPike13Contacts.addAll(pike13StudentContactList);
-//			allPike13Contacts.addAll(pike13AdultContactList);
-//			updateRecords.removeExtraContactRecords(allPike13Contacts, pike13StaffMembers, sfAllContactList);
-//		}
 	}
 }

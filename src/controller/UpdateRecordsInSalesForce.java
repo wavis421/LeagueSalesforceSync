@@ -33,6 +33,7 @@ import model.SalesForceAttendanceModel;
 import model.SalesForceEnrollStatsModel;
 import model.SalesForceStaffHoursModel;
 import model.StaffMemberModel;
+import model.StudentClassLevelModel;
 import model.StudentImportModel;
 import model.StudentNameModel;
 
@@ -198,38 +199,12 @@ public class UpdateRecordsInSalesForce {
 			upsertContactRecordList(dependentUpdates, "Thank and Hear From");
 	}
 
-	// TODO: Finish this. This method is not being called yet.
-	public void removeExtraContactRecords(ArrayList<StudentImportModel> pike13Clients,
-			ArrayList<StaffMemberModel> pike13Staff, ArrayList<Contact> sfContacts) {
-
-		ArrayList<String> deleteList = new ArrayList<String>();
-
-		for (Contact c : sfContacts) {
-			// Check whether contact record exists in Pike13
-			if (c.getContact_Type__c() == null) {
-				System.out.println("Contact record null for " + c.getFirstName() + " " + c.getLastName() + ", "
-						+ c.getFront_Desk_Id__c());
-				deleteList.add(c.getFront_Desk_Id__c());
-			}
-
-			else if (ListUtilities.findClientIDInPike13List(c.getFront_Desk_Id__c(), pike13Clients) == null
-					&& ListUtilities.findStaffIDInList(-1, c.getFront_Desk_Id__c(), "", "", "", pike13Staff) == null) {
-				System.out.println("Remove client: " + c.getFirstName() + " " + c.getLastName() + ", "
-						+ c.getFront_Desk_Id__c() + ", " + c.getContact_Type__c());
-				deleteList.add(c.getFront_Desk_Id__c());
-
-			}
-		}
-
-		System.out.println("Deleted contact records: " + deleteList.size());
-	}
-
 	public void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
 			ArrayList<AttendanceEventModel> dbAttendance, ArrayList<Contact> contacts, ArrayList<Contact> allContacts,
 			ArrayList<StudentImportModel> pike13Students, ArrayList<StaffMemberModel> staffMembers) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
-		ArrayList<ContactModel> classLevelChanges = new ArrayList<ContactModel>();
+		ArrayList<StudentClassLevelModel> classLevelChanges = new ArrayList<StudentClassLevelModel>();
 		ArrayList<AttendanceEventModel> attendLevelChanges = new ArrayList<AttendanceEventModel>();
 		clientUpdateCount = 0;
 		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
@@ -405,9 +380,7 @@ public class UpdateRecordsInSalesForce {
 		}
 		if (classLevelChanges.size() > 0) {
 			// Update 'last class event' in SQL database for each student
-			for (ContactModel c : classLevelChanges)
-				mySqlDb.updateLastEventNameByStudent(Integer.parseInt(c.getClientID()), c.getEventName(),
-						c.getRepoName());
+			mySqlDb.updateLastEventNames(classLevelChanges);
 		}
 		System.out.println(attendLevelChanges.size() + " Attend Level changes");
 		if (attendLevelChanges.size() > 0) {
@@ -1337,18 +1310,19 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	private void updateClassLevel(ArrayList<ContactModel> students, SalesForceAttendanceModel inputModel,
+	private void updateClassLevel(ArrayList<StudentClassLevelModel> students, SalesForceAttendanceModel inputModel,
 			String repoName) {
 		// If event is a regular class and is completed, add to grad list
 		if (inputModel.getEventName() != null && inputModel.getEventName().length() > 2
-				&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '9'
+				&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '7'
 				&& inputModel.getEventName().charAt(1) == '@' && inputModel.getStatus().equals("completed")) {
 
-			ContactModel dupStudent = findFieldInContactList(inputModel.getClientID(), students);
+			int clientID = Integer.parseInt(inputModel.getClientID());
+			StudentClassLevelModel dupStudent = findStudentInClassList(clientID, students);
 
 			if (dupStudent == null) {
 				// Not already in list, so add
-				students.add(new ContactModel(inputModel.getClientID(), inputModel.getEventName(),
+				students.add(new StudentClassLevelModel(clientID, inputModel.getEventName(),
 						inputModel.getServiceDate(), repoName));
 
 			} else if (inputModel.getServiceDate().compareTo(dupStudent.getServiceDate()) > 0) {
@@ -1854,9 +1828,10 @@ public class UpdateRecordsInSalesForce {
 		return 0;
 	}
 
-	public static ContactModel findFieldInContactList(String clientID, ArrayList<ContactModel> contactList) {
-		for (ContactModel c : contactList) {
-			if (c.getClientID().equals(clientID)) {
+	public static StudentClassLevelModel findStudentInClassList(int clientID,
+			ArrayList<StudentClassLevelModel> contactList) {
+		for (StudentClassLevelModel c : contactList) {
+			if (c.getClientID() == clientID) {
 				return c;
 			}
 		}
@@ -1882,48 +1857,5 @@ public class UpdateRecordsInSalesForce {
 			currIdx++;
 		}
 		return output;
-	}
-
-	/*
-	 * ~~~~ Contact Model Class used as an intermediary data structure ~~~~
-	 */
-	private class ContactModel {
-		// Model for storing temp data being upserted to SalesForce Contacts
-		String clientID, eventName, serviceDate, repoName;
-
-		ContactModel(String clientID, String eventName, String serviceDate, String repoName) {
-			this.clientID = clientID;
-			this.eventName = eventName;
-			this.serviceDate = serviceDate;
-			this.repoName = repoName;
-		}
-
-		public String getClientID() {
-			return clientID;
-		}
-
-		public String getEventName() {
-			return eventName;
-		}
-
-		public String getServiceDate() {
-			return serviceDate;
-		}
-
-		public String getRepoName() {
-			return repoName;
-		}
-
-		public void setEventName(String name) {
-			this.eventName = name;
-		}
-
-		public void setServiceDate(String serviceDate) {
-			this.serviceDate = serviceDate;
-		}
-
-		public void setRepoName(String repoName) {
-			this.repoName = repoName;
-		}
 	}
 }
