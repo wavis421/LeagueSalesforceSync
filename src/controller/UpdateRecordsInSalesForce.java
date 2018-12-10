@@ -33,7 +33,6 @@ import model.SalesForceAttendanceModel;
 import model.SalesForceEnrollStatsModel;
 import model.SalesForceStaffHoursModel;
 import model.StaffMemberModel;
-import model.StudentClassLevelModel;
 import model.StudentImportModel;
 import model.StudentNameModel;
 
@@ -198,7 +197,6 @@ public class UpdateRecordsInSalesForce {
 			ArrayList<StudentImportModel> pike13Students, ArrayList<StaffMemberModel> staffMembers) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
-		ArrayList<StudentClassLevelModel> classLevelChanges = new ArrayList<StudentClassLevelModel>();
 		ArrayList<AttendanceEventModel> attendLevelChanges = new ArrayList<AttendanceEventModel>();
 		clientUpdateCount = 0;
 		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
@@ -286,15 +284,15 @@ public class UpdateRecordsInSalesForce {
 						a.setRepo_Name__c(dbAttend.getRepoName());
 				}
 
+				StudentImportModel dbStudent = ListUtilities.findClientIDInPike13List(inputModel.getClientID(),
+						pike13Students);
 				if (inputModel.getServiceDate().compareTo(startBillingDate) >= 0) {
-					StudentImportModel student = ListUtilities.findClientIDInPike13List(inputModel.getClientID(),
-							pike13Students);
-					if (student != null) {
-						if (student.getFinancialAidPercent().length() > MAX_BILLING_NOTES_FIELD_LENGTH)
+					if (dbStudent != null) {
+						if (dbStudent.getFinancialAidPercent().length() > MAX_BILLING_NOTES_FIELD_LENGTH)
 							a.setBilling_Note__c(
-									student.getFinancialAidPercent().substring(0, MAX_BILLING_NOTES_FIELD_LENGTH));
+									dbStudent.getFinancialAidPercent().substring(0, MAX_BILLING_NOTES_FIELD_LENGTH));
 						else
-							a.setBilling_Note__c(student.getFinancialAidPercent());
+							a.setBilling_Note__c(dbStudent.getFinancialAidPercent());
 					}
 				}
 
@@ -304,7 +302,7 @@ public class UpdateRecordsInSalesForce {
 				else
 					a.setStaff__c(newStaff);
 
-				// Extract level from event name, store in 'internal level'
+				// Extract level from DB attendance, store in 'internal level'
 				if (inputModel.getStatus().equals("completed")) {
 					updateAttendLevel(attendLevelChanges, inputModel, contactWithData, a, dbAttend);
 				}
@@ -312,9 +310,8 @@ public class UpdateRecordsInSalesForce {
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
 
-				// Update contact's Intro to Java workshop grad dates, class levels & times
+				// Update contact's Intro to Java workshop grad dates
 				updateWorkshopGrad(workShopGrads, inputModel);
-				updateClassLevel(classLevelChanges, inputModel, a.getRepo_Name__c());
 
 				recordList.add(a);
 			}
@@ -367,11 +364,8 @@ public class UpdateRecordsInSalesForce {
 		if (workShopGrads.size() > 0) {
 			upsertContactRecordList(workShopGrads, "WorkS grad");
 		}
-		if (classLevelChanges.size() > 0) {
-			// Update 'last class event' in SQL database for each student
-			mySqlDb.updateLastEventNames(classLevelChanges);
-		}
-		System.out.println(attendLevelChanges.size() + " Attend Level changes");
+
+		System.out.println(attendLevelChanges.size() + " Attendance completed");
 		if (attendLevelChanges.size() > 0) {
 			// Update attendance level changes
 			for (AttendanceEventModel a : attendLevelChanges)
@@ -551,59 +545,49 @@ public class UpdateRecordsInSalesForce {
 
 		// Insert current level into attendance for all class java, jslam, jlab
 		if (inputModel.getEventType().startsWith("class j") && dbAttend.getState().equals("completed")) {
-			// jclass, jlab or jslam
+			// Only update when DB state just transitioned to complete!
 			if (!dbAttend.getState().equals(dbAttend.getLastSFState())) {
 				String repoLevel = getRepoLevelString(newAttendRecord);
 
-				// Only update when DB state just transitioned to complete!
 				if (contactWithData.getHighest_Level__c() == null) {
 					// If SF level is null, assume this is level 0
 					newAttendRecord.setInternal_level__c("0");
 
-				} else {
-					// Normal case is where values are separated by 1
+					// Check if DB attendance is also 0
+					if (!dbAttend.getClassLevel().equals("0"))
+						MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
+								new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(),
+										false),
+								Integer.parseInt(inputModel.getClientID()),
+								" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+										+ ", DB Level = " + dbAttend.getClassLevel() + ", SF Grad = - (set to 0)");
+
+				} else if (!dbAttend.getClassLevel().equals("")) {
+					// Normal case is where class level is "gradlevel + 1"
 					int highestLevel = (int) ((double) contactWithData.getHighest_Level__c());
-					int delta = (contactWithData.getLast_Class_Level__c().charAt(0) - '0') - highestLevel;
-
-					// Extract class level from event name
-					String eventNameSubstring = null;
-					if (inputModel.getEventType().startsWith("class java"))
-						eventNameSubstring = inputModel.getEventName().substring(0, 1);
-
-					// Special case: always accept Levels 8 & 9 (avoid error)
-					if (eventNameSubstring != null
-							&& (eventNameSubstring.equals("9") || eventNameSubstring.equals("8")))
-						newAttendRecord.setInternal_level__c(eventNameSubstring);
-
-					else {
-						if (delta < 0 || delta > 1) {
-							// Classes taken out-of-order; use last class level if nothing else works
-							if (repoLevel != null)
-								newAttendRecord.setInternal_level__c(repoLevel);
-							else if (eventNameSubstring != null)
-								newAttendRecord.setInternal_level__c(eventNameSubstring);
-							else
-								newAttendRecord.setInternal_level__c(contactWithData.getLast_Class_Level__c());
-						} else {
-							// Delta is 0 or 1, so use last grad level + 1
-							newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
-						}
-
-						if (delta != 1)
-							// Delta of 1 is OK, anything else is an error
-							MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
-									new StudentNameModel(
-											contactWithData.getFirstName(), contactWithData.getLastName(), false),
-									Integer.parseInt(inputModel.getClientID()),
-									" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
-											+ ", SF last = " + contactWithData.getLast_Class_Level__c() + ", SF grad = "
-											+ highestLevel + " (set to " + newAttendRecord.getInternal_level__c()
-											+ ")");
+					int delta = (dbAttend.getClassLevel().charAt(0) - '0') - highestLevel;
+					if (delta != 1 && repoLevel != null) {
+						// Classes taken out-of-order; use repo if possible
+						newAttendRecord.setInternal_level__c(repoLevel);
+					} else {
+						// Default to using last graduated level plus 1
+						newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
 					}
+
+					if (!newAttendRecord.getInternal_level__c().equals(dbAttend.getClassLevel()))
+						// Mismatched levels
+						MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
+								new StudentNameModel(
+										contactWithData.getFirstName(), contactWithData.getLastName(), false),
+								Integer.parseInt(inputModel.getClientID()),
+								" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+										+ ", DB Level = " + dbAttend.getClassLevel() + ", SF Grad = " + highestLevel
+										+ " (set to " + newAttendRecord.getInternal_level__c() + ")");
 				}
+				// Attendance just became completed, so update Last SF State
 				attendLevelChanges.add(dbAttend);
 
-				// Check that github repo name matches attendance level
+				// Check that github repo name matches new attendance level
 				if (repoLevel != null && !repoLevel.equals(newAttendRecord.getInternal_level__c())) {
 					// Github repo level does not match internal level
 					MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
@@ -611,7 +595,7 @@ public class UpdateRecordsInSalesForce {
 							dbAttend.getClientID(),
 							" for repo '" + newAttendRecord.getRepo_Name__c() + "' on "
 									+ dbAttend.getServiceDateString() + ", expected class level "
-									+ newAttendRecord.getInternal_level__c());
+									+ dbAttend.getClassLevel() + " (set to " + newAttendRecord.getInternal_level__c() + ")");
 				}
 			}
 		}
@@ -1284,30 +1268,6 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	private void updateClassLevel(ArrayList<StudentClassLevelModel> students, SalesForceAttendanceModel inputModel,
-			String repoName) {
-		// If event is a regular class and is completed, add to grad list
-		if (inputModel.getEventName() != null && inputModel.getEventName().length() > 2
-				&& inputModel.getEventName().charAt(0) >= '0' && inputModel.getEventName().charAt(0) <= '7'
-				&& inputModel.getEventName().charAt(1) == '@' && inputModel.getStatus().equals("completed")) {
-
-			int clientID = Integer.parseInt(inputModel.getClientID());
-			StudentClassLevelModel dupStudent = findStudentInClassList(clientID, students);
-
-			if (dupStudent == null) {
-				// Not already in list, so add
-				students.add(new StudentClassLevelModel(clientID, inputModel.getEventName(),
-						inputModel.getServiceDate(), repoName));
-
-			} else if (inputModel.getServiceDate().compareTo(dupStudent.getServiceDate()) > 0) {
-				// This client is already in list and date is later, so update
-				dupStudent.setEventName(inputModel.getEventName());
-				dupStudent.setServiceDate(inputModel.getServiceDate());
-				dupStudent.setRepoName(repoName);
-			}
-		}
-	}
-
 	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account,
 			ArrayList<StudentImportModel> pike13Students, ArrayList<Contact> dependents) {
 		// Create contact and add fields
@@ -1800,16 +1760,6 @@ public class UpdateRecordsInSalesForce {
 						new StudentNameModel("", "", false), clientID, " for Level: " + e.getMessage());
 		}
 		return 0;
-	}
-
-	public static StudentClassLevelModel findStudentInClassList(int clientID,
-			ArrayList<StudentClassLevelModel> contactList) {
-		for (StudentClassLevelModel c : contactList) {
-			if (c.getClientID() == clientID) {
-				return c;
-			}
-		}
-		return null;
 	}
 
 	private String camelCase(String input) {
