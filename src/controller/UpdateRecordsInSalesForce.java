@@ -50,11 +50,6 @@ public class UpdateRecordsInSalesForce {
 	private EnterpriseConnection connection;
 	private GetRecordsFromSalesForce getRecords;
 
-	private int clientUpdateCount = 0;
-	private int attendanceUpsertCount = 0;
-	private int staffHoursUpsertCount = 0;
-	private int attendanceDeleteCount = 0;
-	private int enrollStatsUpsertCount = 0;
 	private boolean attendanceUpsertError = false;
 
 	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, EnterpriseConnection connection,
@@ -67,7 +62,6 @@ public class UpdateRecordsInSalesForce {
 	public void updateStudents(ArrayList<StudentImportModel> pike13Students,
 			ArrayList<StudentImportModel> pike13Managers, ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
-		clientUpdateCount = 0;
 
 		try {
 			for (int i = 0; i < pike13Students.size(); i++) {
@@ -149,7 +143,6 @@ public class UpdateRecordsInSalesForce {
 			ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
 		ArrayList<Contact> dependentUpdates = new ArrayList<Contact>();
-		clientUpdateCount = 0;
 
 		try {
 			for (int i = 0; i < pike13Adults.size(); i++) {
@@ -198,7 +191,6 @@ public class UpdateRecordsInSalesForce {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
 		ArrayList<AttendanceEventModel> attendLevelChanges = new ArrayList<AttendanceEventModel>();
-		clientUpdateCount = 0;
 		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
 				.toString("yyyy-MM-dd");
 
@@ -367,7 +359,7 @@ public class UpdateRecordsInSalesForce {
 
 		System.out.println(attendLevelChanges.size() + " Attendance completed");
 		if (attendLevelChanges.size() > 0) {
-			// Update attendance level changes
+			// Update SF attendance state field in SQL DB 
 			for (AttendanceEventModel a : attendLevelChanges)
 				mySqlDb.updateAttendLevelChanges(a.getVisitID(), a.getState());
 		}
@@ -377,7 +369,6 @@ public class UpdateRecordsInSalesForce {
 			String startDayString, String endDayString, ArrayList<StudentImportModel> pike13Students,
 			ArrayList<Contact> contacts) {
 		ArrayList<Enrollment_Stats__c> recordList = new ArrayList<Enrollment_Stats__c>();
-		enrollStatsUpsertCount = 0;
 		String dayOfMonth = middleDate.toString("dd");
 		String yearMonth = middleDate.toString("yyyyMM");
 		int lastClientID = 0, thisID = 0, stats = 0;
@@ -559,7 +550,7 @@ public class UpdateRecordsInSalesForce {
 								new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(),
 										false),
 								Integer.parseInt(inputModel.getClientID()),
-								" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+								" (SF) for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
 										+ ", DB Level = " + dbAttend.getClassLevel() + ", SF Grad = - (set to 0)");
 
 				} else if (!dbAttend.getClassLevel().equals("")) {
@@ -580,7 +571,7 @@ public class UpdateRecordsInSalesForce {
 								new StudentNameModel(
 										contactWithData.getFirstName(), contactWithData.getLastName(), false),
 								Integer.parseInt(inputModel.getClientID()),
-								" for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
+								" (SF) for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
 										+ ", DB Level = " + dbAttend.getClassLevel() + ", SF Grad = " + highestLevel
 										+ " (set to " + newAttendRecord.getInternal_level__c() + ")");
 				}
@@ -593,7 +584,7 @@ public class UpdateRecordsInSalesForce {
 					MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
 							new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
 							dbAttend.getClientID(),
-							" for repo '" + newAttendRecord.getRepo_Name__c() + "' on "
+							" (SF) for repo '" + newAttendRecord.getRepo_Name__c() + "' on "
 									+ dbAttend.getServiceDateString() + ", expected class level "
 									+ dbAttend.getClassLevel() + " (set to " + newAttendRecord.getInternal_level__c() + ")");
 				}
@@ -700,7 +691,6 @@ public class UpdateRecordsInSalesForce {
 	public void updateGraduates(ArrayList<GraduationModel> gradStudents, ArrayList<Contact> sfContacts,
 			ArrayList<Contact_Diary__c> sfDiary) {
 		ArrayList<Contact_Diary__c> recordList = new ArrayList<Contact_Diary__c>();
-		clientUpdateCount = 0;
 
 		try {
 			for (int i = 0; i < gradStudents.size(); i++) {
@@ -765,7 +755,6 @@ public class UpdateRecordsInSalesForce {
 	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts,
 			ArrayList<Account> sfAccounts) {
 		ArrayList<Contact> recordList = new ArrayList<Contact>();
-		clientUpdateCount = 0;
 
 		try {
 			for (int i = 0; i < pike13StaffMembers.size(); i++) {
@@ -1009,8 +998,7 @@ public class UpdateRecordsInSalesForce {
 							new StudentNameModel(records[i].getFirstName(), records[i].getLastName(), false), clientID,
 							": " + errors[j].getMessage());
 				}
-			} else
-				clientUpdateCount++;
+			}
 		}
 	}
 
@@ -1048,8 +1036,7 @@ public class UpdateRecordsInSalesForce {
 					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
 							new StudentNameModel("", "", false), clientID, ": " + errors[j].getMessage());
 				}
-			} else
-				attendanceUpsertCount++;
+			}
 		}
 	}
 
@@ -1083,8 +1070,7 @@ public class UpdateRecordsInSalesForce {
 					MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLL_STATS_IMPORT_ERROR,
 							new StudentNameModel("", "", false), clientID, " (upsert): " + errors[j].getMessage());
 				}
-			} else
-				enrollStatsUpsertCount++;
+			}
 		}
 	}
 
@@ -1114,8 +1100,7 @@ public class UpdateRecordsInSalesForce {
 					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_ERROR,
 							new StudentNameModel("", "", false), 0, ": " + errors[j].getMessage());
 				}
-			} else
-				attendanceDeleteCount++;
+			}
 		}
 	}
 
@@ -1147,8 +1132,7 @@ public class UpdateRecordsInSalesForce {
 							Integer.parseInt(records[i].getStaff_Name__r().getFront_Desk_Id__c()),
 							" (" + records[i].getSchedule_client_ID__c() + "): " + errors[j].getMessage());
 				}
-			} else
-				staffHoursUpsertCount++;
+			}
 		}
 	}
 
@@ -1227,7 +1211,6 @@ public class UpdateRecordsInSalesForce {
 					String graduateName = recordArray[i].getStudent_Contact__r().getFull_Name__c();
 					mySqlDb.updateGraduationField(clientID, graduateName, recordArray[i].getLevel__c(),
 							MySqlDatabase.GRAD_MODEL_IN_SF_FIELD, true);
-					clientUpdateCount++;
 				}
 
 			} else {
@@ -1312,7 +1295,7 @@ public class UpdateRecordsInSalesForce {
 			else
 				c.setPlan__c(contact.getPassOnFile());
 		}
-		if (contact.getHomeLocAsString() != null)
+		if (contact.getHomeLocAsString() != null && !adult)
 			c.setHome_Location_Long__c(contact.getHomeLocAsString());
 		if (contact.getSchoolName() != null)
 			c.setCurrent_School__c(contact.getSchoolName());
