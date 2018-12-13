@@ -9,16 +9,13 @@ import com.sforce.soap.enterprise.sobject.Contact;
 import com.sforce.soap.enterprise.sobject.Contact_Diary__c;
 
 import model.LogDataModel;
-import model.MySqlDatabase;
 import model.MySqlDbLogging;
 import model.StudentNameModel;
 
 public class GetRecordsFromSalesForce {
-	private MySqlDatabase sqlDb;
 	private EnterpriseConnection connection;
 
-	public GetRecordsFromSalesForce(MySqlDatabase sqlDb, EnterpriseConnection connection) {
-		this.sqlDb = sqlDb;
+	public GetRecordsFromSalesForce(EnterpriseConnection connection) {
 		this.connection = connection;
 	}
 

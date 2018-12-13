@@ -33,7 +33,7 @@ public class SalesForceImportEngine {
 
 	public void updateSalesForce(String today, String startDate, String endDate, int enrollCountDays) {
 		// Instantiate get & update classes
-		GetRecordsFromSalesForce getRecords = new GetRecordsFromSalesForce(sqlDb, salesForceApi);
+		GetRecordsFromSalesForce getRecords = new GetRecordsFromSalesForce(salesForceApi);
 		UpdateRecordsInSalesForce updateRecords = new UpdateRecordsInSalesForce(sqlDb, salesForceApi, getRecords);
 
 		// Get SF contacts and accounts and store in list
