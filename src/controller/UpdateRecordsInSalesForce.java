@@ -1379,7 +1379,7 @@ public class UpdateRecordsInSalesForce {
 			c.setGender__c(staff.getGender());
 		if (staff.getGithubName() != null)
 			c.setGIT_HUB_acct_name__c(staff.getGithubName());
-		if (staff.getHomeLocation() != null)
+		if (staff.getHomeLocation() != null && contactType.equals("Adult"))
 			c.setHome_Location_Long__c(staff.getHomeLocation());
 		c.setPast_Staff_Events__c((double) staff.getPastEvents());
 		c.setFuture_Staff_Events__c((double) staff.getFutureEvents());
