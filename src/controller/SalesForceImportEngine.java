@@ -68,13 +68,21 @@ public class SalesForceImportEngine {
 		ArrayList<SalesForceAttendanceModel> pike13Attendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
 
+		// (2) Get SF contacts again in case new students were added
+		if (sfContactList != null && sfAllContactList != null) {
+			sfContactList.clear();
+			sfAllContactList.clear();
+			sfContactList = getRecords.getSalesForceContacts(); // Students & teachers
+			sfAllContactList = getRecords.getAllSalesForceContacts(); // + all adults
+		}
+
 		if (pike13Attendance != null && dbAttendanceList != null && sfContactList != null && sfAllContactList != null
 				&& pike13StudentContactList != null && pike13StaffMembers != null) {
-			// (2) Update attendance records
+			// (3) Update attendance records
 			updateRecords.updateAttendance(pike13Attendance, dbAttendanceList, sfContactList, sfAllContactList,
 					pike13StudentContactList, pike13StaffMembers);
 
-			// (3) Delete canceled attendance records
+			// (4) Delete canceled attendance records
 			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);
 		}
 
