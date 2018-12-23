@@ -661,15 +661,6 @@ public class UpdateRecordsInSalesForce {
 
 							StudentImportModel student = ListUtilities.findClientIDInPike13List(a.getFront_Desk_ID__c(),
 									studentList);
-							if (student != null)
-								MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
-										new StudentNameModel(student.getFirstName(), student.getLastName(), false),
-										Integer.parseInt(a.getFront_Desk_ID__c()),
-										" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate);
-							else
-								MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_DELETE_ATTENDANCE_RECORD,
-										new StudentNameModel("", "", false), Integer.parseInt(a.getFront_Desk_ID__c()),
-										" " + a.getVisit_Id__c() + " " + a.getEvent_Name__c() + " on " + serviceDate);
 						}
 					}
 					if (queryResult.isDone())
