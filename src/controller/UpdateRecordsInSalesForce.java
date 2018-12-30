@@ -627,7 +627,7 @@ public class UpdateRecordsInSalesForce {
 
 	public void removeExtraAttendanceRecords(ArrayList<SalesForceAttendanceModel> pike13Attendance, String startDate,
 			String endDate, ArrayList<StudentImportModel> studentList) {
-		String serviceDate;
+
 		boolean done = false;
 		QueryResult queryResult;
 		ArrayList<String> deleteList = new ArrayList<String>();
@@ -655,12 +655,7 @@ public class UpdateRecordsInSalesForce {
 						Student_Attendance__c a = (Student_Attendance__c) records[i];
 						if (!ListUtilities.findVisitIdInList(a.getVisit_Id__c(), pike13Attendance)) {
 							// Record not found, so add to deletion list
-							serviceDate = (new DateTime(a.getService_Date__c().getTimeInMillis()))
-									.toString("yyyy-MM-dd");
 							deleteList.add(a.getId());
-
-							StudentImportModel student = ListUtilities.findClientIDInPike13List(a.getFront_Desk_ID__c(),
-									studentList);
 						}
 					}
 					if (queryResult.isDone())
