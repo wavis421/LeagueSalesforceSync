@@ -359,7 +359,7 @@ public class UpdateRecordsInSalesForce {
 
 		System.out.println(attendLevelChanges.size() + " Attendance completed");
 		if (attendLevelChanges.size() > 0) {
-			// Update SF attendance state field in SQL DB 
+			// Update SF attendance state field in SQL DB
 			for (AttendanceEventModel a : attendLevelChanges)
 				mySqlDb.updateAttendLevelChanges(a.getVisitID(), a.getState());
 		}
@@ -703,21 +703,20 @@ public class UpdateRecordsInSalesForce {
 				diaryEntry.setLevel__c(student.getGradLevelString());
 				diaryEntry.setDiary_Type__c("Level");
 				diaryEntry.setDescription__c("Level " + student.getGradLevel());
-				if (student.getScore() != null && !student.getScore().equals(""))
-					diaryEntry.setScore__c(student.getScore());
 
 				Calendar endDate = convertDateStringToCalendar(student.getEndDate());
 				diaryEntry.setEnd_Date__c(endDate);
 				diaryEntry.setDiary_Date__c(endDate);
 				if (student.getStartDate() != null && !student.getStartDate().equals(""))
 					diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
-				
+
 				if (student.isPromoted())
 					diaryEntry.setPromoted__c(true); // Did not pass test
 				else if (student.isSkipLevel()) {
 					diaryEntry.setSkipped_Level__c(true);
 					diaryEntry.setStart_Date__c(endDate);
-				}
+				} else if (student.getScore() != null && !student.getScore().equals(""))
+					diaryEntry.setScore__c(student.getScore());
 
 				int numClasses = getNumClassesByLevel(student.getClientID(), student.getGradLevelString());
 				diaryEntry.setNum_Classes__c((double) numClasses);
