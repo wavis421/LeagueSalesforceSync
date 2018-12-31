@@ -711,7 +711,10 @@ public class UpdateRecordsInSalesForce {
 				diaryEntry.setDiary_Date__c(endDate);
 				if (student.getStartDate() != null && !student.getStartDate().equals(""))
 					diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
-				if (student.isSkipLevel()) {
+				
+				if (student.isPromoted())
+					diaryEntry.setPromoted__c(true); // Did not pass test
+				else if (student.isSkipLevel()) {
 					diaryEntry.setSkipped_Level__c(true);
 					diaryEntry.setStart_Date__c(endDate);
 				}
