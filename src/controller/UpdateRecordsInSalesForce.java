@@ -715,8 +715,11 @@ public class UpdateRecordsInSalesForce {
 				else if (student.isSkipLevel()) {
 					diaryEntry.setSkipped_Level__c(true);
 					diaryEntry.setStart_Date__c(endDate);
-				} else if (student.getScore() != null && !student.getScore().equals(""))
+				} else if (student.getScore() != null && !student.getScore().equals("")) {
 					diaryEntry.setScore__c(student.getScore());
+					if (isPassingGrade(student.getScore()))
+						diaryEntry.setPromoted__c(false);
+				}
 
 				int numClasses = getNumClassesByLevel(student.getClientID(), student.getGradLevelString());
 				diaryEntry.setNum_Classes__c((double) numClasses);
@@ -738,6 +741,19 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e.getMessage());
 		}
+	}
+
+	private boolean isPassingGrade(String score) {
+		try {
+			// Try converting to double
+			if (Double.parseDouble(score) >= 70.0)
+				return true;
+			
+		} catch (NumberFormatException e) {
+			
+		}
+
+		return false;
 	}
 
 	public void updateStaffMembers(ArrayList<StaffMemberModel> pike13StaffMembers, ArrayList<Contact> sfContacts,
