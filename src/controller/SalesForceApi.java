@@ -28,7 +28,7 @@ public class SalesForceApi {
 	private static final int DATE_RANGE_ENROLL_STATS_DAYS = 20;
 
 	private static MySqlDatabase sqlDb;
-	private static Pike13Api pike13Api;
+	private static Pike13SalesforceImport pike13Api;
 	private static EnterpriseConnection salesForceApi;
 
 	private static String startDate;
@@ -56,7 +56,8 @@ public class SalesForceApi {
 
 		// Connect to Pike13
 		String pike13Token = readFile("./pike13Token.txt");
-		pike13Api = new Pike13Api(sqlDb, pike13Token);
+		Pike13Connect pike13Conn = new Pike13Connect(pike13Token);
+		pike13Api = new Pike13SalesforceImport(pike13Conn);
 
 		// Connect to SalesForce
 		ConnectorConfig config = new ConnectorConfig();

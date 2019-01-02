@@ -28,6 +28,7 @@ import model.GraduationModel;
 import model.LocationLookup;
 import model.LogDataModel;
 import model.MySqlDatabase;
+import model.MySqlDbImports;
 import model.MySqlDbLogging;
 import model.SalesForceAttendanceModel;
 import model.SalesForceEnrollStatsModel;
@@ -47,14 +48,16 @@ public class UpdateRecordsInSalesForce {
 	private static final String ADMIN_STAFF_NAME = "Staff Admin";
 
 	private MySqlDatabase mySqlDb;
+	private MySqlDbImports dbImports;
 	private EnterpriseConnection connection;
 	private GetRecordsFromSalesForce getRecords;
 
 	private boolean attendanceUpsertError = false;
 
-	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, EnterpriseConnection connection,
+	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, MySqlDbImports dbImports, EnterpriseConnection connection,
 			GetRecordsFromSalesForce getRecords) {
 		this.mySqlDb = mySqlDb;
+		this.dbImports = dbImports;
 		this.connection = connection;
 		this.getRecords = getRecords;
 	}
@@ -361,7 +364,7 @@ public class UpdateRecordsInSalesForce {
 		if (attendLevelChanges.size() > 0) {
 			// Update SF attendance state field in SQL DB
 			for (AttendanceEventModel a : attendLevelChanges)
-				mySqlDb.updateAttendLevelChanges(a.getVisitID(), a.getState());
+				dbImports.updateAttendLevelChanges(a.getVisitID(), a.getState());
 		}
 	}
 
@@ -586,7 +589,8 @@ public class UpdateRecordsInSalesForce {
 							dbAttend.getClientID(),
 							" (SF) for repo '" + newAttendRecord.getRepo_Name__c() + "' on "
 									+ dbAttend.getServiceDateString() + ", expected class level "
-									+ dbAttend.getClassLevel() + " (set to " + newAttendRecord.getInternal_level__c() + ")");
+									+ dbAttend.getClassLevel() + " (set to " + newAttendRecord.getInternal_level__c()
+									+ ")");
 				}
 			}
 		}
@@ -748,9 +752,9 @@ public class UpdateRecordsInSalesForce {
 			// Try converting to double
 			if (Double.parseDouble(score) >= 70.0)
 				return true;
-			
+
 		} catch (NumberFormatException e) {
-			
+
 		}
 
 		return false;

@@ -13,6 +13,7 @@ import com.sforce.soap.enterprise.sobject.Contact_Diary__c;
 import model.AttendanceEventModel;
 import model.GraduationModel;
 import model.MySqlDatabase;
+import model.MySqlDbImports;
 import model.SalesForceAttendanceModel;
 import model.SalesForceEnrollStatsModel;
 import model.SalesForceStaffHoursModel;
@@ -22,19 +23,24 @@ import model.StudentImportModel;
 public class SalesForceImportEngine {
 
 	private MySqlDatabase sqlDb;
-	private Pike13Api pike13Api;
+	private MySqlDbImports dbImports;
+	private Pike13SalesforceImport pike13Api;
 	private EnterpriseConnection salesForceApi;
 
-	public SalesForceImportEngine(MySqlDatabase sqlDb, Pike13Api pike13Api, EnterpriseConnection salesForceApi) {
+	public SalesForceImportEngine(MySqlDatabase sqlDb, Pike13SalesforceImport pike13Api,
+			EnterpriseConnection salesForceApi) {
 		this.sqlDb = sqlDb;
 		this.pike13Api = pike13Api;
 		this.salesForceApi = salesForceApi;
+
+		dbImports = new MySqlDbImports(sqlDb);
 	}
 
 	public void updateSalesForce(String today, String startDate, String endDate, int enrollCountDays) {
 		// Instantiate get & update classes
 		GetRecordsFromSalesForce getRecords = new GetRecordsFromSalesForce(salesForceApi);
-		UpdateRecordsInSalesForce updateRecords = new UpdateRecordsInSalesForce(sqlDb, salesForceApi, getRecords);
+		UpdateRecordsInSalesForce updateRecords = new UpdateRecordsInSalesForce(sqlDb, dbImports, salesForceApi,
+				getRecords);
 
 		// Get SF contacts and accounts and store in list
 		ArrayList<Contact> sfContactList = getRecords.getSalesForceContacts(); // Students & teachers
@@ -64,7 +70,7 @@ public class SalesForceImportEngine {
 
 		// === UPDATE ATTENDANCE ===
 		// (1) Get Github comments and Pike13 attendance; store in list
-		ArrayList<AttendanceEventModel> dbAttendanceList = sqlDb.getAllEvents(startDate);
+		ArrayList<AttendanceEventModel> dbAttendanceList = dbImports.getAllEvents(startDate);
 		ArrayList<SalesForceAttendanceModel> pike13Attendance = pike13Api.getSalesForceAttendance(startDate, endDate);
 		ArrayList<StaffMemberModel> pike13StaffMembers = pike13Api.getSalesForceStaffMembers();
 
@@ -105,7 +111,7 @@ public class SalesForceImportEngine {
 		if (gradList != null && gradList.size() > 0) {
 			// Update records, then remove any processed records
 			updateRecords.updateGraduates(gradList, sfContactList, sfDiaryList);
-			sqlDb.removeProcessedGraduations();
+			dbImports.removeProcessedGraduations();
 		}
 
 		// === UPDATE STAFF MEMBERS AND HOURS ===
