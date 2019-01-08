@@ -563,12 +563,21 @@ public class UpdateRecordsInSalesForce {
 					if (delta != 1 && repoLevel != null) {
 						// Classes taken out-of-order; use repo if possible
 						newAttendRecord.setInternal_level__c(repoLevel);
-					} else {
-						// Default to using last graduated level plus 1
+					} else if (dbAttend.getEventName().startsWith("EL")) {
+						// Ignore elective classes
+						newAttendRecord.setInternal_level__c("");
+					} else if (highestLevel < 7) {
 						newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
+					} else if (highestLevel == 8) {
+						// Passed oracle, but not finished levels 0-7
+						newAttendRecord.setInternal_level__c(dbAttend.getClassLevel());
+					} else {
+						// This will show up as an error in salesforce report
+						newAttendRecord.setInternal_level__c("");
 					}
 
-					if (!newAttendRecord.getInternal_level__c().equals(dbAttend.getClassLevel()))
+					if (!newAttendRecord.getInternal_level__c().equals("") 
+							&& !newAttendRecord.getInternal_level__c().equals(dbAttend.getClassLevel()))
 						// Mismatched levels
 						MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
 								new StudentNameModel(
@@ -603,14 +612,22 @@ public class UpdateRecordsInSalesForce {
 
 		// Check if github repo matches classroom naming for level
 		String levelString = null;
-		if (newAttendRecord.getRepo_Name__c().toLowerCase().startsWith("level-")
-				|| newAttendRecord.getRepo_Name__c().toLowerCase().startsWith("level_"))
-			levelString = newAttendRecord.getRepo_Name__c().substring(6, 7);
-		else if (newAttendRecord.getRepo_Name__c().toLowerCase().startsWith("level"))
-			levelString = newAttendRecord.getRepo_Name__c().substring(5, 6);
+		String repoName = newAttendRecord.getRepo_Name__c().toLowerCase();
+		if ((repoName.startsWith("level-") || repoName.startsWith("level_")) 
+				&& repoName.length() > 7 && repoName.substring(7).startsWith("-module"))
+			levelString = repoName.substring(6, 7);
+		else if (repoName.startsWith("level") && repoName.length() > 6 
+				&& repoName.substring(6).startsWith("-module"))
+			levelString = repoName.substring(5, 6);
+		else if (repoName.startsWith("old-level") && repoName.length() > 10
+				&& repoName.substring(10).startsWith("-module"))
+			levelString = repoName.substring(9, 10);
+		else if (repoName.startsWith("level5-0") && repoName.length() > 9 
+				&& repoName.charAt(9) == '-')
+			levelString = "5";
 
 		// Found github classroom, now check if starts with digit
-		if (levelString != null && levelString.compareTo("0") >= 0 && levelString.compareTo("9") <= 0)
+		if (levelString != null && levelString.compareTo("0") >= 0 && levelString.compareTo("5") <= 0)
 			return levelString;
 		else
 			return null;
