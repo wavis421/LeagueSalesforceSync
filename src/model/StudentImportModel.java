@@ -9,7 +9,7 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 	private String gradYearString;
 	private String genderString;
 	private String birthDate = "";
-	private String currGrade, lastExamScore = "", currentClass;
+	private String currGrade, lastExamScore = "", currentClass, registerClass;
 	private String email, mobilePhone, homePhone, address, schoolName, tShirtSize, financialAidPercent, grantInfo;
 	private String membership, passOnFile, leaveReason, hearAboutUs, whoToThank;
 	private String emergContactName, emergContactPhone, emergContactEmail;
@@ -74,7 +74,7 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 			String startDate, int homeLocation, int gradYear, int isInMasterDb, String email, String acctMgrEmail,
 			String emergEmail, String mobilePhone, String acctMgrPhones, String homePhone, String emergContactPhone,
 			String birthdate, String staffSinceDate, int staffPastEvents, String currentLevel, String currentClass,
-			String lastScore) {
+			String lastScore, String registerClass) {
 
 		// Database format being converted for comparison purposes
 		this.clientID = clientID;
@@ -92,6 +92,7 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		this.currLevel = currentLevel;
 		this.currentClass = currentClass;
 		this.lastExamScore = lastScore;
+		this.registerClass = registerClass;
 
 		this.email = email;
 		this.accountMgrEmails = acctMgrEmail;
@@ -246,6 +247,10 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 
 	public String getCurrClass() {
 		return currentClass;
+	}
+
+	public String getRegClass() {
+		return registerClass;
 	}
 
 	public String getLastExamScore() {
