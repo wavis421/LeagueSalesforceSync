@@ -2,8 +2,6 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -17,7 +15,6 @@ import com.sforce.soap.enterprise.UpsertResult;
 import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
 import com.sforce.soap.enterprise.sobject.Contact_Diary__c;
-import com.sforce.soap.enterprise.sobject.Enrollment_Stats__c;
 import com.sforce.soap.enterprise.sobject.SObject;
 import com.sforce.soap.enterprise.sobject.Staff_Hours__c;
 import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
@@ -31,7 +28,6 @@ import model.MySqlDatabase;
 import model.MySqlDbImports;
 import model.MySqlDbLogging;
 import model.SalesForceAttendanceModel;
-import model.SalesForceEnrollStatsModel;
 import model.SalesForceStaffHoursModel;
 import model.StaffMemberModel;
 import model.StudentImportModel;
@@ -366,162 +362,6 @@ public class UpdateRecordsInSalesForce {
 			for (AttendanceEventModel a : attendLevelChanges)
 				dbImports.updateAttendLevelChanges(a.getVisitID(), a.getState());
 		}
-	}
-
-	public void updateEnrollStats(ArrayList<SalesForceEnrollStatsModel> pike13EnrollStats, DateTime middleDate,
-			String startDayString, String endDayString, ArrayList<StudentImportModel> pike13Students,
-			ArrayList<Contact> contacts) {
-		ArrayList<Enrollment_Stats__c> recordList = new ArrayList<Enrollment_Stats__c>();
-		String dayOfMonth = middleDate.toString("dd");
-		String yearMonth = middleDate.toString("yyyyMM");
-		int lastClientID = 0, thisID = 0, stats = 0;
-		Contact thisContact = null;
-
-		// Sort list by Client ID so Attendance is grouped
-		Collections.sort(pike13EnrollStats);
-
-		try {
-			for (SalesForceEnrollStatsModel inputModel : pike13EnrollStats) {
-				// Add each Pike13 stats record to SalesForce list
-				thisID = inputModel.getClientID();
-
-				if (thisID != lastClientID) {
-					if (thisContact != null)
-						// Save stats accumulated for last client
-						recordList.add(createEnrollStatsRecord(dayOfMonth, yearMonth, stats, thisContact));
-
-					// Cannot add stats for contacts that do not exist!
-					thisContact = ListUtilities.findClientIDInList(LogDataModel.MISSING_SF_CONTACT_FOR_ENROLL_STATS,
-							((Integer) thisID).toString(), "", "", contacts);
-					if (thisContact == null)
-						continue;
-
-					lastClientID = thisID;
-					stats = 0;
-				}
-				stats++;
-			}
-
-			if (thisContact != null)
-				// Save stats accumulated for last client processed
-				recordList.add(createEnrollStatsRecord(dayOfMonth, yearMonth, stats, thisContact));
-
-			// Copy up to 200 records to array at a time (max allowed)
-			Enrollment_Stats__c[] recordArray;
-			int numRecords = recordList.size();
-			int remainingRecords = numRecords;
-			int arrayIdx = 0;
-
-			System.out.println(numRecords + " Pike13 enrollment stats record(s)");
-			if (numRecords > MAX_NUM_UPSERT_RECORDS)
-				recordArray = new Enrollment_Stats__c[MAX_NUM_UPSERT_RECORDS];
-			else
-				recordArray = new Enrollment_Stats__c[numRecords];
-
-			for (int i = 0; i < numRecords; i++) {
-				recordArray[arrayIdx] = recordList.get(i);
-
-				arrayIdx++;
-				if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
-					upsertEnrollStatsRecords(recordArray);
-					remainingRecords -= MAX_NUM_UPSERT_RECORDS;
-					arrayIdx = 0;
-
-					if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
-						recordArray = new Enrollment_Stats__c[MAX_NUM_UPSERT_RECORDS];
-					else if (remainingRecords > 0)
-						recordArray = new Enrollment_Stats__c[remainingRecords];
-				}
-			}
-
-			// Update remaining records in Salesforce.com
-			if (arrayIdx > 0)
-				upsertEnrollStatsRecords(recordArray);
-
-		} catch (Exception e) {
-			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLL_STATS_IMPORT_ERROR,
-						new StudentNameModel("", "", false), 0, "");
-				e.printStackTrace();
-			} else
-				MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLL_STATS_IMPORT_ERROR,
-						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
-		}
-	}
-
-	private Enrollment_Stats__c createEnrollStatsRecord(String dayOfMonth, String yearMonth, int stats, Contact c) {
-		Enrollment_Stats__c statsRecord = new Enrollment_Stats__c();
-		statsRecord.setPike_13_ID__r(c);
-		statsRecord.setEnrollment_Id__c(c.getFront_Desk_Id__c() + yearMonth);
-		statsRecord.setYear_month__c(yearMonth);
-		setEnrollStatsField(dayOfMonth, (double) stats, statsRecord);
-
-		return statsRecord;
-	}
-
-	private void setEnrollStatsField(String dayOfMonth, double value, Enrollment_Stats__c statsRecord) {
-		if (dayOfMonth.equals("01"))
-			statsRecord.setD01__c(value);
-		else if (dayOfMonth.equals("02"))
-			statsRecord.setD02__c(value);
-		else if (dayOfMonth.equals("03"))
-			statsRecord.setD03__c(value);
-		else if (dayOfMonth.equals("04"))
-			statsRecord.setD04__c(value);
-		else if (dayOfMonth.equals("05"))
-			statsRecord.setD05__c(value);
-		else if (dayOfMonth.equals("06"))
-			statsRecord.setD06__c(value);
-		else if (dayOfMonth.equals("07"))
-			statsRecord.setD07__c(value);
-		else if (dayOfMonth.equals("08"))
-			statsRecord.setD08__c(value);
-		else if (dayOfMonth.equals("09"))
-			statsRecord.setD09__c(value);
-		else if (dayOfMonth.equals("10"))
-			statsRecord.setD10__c(value);
-		else if (dayOfMonth.equals("11"))
-			statsRecord.setD11__c(value);
-		else if (dayOfMonth.equals("12"))
-			statsRecord.setD12__c(value);
-		else if (dayOfMonth.equals("13"))
-			statsRecord.setD13__c(value);
-		else if (dayOfMonth.equals("14"))
-			statsRecord.setD14__c(value);
-		else if (dayOfMonth.equals("15"))
-			statsRecord.setD15__c(value);
-		else if (dayOfMonth.equals("16"))
-			statsRecord.setD16__c(value);
-		else if (dayOfMonth.equals("17"))
-			statsRecord.setD17__c(value);
-		else if (dayOfMonth.equals("18"))
-			statsRecord.setD18__c(value);
-		else if (dayOfMonth.equals("19"))
-			statsRecord.setD19__c(value);
-		else if (dayOfMonth.equals("20"))
-			statsRecord.setD20__c(value);
-		else if (dayOfMonth.equals("21"))
-			statsRecord.setD21__c(value);
-		else if (dayOfMonth.equals("22"))
-			statsRecord.setD22__c(value);
-		else if (dayOfMonth.equals("23"))
-			statsRecord.setD23__c(value);
-		else if (dayOfMonth.equals("24"))
-			statsRecord.setD24__c(value);
-		else if (dayOfMonth.equals("25"))
-			statsRecord.setD25__c(value);
-		else if (dayOfMonth.equals("26"))
-			statsRecord.setD26__c(value);
-		else if (dayOfMonth.equals("27"))
-			statsRecord.setD27__c(value);
-		else if (dayOfMonth.equals("28"))
-			statsRecord.setD28__c(value);
-		else if (dayOfMonth.equals("29"))
-			statsRecord.setD29__c(value);
-		else if (dayOfMonth.equals("30"))
-			statsRecord.setD30__c(value);
-		else if (dayOfMonth.equals("31"))
-			statsRecord.setD31__c(value);
 	}
 
 	private void updateAttendLevel(ArrayList<AttendanceEventModel> attendLevelChanges,
@@ -1060,40 +900,6 @@ public class UpdateRecordsInSalesForce {
 				for (int j = 0; j < errors.length; j++) {
 					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
 							new StudentNameModel("", "", false), clientID, ": " + errors[j].getMessage());
-				}
-			}
-		}
-	}
-
-	private void upsertEnrollStatsRecords(Enrollment_Stats__c[] records) {
-		UpsertResult[] upsertResults = null;
-
-		try {
-			// Update the records in Salesforce.com
-			upsertResults = connection.upsert("Enrollment_Id__c", records);
-
-		} catch (ConnectionException e) {
-			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLL_STATS_IMPORT_ERROR,
-						new StudentNameModel("", "", false), 0, " (upsert)");
-				e.printStackTrace();
-			} else
-				MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLL_STATS_IMPORT_ERROR,
-						new StudentNameModel("", "", false), 0, " (upsert): " + e.getMessage());
-			return;
-		}
-
-		// check the returned results for any errors
-		for (int i = 0; i < upsertResults.length; i++) {
-			if (!upsertResults[i].isSuccess()) {
-				// Get numeric ClientID
-				Contact c = records[i].getPike_13_ID__r();
-				int clientID = Integer.parseInt(c.getFront_Desk_Id__c());
-
-				Error[] errors = upsertResults[i].getErrors();
-				for (int j = 0; j < errors.length; j++) {
-					MySqlDbLogging.insertLogData(LogDataModel.SF_ENROLL_STATS_IMPORT_ERROR,
-							new StudentNameModel("", "", false), clientID, " (upsert): " + errors[j].getMessage());
 				}
 			}
 		}

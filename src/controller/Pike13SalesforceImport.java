@@ -7,7 +7,6 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 
 import model.SalesForceAttendanceModel;
-import model.SalesForceEnrollStatsModel;
 import model.SalesForceStaffHoursModel;
 import model.StaffMemberModel;
 import model.StudentImportModel;
@@ -92,9 +91,6 @@ public class Pike13SalesforceImport {
 	private final int CLIENT_ACCOUNT_MGR_PHONES_IDX = 33;
 	private final int CLIENT_DEPENDENT_NAMES_IDX = 34;
 	private final int CLIENT_CURRENT_LEVEL_IDX = 35;
-
-	// Indices for enrollment stats data
-	private final int STATS_CLIENT_ID_IDX = 0;
 	
 	// Indices for SalesForce enrollment data
 	private final int SF_PERSON_ID_IDX = 0;
@@ -201,25 +197,6 @@ public class Pike13SalesforceImport {
 			+ "                              [\"starts\",\"service_category\",\"works\"]]],"
 			+ "                    [\"and\",[[\"gt\",\"service_date\",\"2222-22-22\"],"
 			+ "                              [\"eq\",\"service_category\",\"leave\"]]]]]}}}";
-
-	// This query is used to get enrollment stats for each student
-	private final String getEnrollStatsSalesForce = "{\"data\":{\"type\":\"queries\","
-			// Get attributes: fields, page limit
-			+ "\"attributes\":{"
-			// Select fields
-			+ "\"fields\":[\"person_id\"],"
-			// Page limit max is 500
-			+ "\"page\":{\"limit\":500";
-
-	private final String getEnrollStatsSalesForce2 = "},"
-			// Filter on between start/end dates OR all future summer slam, workshops and leave
-			+ "\"filter\":[\"and\",[[\"btw\",\"service_date\",[\"0000-00-00\",\"1111-11-11\"]],"
-			+ "                     [\"or\",[[\"eq\",\"state\",\"completed\"],"
-			+ "                              [\"eq\",\"state\",\"registered\"],"
-			+ "                              [\"eq\",\"state\",\"late_canceled\"],"
-			+ "                              [\"eq\",\"state\",\"noshowed\"]]],"
-			+ "                     [\"or\",[[\"eq\",\"service_category\",\"class java\"],"
-			+ "                              [\"eq\",\"service_category\",\"class jslam\"]]]]]}}}";
 
 	// Get staff member data
 	private final String getStaffMemberData = "{\"data\":{\"type\":\"queries\","
@@ -412,52 +389,6 @@ public class Pike13SalesforceImport {
 			}
 
 			// Check to see if there are more pages
-			hasMore = jsonObj.getBoolean("has_more");
-			if (hasMore)
-				lastKey = jsonObj.getString("last_key");
-
-			conn.disconnect();
-
-		} while (hasMore);
-
-		return eventList;
-	}
-
-	public ArrayList<SalesForceEnrollStatsModel> getSalesForceEnrollStats(String startDate, String endDate) {
-		// Get enrollment stats between +/- 20 days
-		ArrayList<SalesForceEnrollStatsModel> eventList = new ArrayList<SalesForceEnrollStatsModel>();
-		boolean hasMore = false;
-		String lastKey = "";
-
-		// Insert start date and end date into enrollment command string
-		String enroll2 = getEnrollStatsSalesForce2.replaceFirst("0000-00-00", startDate);
-		enroll2 = enroll2.replaceFirst("1111-11-11", endDate);
-		do {
-			// Get URL connection and send the query; add page info if necessary
-			HttpURLConnection conn;
-			if (hasMore)
-				conn = pike13Conn.sendQueryToUrl("enrollments", getEnrollStatsSalesForce + ",\"starting_after\":\"" + lastKey + "\"" + enroll2);
-			else
-				conn = pike13Conn.sendQueryToUrl("enrollments", getEnrollStatsSalesForce + enroll2);
-
-			if (conn == null)
-				return null;
-
-			// Get input stream and read data
-			JsonObject jsonObj = pike13Conn.readInputStream(conn);
-			if (jsonObj == null) {
-				conn.disconnect();
-				return null;
-			}
-			JsonArray jsonArray = jsonObj.getJsonArray("rows");
-
-			for (int i = 0; i < jsonArray.size(); i++) {
-				// Get enrollments for each student, add to list
-				JsonArray eventArray = (JsonArray) jsonArray.get(i);
-				eventList.add(new SalesForceEnrollStatsModel(eventArray.getInt(STATS_CLIENT_ID_IDX), 0));
-			}
-
-			// Check to see if there are more pages	
 			hasMore = jsonObj.getBoolean("has_more");
 			if (hasMore)
 				lastKey = jsonObj.getString("last_key");
