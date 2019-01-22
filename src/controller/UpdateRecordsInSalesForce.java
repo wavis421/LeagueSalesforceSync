@@ -1040,7 +1040,7 @@ public class UpdateRecordsInSalesForce {
 				if (clientID > 0) {
 					// Graduation diary entry successfully added to SF, so update SQL DB flag
 					String graduateName = recordArray[i].getStudent_Contact__r().getFull_Name__c();
-					mySqlDb.updateGradInSfField(clientID, graduateName, recordArray[i].getLevel__c(), true);
+					dbImports.updateGradInSfField(clientID, graduateName, recordArray[i].getLevel__c(), true);
 				}
 
 			} else {
