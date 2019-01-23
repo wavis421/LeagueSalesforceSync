@@ -392,7 +392,7 @@ public class UpdateRecordsInSalesForce {
 										false),
 								Integer.parseInt(inputModel.getClientID()),
 								" (SF) for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
-										+ ", DB Level = " + dbAttend.getClassLevel() + ", SF Grad = - (set to 0)");
+										+ ", Pike13 Level = " + dbAttend.getClassLevel() + ", SF Grad = - (set to 0)");
 
 				} else if (!dbAttend.getClassLevel().equals("")) {
 					// Normal case is where class level is "gradlevel + 1"
@@ -422,7 +422,7 @@ public class UpdateRecordsInSalesForce {
 										contactWithData.getFirstName(), contactWithData.getLastName(), false),
 								Integer.parseInt(inputModel.getClientID()),
 								" (SF) for " + inputModel.getEventName() + " on " + dbAttend.getServiceDateString()
-										+ ", DB Level = " + dbAttend.getClassLevel() + ", SF Grad = " + highestLevel
+										+ ", Pike13 Level = " + dbAttend.getClassLevel() + ", SF Grad = " + highestLevel
 										+ " (set to " + newAttendRecord.getInternal_level__c() + ")");
 				}
 				// Attendance just became completed, so update Last SF State
