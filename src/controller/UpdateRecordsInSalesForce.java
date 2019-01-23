@@ -43,7 +43,6 @@ public class UpdateRecordsInSalesForce {
 	private static final String ADMIN_STAFF_CLIENT_ID = "999999";
 	private static final String ADMIN_STAFF_NAME = "Staff Admin";
 
-	private MySqlDatabase mySqlDb;
 	private MySqlDbImports dbImports;
 	private EnterpriseConnection connection;
 	private GetRecordsFromSalesForce getRecords;
@@ -52,7 +51,6 @@ public class UpdateRecordsInSalesForce {
 
 	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, MySqlDbImports dbImports, EnterpriseConnection connection,
 			GetRecordsFromSalesForce getRecords) {
-		this.mySqlDb = mySqlDb;
 		this.dbImports = dbImports;
 		this.connection = connection;
 		this.getRecords = getRecords;
@@ -431,7 +429,8 @@ public class UpdateRecordsInSalesForce {
 				attendLevelChanges.add(dbAttend);
 
 				// Check that github repo name matches new attendance level
-				if (repoLevel != null && !repoLevel.equals(newAttendRecord.getInternal_level__c())) {
+				if (repoLevel != null && !repoLevel.equals(newAttendRecord.getInternal_level__c())
+						 && !dbAttend.getEventName().startsWith("EL")) {
 					// Github repo level does not match internal level
 					MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH,
 							new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
