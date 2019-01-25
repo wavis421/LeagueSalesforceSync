@@ -150,7 +150,7 @@ public class MySqlDbImports {
 				&& (isJavaClass(dbStudent.getCurrClass()) || isJavaClass(dbStudent.getRegClass()))) {
 			MySqlDbLogging.insertLogData(LogDataModel.MISSING_CURRENT_LEVEL,
 					new StudentNameModel(importStudent.getFirstName(), importStudent.getLastName(), true),
-					 importStudent.getClientID(), "");
+					importStudent.getClientID(), "");
 		}
 	}
 
@@ -254,13 +254,11 @@ public class MySqlDbImports {
 				addStudentStmt.setInt(col++, student.getClientID());
 				addStudentStmt.setString(col++, student.getLastName());
 				addStudentStmt.setString(col++, student.getFirstName());
-				if (student.getGithubName().equals("")) {
+				if (student.getGithubName().equals(""))
 					addStudentStmt.setString(col++, null);
-					addStudentStmt.setInt(col++, 0);
-				} else {
+				else
 					addStudentStmt.setString(col++, student.getGithubName());
-					addStudentStmt.setInt(col++, 1);
-				}
+				addStudentStmt.setInt(col++, 0);
 				addStudentStmt.setInt(col++, 1);
 				addStudentStmt.setInt(col++, student.getGender());
 				if (!student.getStartDate().equals(""))
@@ -313,15 +311,11 @@ public class MySqlDbImports {
 		for (int i = 0; i < 2; i++) {
 			// Before updating database, determine what fields have changed
 			String changedFields = getStudentChangedFields(importStudent, dbStudent);
-			boolean githubChanged = false;
 			boolean newStudent = false;
 
 			// If student added back to DB, mark as new
 			if (changedFields.contains("Added back"))
 				newStudent = true;
-			// If github user has changed or new student, force github updates
-			if (changedFields.contains("Github") || (newStudent && !importStudent.getGithubName().equals("")))
-				githubChanged = true;
 
 			// If student level just changed, clear module field and graduate student
 			if (changedFields.contains("Current Level") || changedFields.contains("Exam Score")) {
@@ -345,7 +339,7 @@ public class MySqlDbImports {
 					updateStudentStmt.setString(col++, null);
 				else
 					updateStudentStmt.setString(col++, importStudent.getGithubName());
-				updateStudentStmt.setInt(col++, githubChanged ? 1 : 0);
+				updateStudentStmt.setInt(col++, 0);
 				updateStudentStmt.setInt(col++, newStudent ? 1 : 0);
 				updateStudentStmt.setInt(col++, importStudent.getGender());
 				if (importStudent.getStartDate() != null && !importStudent.getStartDate().equals(""))
@@ -1065,6 +1059,111 @@ public class MySqlDbImports {
 		return eventList;
 	}
 
+	public ArrayList<PendingGithubModel> getPendingGithubEvents() {
+		ArrayList<PendingGithubModel> eventList = new ArrayList<PendingGithubModel>();
+
+		for (int i = 0; i < 2; i++) {
+			try {
+				// Get pending github event data from the DB. This data is populated by
+				// a Github "hook" each time a student commits to a github classroom.
+				PreparedStatement selectStmt = sqlDb.dbConnection
+						.prepareStatement("SELECT * FROM PendingGithub ORDER BY GitUser;");
+				ResultSet result = selectStmt.executeQuery();
+
+				while (result.next()) {
+					eventList.add(new PendingGithubModel(result.getInt("PrimaryID"), result.getString("GitUser"),
+							result.getString("RepoName"), result.getString("ServiceDate"),
+							result.getString("Comments")));
+				}
+
+				result.close();
+				selectStmt.close();
+				break;
+
+			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+				if (i == 0) {
+					// First attempt to re-connect
+					sqlDb.connectDatabase();
+				}
+
+			} catch (SQLException e) {
+				MySqlDbLogging.insertLogData(LogDataModel.GITHUB_DB_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e.getMessage());
+				break;
+			}
+		}
+		return eventList;
+	}
+
+	private void deletePendingGithubEvent(int primaryID) {
+		PreparedStatement deleteGithubStmt;
+		for (int i = 0; i < 2; i++) {
+			try {
+				deleteGithubStmt = sqlDb.dbConnection.prepareStatement("DELETE FROM PendingGithub WHERE PrimaryID=?;");
+				deleteGithubStmt.setInt(1, primaryID);
+				deleteGithubStmt.executeUpdate();
+				deleteGithubStmt.close();
+
+			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+				if (i == 0) {
+					// First attempt to re-connect
+					sqlDb.connectDatabase();
+				}
+
+			} catch (SQLException e) {
+				MySqlDbLogging.insertLogData(LogDataModel.GITHUB_DB_ERROR, new StudentNameModel("", "", false), 0,
+						" deleting record: " + e.getMessage());
+				break;
+			}
+		}
+	}
+
+	public void updatePendingGithubComments(ArrayList<PendingGithubModel> githubList, String startDate,
+			ArrayList<AttendanceEventModel> eventList) {
+		// Process all the pending commits
+		for (int i = 0; i < githubList.size(); i++) {
+			// Get commit date
+			PendingGithubModel pendingGit = githubList.get(i);
+			String commitDate = new DateTime(pendingGit.getServiceDate().substring(0, 10))
+					.withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
+
+			// Record is out-of-date (attendance never updated!), so remove
+			if (commitDate.compareTo(startDate) < 0) {
+				deletePendingGithubEvent(pendingGit.getPrimaryID());
+				githubList.remove(i);
+				i--;
+				continue;
+			}
+
+			// Find gituser & date match in event list; append multiple comments
+			for (int j = 0; j < eventList.size(); j++) {
+				AttendanceEventModel event = eventList.get(j);
+				if (commitDate.equals(event.getServiceDateString())
+						&& pendingGit.getGitUser().toLowerCase().equals(event.getGithubName().toLowerCase())) {
+					// Update comments & repo name
+					event.setGithubComments(trimMessage(pendingGit.getComments()));
+					updateAttendance(event.getClientID(), event.getStudentNameModel(), commitDate, event.getEventName(),
+							pendingGit.getRepoName(), event.getGithubComments());
+
+					// This pending github record has been processed, so remove!
+					deletePendingGithubEvent(pendingGit.getPrimaryID());
+					githubList.remove(i);
+					i--;
+				}
+			}
+		}
+	}
+
+	private String trimMessage(String inputMsg) {
+		// Trim message up to first new-line character
+		inputMsg = inputMsg.trim();
+		int idx = inputMsg.indexOf("\n");
+		if (idx > -1)
+			return inputMsg.substring(0, idx);
+		else
+			return inputMsg;
+	}
+
 	private int addAttendance(AttendanceEventModel importEvent, String teacherNames, StudentModel student) {
 		// Update class level if <= L7
 		boolean addLevel = false;
@@ -1255,8 +1354,8 @@ public class MySqlDbImports {
 		for (int i = 0; i < 2; i++) {
 			try {
 				// If Database no longer connected, the exception code will re-connect
-				PreparedStatement updateGraduateStmt = sqlDb.dbConnection.prepareStatement(
-						"UPDATE Graduation SET InSalesForce=? WHERE ClientID=? AND GradLevel=?;");
+				PreparedStatement updateGraduateStmt = sqlDb.dbConnection
+						.prepareStatement("UPDATE Graduation SET InSalesForce=? WHERE ClientID=? AND GradLevel=?;");
 
 				updateGraduateStmt.setInt(1, newValue ? 1 : 0);
 				updateGraduateStmt.setInt(2, clientID);
@@ -1299,7 +1398,7 @@ public class MySqlDbImports {
 
 			if (importStudent.getCurrLevel().compareTo(dbStudent.getCurrLevel()) > 0
 					&& importStudent.getLastExamScore().startsWith("L" + dbStudent.getCurrLevel() + " ")) {
-				// New graduate: If score is just 'Ln ' or student promoted or skipped, then no score
+				// New graduate: If score just 'Ln ' or student promoted/skipped, then no score
 				if (!isPromoted && !isSkip && importStudent.getLastExamScore().length() > 3)
 					score = importStudent.getLastExamScore().substring(3);
 
@@ -1322,18 +1421,20 @@ public class MySqlDbImports {
 			addGraduationRecord(new GraduationModel(dbStudent.getClientID(), dbStudent.getFullName(), dbCurrLevelNum,
 					score, dbStudent.getCurrClass(),
 					getStartDateByClientIdAndLevel(dbStudent.getClientID(), dbCurrLevelNum),
-					new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd"),
-					false, isSkip, isPromoted));
-			
-		} else if (dbStudent.getCurrLevel().equals("") && importStudent.getLastExamScore().toLowerCase().contains("skip")
-				&& importStudent.getLastExamScore().charAt(0) == 'L' && importStudent.getLastExamScore().charAt(2) == ' ') {
+					new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd"), false,
+					isSkip, isPromoted));
+
+		} else if (dbStudent.getCurrLevel().equals("")
+				&& importStudent.getLastExamScore().toLowerCase().contains("skip")
+				&& importStudent.getLastExamScore().charAt(0) == 'L'
+				&& importStudent.getLastExamScore().charAt(2) == ' ') {
 			// Student's current level is blank but student skipped level(s)
 			int currLevel = Integer.parseInt(importStudent.getCurrLevel());
 			String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
-			
+
 			for (int i = 0; i < currLevel; i++)
-				addGraduationRecord(new GraduationModel(dbStudent.getClientID(), dbStudent.getFullName(), i,
-						"", dbStudent.getCurrClass(), today, today, false, true, false));
+				addGraduationRecord(new GraduationModel(dbStudent.getClientID(), dbStudent.getFullName(), i, "",
+						dbStudent.getCurrClass(), today, today, false, true, false));
 		}
 	}
 
@@ -1396,7 +1497,7 @@ public class MySqlDbImports {
 
 	private void updateGraduationRecord(GraduationModel gradModel) {
 		// Graduation records are uniquely identified by clientID & level pair.
-		// Update only EndDate, Score, SkipLevel, Promoted. Set 'in SF' false to force update.
+		// Update EndDate/Score/SkipLevel/Promoted. Set 'in SF' false to force update.
 		for (int i = 0; i < 2; i++) {
 			try {
 				// Update graduation record in database
