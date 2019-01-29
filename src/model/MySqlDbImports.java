@@ -1124,8 +1124,7 @@ public class MySqlDbImports {
 		for (int i = 0; i < githubList.size(); i++) {
 			// Get commit date
 			PendingGithubModel pendingGit = githubList.get(i);
-			String commitDate = new DateTime(pendingGit.getServiceDate().substring(0, 10))
-					.withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
+			String commitDate = pendingGit.getServiceDate().substring(0, 10);
 
 			// Record is out-of-date (attendance never updated!), so remove
 			if (commitDate.compareTo(startDate) < 0) {
