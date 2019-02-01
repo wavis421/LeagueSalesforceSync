@@ -1014,7 +1014,7 @@ public class MySqlDbImports {
 		if (includeEmpty)
 			clientIdFilter += "(Comments IS NULL OR Comments = '') ";
 		else
-			clientIdFilter += "Comments IS NULL ";
+			clientIdFilter += "Comments IS NULL AND LEFT(EventName,2) != 'EL' AND LEFT(EventName,2) != 'PG' ";
 
 		for (int i = 0; i < 2; i++) {
 			try {
@@ -1022,8 +1022,8 @@ public class MySqlDbImports {
 				// and the comment field is blank
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
 						"SELECT * FROM Attendance, Students WHERE Attendance.ClientID = Students.ClientID AND "
-								+ clientIdFilter + " AND State = 'completed' AND LEFT(EventName,2) != 'EL' AND "
-								+ "LEFT(EventName,2) != 'PG' AND GithubName IS NOT NULL AND ServiceDate >= ? ORDER BY GithubName;");
+								+ clientIdFilter + " AND State = 'completed' "
+								+ "AND GithubName IS NOT NULL AND ServiceDate >= ? ORDER BY GithubName;");
 				selectStmt.setDate(1, java.sql.Date.valueOf(startDate));
 				ResultSet result = selectStmt.executeQuery();
 
