@@ -1257,9 +1257,10 @@ public class UpdateRecordsInSalesForce {
 
 		// check the returned results for any errors
 		if (saveResults[0].isSuccess()) {
-			MySqlDbLogging.insertLogData(LogDataModel.CREATE_SALES_FORCE_ACCOUNT,
-					new StudentNameModel(firstName, lastName, false), clientID,
-					" for " + firstName + " " + lastName + ": " + account.getName());
+			System.out.println("Created SalesForce account for " + firstName + " " + lastName + ": " + account.getName());
+//			MySqlDbLogging.insertLogData(LogDataModel.CREATE_SALES_FORCE_ACCOUNT,
+//					new StudentNameModel(firstName, lastName, false), clientID,
+//					" for " + firstName + " " + lastName + ": " + account.getName());
 			return true;
 
 		} else {
