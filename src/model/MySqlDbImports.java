@@ -283,13 +283,15 @@ public class MySqlDbImports {
 				addStudentStmt.close();
 
 				if (student.getGithubName() == null)
-					MySqlDbLogging.insertLogData(LogDataModel.ADD_NEW_STUDENT_NO_GITHUB,
-							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
-							student.getClientID(), "");
+					System.out.println("Added new student: " + student.getFirstName() + " " + student.getLastName());
+//					MySqlDbLogging.insertLogData(LogDataModel.ADD_NEW_STUDENT_NO_GITHUB,
+//							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
+//							student.getClientID(), "");
 				else
-					MySqlDbLogging.insertLogData(LogDataModel.ADD_NEW_STUDENT,
-							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
-							student.getClientID(), "");
+					System.out.println("Added new student (no Github): " + student.getFirstName() + " " + student.getLastName());
+//					MySqlDbLogging.insertLogData(LogDataModel.ADD_NEW_STUDENT,
+//							new StudentNameModel(student.getFirstName(), student.getLastName(), true),
+//							student.getClientID(), "");
 				break;
 
 			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
@@ -368,9 +370,11 @@ public class MySqlDbImports {
 				updateStudentStmt.close();
 
 				if (!changedFields.equals(""))
-					MySqlDbLogging.insertLogData(LogDataModel.UPDATE_STUDENT_INFO,
-							new StudentNameModel(importStudent.getFirstName(), importStudent.getLastName(), true),
-							importStudent.getClientID(), changedFields);
+					System.out.println("Updated " + importStudent.getFirstName() + " " + importStudent.getLastName() 
+							+ " " + changedFields);
+//					MySqlDbLogging.insertLogData(LogDataModel.UPDATE_STUDENT_INFO,
+//							new StudentNameModel(importStudent.getFirstName(), importStudent.getLastName(), true),
+//							importStudent.getClientID(), changedFields);
 				break;
 
 			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
@@ -1135,6 +1139,7 @@ public class MySqlDbImports {
 			}
 
 			// Find gituser & date match in event list; append multiple comments
+			boolean foundMatch = false;
 			for (int j = 0; j < eventList.size(); j++) {
 				AttendanceEventModel event = eventList.get(j);
 				if (commitDate.equals(event.getServiceDateString())
@@ -1143,13 +1148,14 @@ public class MySqlDbImports {
 					event.setGithubComments(trimMessage(pendingGit.getComments()));
 					updateAttendance(event.getClientID(), event.getStudentNameModel(), commitDate, event.getEventName(),
 							pendingGit.getRepoName(), event.getGithubComments());
-
-					// This pending github record has been processed, so remove!
-					deletePendingGithubEvent(pendingGit.getPrimaryID());
-					githubList.remove(i);
-					i--;
-					break;
+					foundMatch = true;
 				}
+			}
+			if (foundMatch) {
+				// This pending github record has been processed, so remove!
+				deletePendingGithubEvent(pendingGit.getPrimaryID());
+				githubList.remove(i);
+				i--;
 			}
 		}
 	}
