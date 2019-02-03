@@ -1148,6 +1148,7 @@ public class MySqlDbImports {
 					deletePendingGithubEvent(pendingGit.getPrimaryID());
 					githubList.remove(i);
 					i--;
+					break;
 				}
 			}
 		}
