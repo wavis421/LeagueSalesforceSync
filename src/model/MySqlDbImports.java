@@ -1396,19 +1396,27 @@ public class MySqlDbImports {
 			String score = "";
 			boolean isPromoted = false, isSkip = false;
 			int dbCurrLevelNum = Integer.parseInt(dbStudent.getCurrLevel());
+			int importLevelNum = Integer.parseInt(importStudent.getCurrLevel());
 
 			if (importStudent.getLastExamScore().toLowerCase().contains("promoted"))
 				isPromoted = true; // Student did not pass the exam
 			else if (importStudent.getLastExamScore().toLowerCase().contains("skip"))
 				isSkip = true;
 
-			if (importStudent.getCurrLevel().compareTo(dbStudent.getCurrLevel()) > 0
+			if (isSkip && importLevelNum > dbCurrLevelNum 
+					&& importStudent.getLastExamScore().startsWith("L" + ((Integer) (importLevelNum - 1)).toString() + " ")) {
+				// Student has skipped one or more levels; graduate each level
+				graduateSkippedLevels(dbStudent, importLevelNum);
+				return;
+			}
+
+			else if (importLevelNum > dbCurrLevelNum
 					&& importStudent.getLastExamScore().startsWith("L" + dbStudent.getCurrLevel() + " ")) {
 				// New graduate: If score just 'Ln ' or student promoted/skipped, then no score
 				if (!isPromoted && !isSkip && importStudent.getLastExamScore().length() > 3)
 					score = importStudent.getLastExamScore().substring(3);
 
-			} else if (importStudent.getCurrLevel().equals(dbStudent.getCurrLevel()) && dbCurrLevelNum > 0
+			} else if (importLevelNum == dbCurrLevelNum && dbCurrLevelNum > 0
 					&& importStudent.getLastExamScore().startsWith("L" + (dbCurrLevelNum - 1) + " ")) {
 				// Student already graduated, score being updated
 				if (!isPromoted && !isSkip)
@@ -1435,12 +1443,17 @@ public class MySqlDbImports {
 				&& importStudent.getLastExamScore().charAt(0) == 'L'
 				&& importStudent.getLastExamScore().charAt(2) == ' ') {
 			// Student's current level is blank but student skipped level(s)
-			int currLevel = Integer.parseInt(importStudent.getCurrLevel());
-			String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
+			graduateSkippedLevels(dbStudent, Integer.parseInt(importStudent.getCurrLevel()));			
+		}
+	}
 
-			for (int i = 0; i < currLevel; i++)
-				addGraduationRecord(new GraduationModel(dbStudent.getClientID(), dbStudent.getFullName(), i, "",
-						dbStudent.getCurrClass(), today, today, false, true, false));
+	private void graduateSkippedLevels(StudentImportModel dbStudent, int newLevel) {
+		String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
+
+		// Graduate each level skipped, up to 'newLevel'
+		for (int i = 0; i < newLevel; i++) {
+			addGraduationRecord(new GraduationModel(dbStudent.getClientID(), dbStudent.getFullName(), i, "",
+					dbStudent.getCurrClass(), today, today, false, true, false));
 		}
 	}
 
