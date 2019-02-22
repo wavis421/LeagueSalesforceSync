@@ -2,8 +2,6 @@ package controller;
 
 import java.util.ArrayList;
 
-import org.joda.time.DateTime;
-
 import com.sforce.soap.enterprise.EnterpriseConnection;
 import com.sforce.soap.enterprise.sobject.Account;
 import com.sforce.soap.enterprise.sobject.Contact;
