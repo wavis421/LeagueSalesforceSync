@@ -173,9 +173,16 @@ public class Pike13SalesforceImport {
 			// Page limit max is 500
 			+ "\"page\":{\"limit\":500";
 
-	private final String getClientDataForSF2 = "},"
-			// Filter on Dependents NULL or not NULL ("MMM" filled in at run-time)
-			+ "\"filter\":[\"and\",[[\"MMM\",\"dependent_names\"],"
+	private final String getClientDataForSF2student = "},"
+			// Filter on Dependents NULL, visited within the last year OR has future visits
+			+ "\"filter\":[\"and\",[[\"emp\",\"dependent_names\"],"
+			+ "                     [\"eq\",\"person_state\",\"active\"],"
+			+ "                     [\"or\",[[\"and\",[[\"emp\",\"days_since_last_visit\"],[\"gt\",\"future_visits\",0]]],"
+			+ "                              [\"and\",[[\"nemp\",\"days_since_last_visit\"],[\"lt\",\"days_since_last_visit\",366]]]]]]]}}}";
+
+	private final String getClientDataForSF2adult = "},"
+			// Filter on Dependents not NULL
+			+ "\"filter\":[\"and\",[[\"nemp\",\"dependent_names\"],"
 			+ "                     [\"eq\",\"person_state\",\"active\"]]]}}}";
 
 	private final String getEnrollmentSalesForce = "{\"data\":{\"type\":\"queries\","
@@ -262,9 +269,9 @@ public class Pike13SalesforceImport {
 			// Send the query (set dependents not empty for manager)
 			String cmd2;
 			if (isAcctMgr)
-				cmd2 = getClientDataForSF2.replace("MMM", "nemp");
+				cmd2 = getClientDataForSF2adult;
 			else
-				cmd2 = getClientDataForSF2.replace("MMM", "emp");
+				cmd2 = getClientDataForSF2student;
 			if (hasMore)
 				conn = pike13Conn.sendQueryToUrl("clients", getClientDataForSF + ",\"starting_after\":\"" + lastKey + "\"" + cmd2);
 			else

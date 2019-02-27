@@ -826,6 +826,49 @@ public class MySqlDbImports {
 		return eventList;
 	}
 
+	public ArrayList<AttendanceEventModel> getExpiredEvents(String sinceDate) {
+		ArrayList<AttendanceEventModel> eventList = new ArrayList<AttendanceEventModel>();
+
+		for (int i = 0; i < 2; i++) {
+			try {
+				// Get expired (not completed) attendance data
+				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
+						"SELECT * FROM Attendance, Students WHERE Attendance.ClientID = Students.ClientID "
+								+ "AND State = 'registered' AND ServiceDate < ?;");
+				selectStmt.setString(1, sinceDate);
+				ResultSet result = selectStmt.executeQuery();
+
+				while (result.next()) {
+					eventList.add(new AttendanceEventModel(result.getInt("ClientID"), 
+							result.getInt("VisitID"), result.getDate("ServiceDate"), 
+							result.getString("ServiceTime"), result.getString("EventName"), 
+							result.getString("GithubName"), result.getString("RepoName"), 
+							result.getString("Comments"), new StudentNameModel(result.getString("FirstName"),
+									result.getString("LastName"), true),
+							result.getString("ServiceCategory"), result.getString("State"),
+							result.getString("LastSFState"), result.getString("TeacherNames"),
+							result.getString("ClassLevel")));
+				}
+
+				result.close();
+				selectStmt.close();
+				break;
+
+			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+				if (i == 0) {
+					// First attempt to re-connect
+					sqlDb.connectDatabase();
+				}
+
+			} catch (SQLException e2) {
+				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
+						": " + e2.getMessage());
+				break;
+			}
+		}
+		return eventList;
+	}
+
 	public void importAttendance(String startDate, ArrayList<AttendanceEventModel> importList, boolean fullList) {
 		// Import attendance from Pike13 to the Tracker database
 		ArrayList<AttendanceEventModel> dbList = getAllEvents(startDate);
@@ -972,6 +1015,12 @@ public class MySqlDbImports {
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, studentModel, clientID,
 						": " + e.getMessage());
 			}
+		}
+	}
+
+	public void deleteExpiredAttendance(ArrayList<AttendanceEventModel> attendList) {
+		for (AttendanceEventModel a : attendList) {
+			deleteFromAttendance(a.getClientID(), a.getVisitID(), a.getStudentNameModel());
 		}
 	}
 
