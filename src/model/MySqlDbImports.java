@@ -1222,15 +1222,16 @@ public class MySqlDbImports {
 	private int addAttendance(AttendanceEventModel importEvent, String teacherNames, StudentModel student) {
 		// Update class level if <= L7
 		boolean addLevel = false;
+		String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
 
-		if (importEvent.getState().equals("completed")
+		if (importEvent.getState().equals("completed") && importEvent.getServiceDateString().compareTo(today) <= 0
 				&& ((importEvent.getEventName().charAt(0) >= '0' && importEvent.getEventName().charAt(0) <= '7')
 						|| importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
 						|| importEvent.getEventName().startsWith("PG")
 						|| ((importEvent.getServiceCategory().startsWith("class jlab")
 								|| importEvent.getServiceCategory().startsWith("class jslam"))
-								&& !student.getCurrentLevel().equals("")
-								&& student.getCurrentLevel().charAt(0) <= '7'))) {
+								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
+			// Update student's current level and last visit date
 			addLevel = true;
 			updateStudentLastVisit(student, importEvent);
 		}
@@ -1263,6 +1264,9 @@ public class MySqlDbImports {
 				addAttendanceStmt.executeUpdate();
 				addAttendanceStmt.close();
 
+				// Now update student's last visit date (if not already done)
+				if (!addLevel)
+					updateLastVisitDate(importEvent, student, today);
 				return 1;
 
 			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
@@ -1289,16 +1293,16 @@ public class MySqlDbImports {
 		// When transitioning to completed, update current level for students <= L7.
 		// Only set level for old levels 0-7, AD/AG/PG, Slams & Make-ups.
 		boolean addLevel = false;
+		String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
 
 		if ((dbAttendance == null || !dbAttendance.getState().equals("completed"))
-				&& importEvent.getState().equals("completed")
+				&& importEvent.getState().equals("completed") && importEvent.getServiceDateString().compareTo(today) <= 0
 				&& ((importEvent.getEventName().charAt(0) >= '0' && importEvent.getEventName().charAt(0) <= '7')
 						|| importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
 						|| importEvent.getEventName().startsWith("PG")
 						|| ((importEvent.getServiceCategory().startsWith("class jlab")
 								|| importEvent.getServiceCategory().startsWith("class jslam"))
-								&& !student.getCurrentLevel().equals("")
-								&& student.getCurrentLevel().charAt(0) <= '7'))) {
+								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
 			addLevel = true;
 			updateStudentLastVisit(student, importEvent);
 		}
@@ -1329,6 +1333,9 @@ public class MySqlDbImports {
 				updateAttendanceStmt.executeUpdate();
 				updateAttendanceStmt.close();
 
+				// Now update student's last visit date (if not already done)
+				if (!addLevel)
+					updateLastVisitDate(importEvent, student, today);
 				return 1;
 
 			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
@@ -1344,6 +1351,17 @@ public class MySqlDbImports {
 			}
 		}
 		return 0;
+	}
+
+	private void updateLastVisitDate(AttendanceEventModel importEvent, StudentModel student, String today) {
+		if (importEvent.getState().equals("completed")
+				&& importEvent.getServiceDateString().compareTo(today) <= 0
+				&& !importEvent.getEventName().toLowerCase().contains("leave")
+				&& (student.getLastVisitDate() == null ||
+				    student.getLastVisitDateString().compareTo(importEvent.getServiceDateString()) < 0)) {
+			// Update last visit date for this student
+			updateLastEventInfoByStudent(student.getClientID(), null, importEvent.getServiceDateString(), null);
+		}
 	}
 
 	private void deleteFromAttendance(int clientID, int visitID, StudentNameModel studentModel) {
@@ -1492,7 +1510,7 @@ public class MySqlDbImports {
 				&& importStudent.getLastExamScore().charAt(0) == 'L'
 				&& importStudent.getLastExamScore().charAt(2) == ' ') {
 			// Student's current level is blank but student skipped level(s)
-			graduateSkippedLevels(dbStudent, Integer.parseInt(importStudent.getCurrLevel()));			
+			graduateSkippedLevels(dbStudent, Integer.parseInt(importStudent.getCurrLevel()));
 		}
 	}
 
