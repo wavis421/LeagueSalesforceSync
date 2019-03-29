@@ -197,13 +197,14 @@ public class Pike13SalesforceImport {
 
 	private final String getEnrollmentSalesForce2 = "},"
 			// Filter on between start/end dates OR all future summer slam, workshops and leave
-			+ "\"filter\":[\"or\",[[\"btw\",\"service_date\",[\"0000-00-00\",\"1111-11-11\"]],"
-			+ "                    [\"and\",[[\"gt\",\"service_date\",\"2222-22-22\"],"
-			+ "                              [\"starts\",\"service_category\",\"class jslam\"]]],"
-			+ "                    [\"and\",[[\"gt\",\"service_date\",\"2222-22-22\"],"
-			+ "                              [\"starts\",\"service_category\",\"works\"]]],"
-			+ "                    [\"and\",[[\"gt\",\"service_date\",\"2222-22-22\"],"
-			+ "                              [\"eq\",\"service_category\",\"leave\"]]]]]}}}";
+			+ "\"filter\":[\"and\",[[\"or\",[[\"btw\",\"service_date\",[\"0000-00-00\",\"1111-11-11\"]],"
+			+ "                              [\"and\",[[\"gt\",\"service_date\",\"2222-22-22\"],"
+			+ "                                        [\"starts\",\"service_category\",\"class jslam\"]]],"
+			+ "                              [\"and\",[[\"gt\",\"service_date\",\"2222-22-22\"],"
+			+ "                                        [\"starts\",\"service_category\",\"works\"]]],"
+			+ "                              [\"and\",[[\"gt\",\"service_date\",\"2222-22-22\"],"
+			+ "                                        [\"eq\",\"service_category\",\"leave\"]]]]],"
+			+ "                     [\"eq\",\"service_state\",\"active\"]]]}}}";
 
 	// Get staff member data
 	private final String getStaffMemberData = "{\"data\":{\"type\":\"queries\","
