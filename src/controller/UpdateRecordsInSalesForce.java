@@ -337,9 +337,7 @@ public class UpdateRecordsInSalesForce {
 			if (arrayIdx > 0)
 				upsertAttendanceRecords(recordArray);
 
-		} catch (
-
-		Exception e) {
+		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR,
 						new StudentNameModel("", "", false), 0, "");
@@ -367,11 +365,14 @@ public class UpdateRecordsInSalesForce {
 			AttendanceEventModel dbAttend) {
 
 		// Failed to find attendance record in Tracker DB: this should not happen!
-		if (dbAttend == null && inputModel.getEventName() != null && !inputModel.getEventName().equals("")) {
-			MySqlDbLogging.insertLogData(LogDataModel.MISSING_VISIT_ID_FOR_SF_IMPORT,
-					new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
-					Integer.parseInt(inputModel.getClientID()), ": Visit ID " + inputModel.getVisitID() + " for "
-							+ inputModel.getEventName() + " on " + inputModel.getServiceDate());
+		if (dbAttend == null) {
+			// Only report error if this was not because of a missing event name
+			if (inputModel.getEventName() != null && !inputModel.getEventName().equals("")) {
+				MySqlDbLogging.insertLogData(LogDataModel.MISSING_VISIT_ID_FOR_SF_IMPORT,
+						new StudentNameModel(contactWithData.getFirstName(), contactWithData.getLastName(), false),
+						Integer.parseInt(inputModel.getClientID()), ": Visit ID " + inputModel.getVisitID() + " for "
+								+ inputModel.getEventName() + " on " + inputModel.getServiceDate());
+			}
 			return;
 		}
 
@@ -1566,11 +1567,11 @@ public class UpdateRecordsInSalesForce {
 			if (e.getMessage() == null) {
 				e.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR, new StudentNameModel("", "", false),
-						clientID, " for Level");
+						clientID, " for Level " + level);
 
 			} else
-				MySqlDbLogging.insertLogData(LogDataModel.SF_ATTENDANCE_IMPORT_ERROR,
-						new StudentNameModel("", "", false), clientID, " for Level: " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_DIARY_IMPORT_ERROR,
+						new StudentNameModel("", "", false), clientID, " for Level " + level + ": " + e.getMessage());
 		}
 		return 0;
 	}
