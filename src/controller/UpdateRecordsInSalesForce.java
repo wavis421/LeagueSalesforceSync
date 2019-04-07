@@ -48,6 +48,8 @@ public class UpdateRecordsInSalesForce {
 	private GetRecordsFromSalesForce getRecords;
 
 	private boolean attendanceUpsertError = false;
+	
+	private static final String[] gitEmojis = {":smile:", ":sunglasses:", ":sleeping:", ":confused:", ":neutral_face:", ":unamused:", ":cry:" };
 
 	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, MySqlDbImports dbImports, EnterpriseConnection connection,
 			GetRecordsFromSalesForce getRecords) {
@@ -271,6 +273,10 @@ public class UpdateRecordsInSalesForce {
 						a.setNote__c(dbAttend.getGithubComments());
 					if (dbAttend.getRepoName() != null && !dbAttend.getRepoName().equals(""))
 						a.setRepo_Name__c(dbAttend.getRepoName());
+					if (!dbAttend.getGitDescription().equals("")) {
+						a.setGit_Description__c(dbAttend.getGitDescription());
+						a.setGit_Emoji_Feedback__c(getEmojiFeedback(dbAttend.getGitDescription()));
+					}
 				}
 
 				StudentImportModel dbStudent = ListUtilities.findClientIDInPike13List(inputModel.getClientID(),
@@ -358,6 +364,14 @@ public class UpdateRecordsInSalesForce {
 			for (AttendanceEventModel a : attendLevelChanges)
 				dbImports.updateAttendLevelChanges(a.getVisitID(), a.getState());
 		}
+	}
+
+	private String getEmojiFeedback(String description) {
+		for (int i = 0; i < gitEmojis.length; i++) {
+			if (description.contains(gitEmojis[i]))
+				return gitEmojis[i];
+		}
+		return "";
 	}
 
 	private void updateAttendLevel(ArrayList<AttendanceEventModel> attendLevelChanges,
