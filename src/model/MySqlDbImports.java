@@ -843,8 +843,8 @@ public class MySqlDbImports {
 							result.getInt("VisitID"), result.getDate("ServiceDate"), 
 							result.getString("ServiceTime"), result.getString("EventName"), 
 							result.getString("GithubName"), result.getString("RepoName"), 
-							result.getString("Comments"), result.getString("GitDescription"),
-							new StudentNameModel(result.getString("FirstName"),	result.getString("LastName"), true),
+							result.getString("Comments"), result.getString("GitDescription"), 
+							new StudentNameModel(result.getString("FirstName"), result.getString("LastName"), true),
 							result.getString("ServiceCategory"), result.getString("State"),
 							result.getString("LastSFState"), result.getString("TeacherNames"),
 							result.getString("ClassLevel")));
@@ -978,13 +978,13 @@ public class MySqlDbImports {
 	}
 
 	public void updateAttendance(int clientID, StudentNameModel nameModel, String serviceDate, String eventName,
-			String repoName, String comments) {
+			String repoName, String comments, String gitDescription) {
 		PreparedStatement updateAttendanceStmt;
 		for (int i = 0; i < 2; i++) {
 			try {
 				// The only fields that should be updated are the comments and repo name
 				updateAttendanceStmt = sqlDb.dbConnection.prepareStatement(
-						"UPDATE Attendance SET Comments=?, RepoName=? WHERE ClientID=? AND ServiceDate=?;");
+						"UPDATE Attendance SET Comments=?, RepoName=?, GitDescription=? WHERE ClientID=? AND ServiceDate=?;");
 
 				int col = 1;
 				if (comments != null && comments.length() >= COMMENT_WIDTH)
@@ -993,6 +993,7 @@ public class MySqlDbImports {
 				if (repoName != null && repoName.length() >= REPO_NAME_WIDTH)
 					repoName = repoName.substring(0, REPO_NAME_WIDTH);
 				updateAttendanceStmt.setString(col++, repoName);
+				updateAttendanceStmt.setString(col++, gitDescription);
 				updateAttendanceStmt.setInt(col++, clientID);
 				updateAttendanceStmt.setDate(col++, java.sql.Date.valueOf(serviceDate));
 
@@ -1194,9 +1195,9 @@ public class MySqlDbImports {
 				if (commitDate.equals(event.getServiceDateString())
 						&& pendingGit.getGitUser().toLowerCase().equals(event.getGithubName().toLowerCase())) {
 					// Update comments & repo name
-					event.setGithubComments(trimMessage(pendingGit.getComments()));
+					event.setGithubComments(pendingGit.getComments());
 					updateAttendance(event.getClientID(), event.getStudentNameModel(), commitDate, event.getEventName(),
-							pendingGit.getRepoName(), event.getGithubComments());
+							pendingGit.getRepoName(), event.getGithubComments(), event.getGitDescription());
 					foundMatch = true;
 				}
 			}
@@ -1207,16 +1208,6 @@ public class MySqlDbImports {
 				i--;
 			}
 		}
-	}
-
-	private String trimMessage(String inputMsg) {
-		// Trim message up to first new-line character
-		inputMsg = inputMsg.trim();
-		int idx = inputMsg.indexOf("\n");
-		if (idx > -1)
-			return inputMsg.substring(0, idx);
-		else
-			return inputMsg;
 	}
 
 	private int addAttendance(AttendanceEventModel importEvent, String teacherNames, StudentModel student) {

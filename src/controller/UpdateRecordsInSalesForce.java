@@ -367,6 +367,7 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	private String getEmojiFeedback(String description) {
+		// Check if description contains any of the emojis in the emoji list
 		for (int i = 0; i < gitEmojis.length; i++) {
 			if (description.contains(gitEmojis[i]))
 				return gitEmojis[i];
