@@ -993,7 +993,10 @@ public class MySqlDbImports {
 				if (repoName != null && repoName.length() >= REPO_NAME_WIDTH)
 					repoName = repoName.substring(0, REPO_NAME_WIDTH);
 				updateAttendanceStmt.setString(col++, repoName);
-				updateAttendanceStmt.setString(col++, gitDescription);
+				if (gitDescription != null && gitDescription.length() >= COMMENT_WIDTH)
+					updateAttendanceStmt.setString(col++, gitDescription.substring(0, COMMENT_WIDTH));
+				else
+					updateAttendanceStmt.setString(col++, gitDescription);
 				updateAttendanceStmt.setInt(col++, clientID);
 				updateAttendanceStmt.setDate(col++, java.sql.Date.valueOf(serviceDate));
 
