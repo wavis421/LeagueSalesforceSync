@@ -67,13 +67,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getActiveStudents: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -224,13 +226,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getAllStudentsAsImportData: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -294,13 +298,15 @@ public class MySqlDbImports {
 //							student.getClientID(), "");
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("insertStudent: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				StudentNameModel studentModel = new StudentNameModel(student.getFirstName(), student.getLastName(),
 						student.getIsInMasterDb() == 1 ? true : false);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, studentModel, 0, ": " + e2.getMessage());
@@ -377,13 +383,15 @@ public class MySqlDbImports {
 //							importStudent.getClientID(), changedFields);
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateStudent: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				StudentNameModel studentModel = new StudentNameModel(importStudent.getFirstName(),
 						importStudent.getLastName(), true);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, studentModel, 0, ": " + e2.getMessage());
@@ -545,13 +553,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getStudentsUsingFlag: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -574,13 +584,15 @@ public class MySqlDbImports {
 				updateStudentStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateStudentFlags: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, student.getNameModel(),
 						student.getClientID(), ": " + e2.getMessage());
 				break;
@@ -602,13 +614,15 @@ public class MySqlDbImports {
 				updateStudentStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateIsInMasterDb: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				StudentNameModel model = new StudentNameModel(student.getFirstName(), student.getLastName(),
 						(isInMasterDb == 1) ? true : false);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, model, student.getClientID(),
@@ -669,13 +683,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getStudentCurrentLevel: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -688,35 +704,46 @@ public class MySqlDbImports {
 		// Extract module from repo name: level must match student current level
 		if (repoName != null && student != null) {
 			String currLevel = student.getCurrentLevel();
+			String newModuleName = null;
+			
 			if (!currLevel.equals("") && currLevel.charAt(0) <= '5') {
-				int idx;
+				int idx = 0;
 				// Github classroom names are formatted level-0-module-3 OR level3-module1
 				if (repoName.startsWith("level" + currLevel + "-module"))
 					idx = 13;
 				else if (repoName.startsWith("level-" + currLevel + "-module"))
 					idx = 14;
 				else if (repoName.startsWith("old-level" + currLevel + "-module")) {
-					System.out.println(student.getNameModel().toString() + ": " + repoName);
 					idx = 17;
 				} else if (currLevel.equals("5") && repoName.length() > 10 && repoName.startsWith("level5-0")
 						&& repoName.charAt(9) == '-') {
-					System.out.println(student.getNameModel().toString() + ": " + repoName.charAt(8) + ", " + repoName);
 					idx = 8;
+				} else if (currLevel.equals("2") && repoName.startsWith("processingsnake-")) {
+					newModuleName="2";
+				} else if (currLevel.equals("2") && repoName.startsWith("league-invaders-")) {
+					newModuleName="3";
+				} else if (currLevel.equals("2") && repoName.startsWith("league-level2-game-")) {
+					newModuleName="4";
 				} else {
-					System.out.println(student.getNameModel().toString() + ": (unknown) " + repoName);
+					System.out.println(clientID + ": (unknown) " + repoName + " [" + currLevel + "][" + student.getCurrentModule() + "]");
 					return; // No matching level in repo name
 				}
 
-				if (repoName.charAt(idx) == '-')
-					idx++;
+				if (newModuleName == null) {
+					if (repoName.charAt(idx) == '-')
+						idx++;
 
-				// Now find module
-				if (repoName.charAt(idx) >= '0' && repoName.charAt(idx) <= '9' // module #
+					// Now find module
+					if (repoName.charAt(idx) >= '0' && repoName.charAt(idx) <= '9' // module #
 						&& (repoName.length() == (idx + 1) || repoName.charAt(idx + 1) == '-')) {
-					String newModuleName = repoName.substring(idx, idx + 1);
-
+						newModuleName = repoName.substring(idx, idx + 1);
+					}
+				}
+				
+				if (newModuleName != null) {
 					// Done parsing repo name; update student module if changed
-					if (newModuleName.compareTo(student.getCurrentModule()) > 0) {
+					if (student.getCurrentModule() == null || newModuleName.compareTo(student.getCurrentModule()) > 0) {
+						System.out.println("Update module for " + clientID + " to [" + currLevel + "][" + newModuleName + "], repo = " + repoName);
 						updateLastEventInfoByStudent(clientID, null, null, newModuleName);
 					}
 				}
@@ -764,13 +791,15 @@ public class MySqlDbImports {
 				updateStudentStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateLastEventInfoByStudent: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false),
 						clientID, ": " + e2.getMessage());
 				break;
@@ -811,13 +840,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getAllEvents: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -839,6 +870,9 @@ public class MySqlDbImports {
 				ResultSet result = selectStmt.executeQuery();
 
 				while (result.next()) {
+					System.out.println("Removing: " + result.getInt("ClientID") + ", " + result.getDate("ServiceDate")
+							 + ", " + result.getString("EventName") + ", " + result.getString("State"));
+
 					eventList.add(new AttendanceEventModel(result.getInt("ClientID"), 
 							result.getInt("VisitID"), result.getDate("ServiceDate"), 
 							result.getString("ServiceTime"), result.getString("EventName"), 
@@ -854,13 +888,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getExpiredEvents: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -1007,13 +1043,15 @@ public class MySqlDbImports {
 				updateStudentModule(clientID, getStudentCurrentLevel(clientID), repoName);
 				return;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateAttendance: " + clientID + " " + serviceDate + ", " + eventName + ", " +  e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e) {
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
 				StudentNameModel studentModel = new StudentNameModel(nameModel.getFirstName(), nameModel.getLastName(),
 						nameModel.getIsInMasterDb());
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, studentModel, clientID,
@@ -1044,13 +1082,15 @@ public class MySqlDbImports {
 				insertStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("createSortedAttendanceList: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						" sorting: " + e2.getMessage());
 				break;
@@ -1101,13 +1141,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getEventsWithNoComments: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -1137,13 +1179,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getPendingGithubEvents: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e) {
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.GITHUB_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e.getMessage());
 				break;
@@ -1161,13 +1205,15 @@ public class MySqlDbImports {
 				deleteGithubStmt.executeUpdate();
 				deleteGithubStmt.close();
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("deletePendingGithubEvent: " + e1.getMessage());
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e) {
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.GITHUB_DB_ERROR, new StudentNameModel("", "", false), 0,
 						" deleting record: " + e.getMessage());
 				break;
@@ -1263,9 +1309,10 @@ public class MySqlDbImports {
 					updateLastVisitDate(importEvent, student, today);
 				return 1;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("addAttendance: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
@@ -1273,7 +1320,8 @@ public class MySqlDbImports {
 				// Attendance data already exists, do nothing
 				break;
 
-			} catch (SQLException e3) {
+			} catch (SQLException | NullPointerException e3) {
+				e3.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, student.getNameModel(),
 						importEvent.getClientID(), ": " + e3.getMessage());
 				break;
@@ -1332,13 +1380,15 @@ public class MySqlDbImports {
 					updateLastVisitDate(importEvent, student, today);
 				return 1;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateAttendanceState: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e) {
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, student.getNameModel(),
 						importEvent.getClientID(), ": " + e.getMessage());
 				break;
@@ -1371,13 +1421,15 @@ public class MySqlDbImports {
 				deleteAttendanceStmt.executeUpdate();
 				deleteAttendanceStmt.close();
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("deleteFromAttendance: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e) {
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, studentModel, clientID,
 						" removing registered attendance record: " + e.getMessage());
 				break;
@@ -1399,13 +1451,15 @@ public class MySqlDbImports {
 				updateAttendanceStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateAttendLevelChanges: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						" updating LastSFState: " + e2.getMessage());
 				break;
@@ -1432,13 +1486,15 @@ public class MySqlDbImports {
 				updateGraduateStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateGradInSfField: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR,
 						new StudentNameModel(studentName, "", false), clientID, " for Graduation: " + e2.getMessage());
 				break;
@@ -1561,13 +1617,15 @@ public class MySqlDbImports {
 				updateGraduationRecord(gradModel);
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("addGraduationRecord: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false),
 						gradModel.getClientID(), " for Graduation: " + e2.getMessage());
 				break;
@@ -1612,13 +1670,15 @@ public class MySqlDbImports {
 				updateGraduateStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateGraduationRecord: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false),
 						gradModel.getClientID(), " for Graduation: " + e2.getMessage());
 				break;
@@ -1652,13 +1712,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("removeProcessedGraduations: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false), 0,
 						" for Graduation: " + e2.getMessage());
 				break;
@@ -1696,13 +1758,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("getStartDateByClientIdAndLevel: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -1804,13 +1868,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateMissingCurrentClass: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				StudentNameModel model = new StudentNameModel("", "", false);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, model, 0, ": " + e2.getMessage());
 				break;
@@ -1854,13 +1920,15 @@ public class MySqlDbImports {
 				selectStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateRegisteredClass: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				StudentNameModel model = new StudentNameModel("", "", false);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, model, 0, ": " + e2.getMessage());
 				break;
@@ -1882,13 +1950,15 @@ public class MySqlDbImports {
 				updateStudentStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateRegisteredClassByStudent: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false),
 						clientID, ": " + e2.getMessage());
 				break;
@@ -1908,13 +1978,15 @@ public class MySqlDbImports {
 				updateStudentStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("clearRegisteredClasses: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e2.getMessage());
 				break;
@@ -1935,13 +2007,15 @@ public class MySqlDbImports {
 				deleteClassStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("removeClassFromSchedule: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.SCHEDULE_DB_ERROR, null, 0, ": " + e2.getMessage());
 				break;
 			}
@@ -1975,9 +2049,10 @@ public class MySqlDbImports {
 				addScheduleStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("addClassToSchedule: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
@@ -1985,7 +2060,8 @@ public class MySqlDbImports {
 				// Schedule data already exists, do nothing
 				break;
 
-			} catch (SQLException e3) {
+			} catch (SQLException | NullPointerException e3) {
+				e3.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.SCHEDULE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e3.getMessage());
 				break;
@@ -2013,13 +2089,15 @@ public class MySqlDbImports {
 				updateScheduleStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateClassInSchedule: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e3) {
+			} catch (SQLException | NullPointerException e3) {
+				e3.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.SCHEDULE_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e3.getMessage());
 				break;
@@ -2115,9 +2193,10 @@ public class MySqlDbImports {
 				addCourseStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("addCourseToSchedule: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
@@ -2125,7 +2204,8 @@ public class MySqlDbImports {
 				// Schedule data already exists, do nothing
 				break;
 
-			} catch (SQLException e3) {
+			} catch (SQLException | NullPointerException e3) {
+				e3.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.COURSES_DB_ERROR, new StudentNameModel("", "", false), 0,
 						": " + e3.getMessage());
 				break;
@@ -2149,13 +2229,15 @@ public class MySqlDbImports {
 				updateCourseStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("updateCourse: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				StudentNameModel studentModel = new StudentNameModel("", "", true);
 				MySqlDbLogging.insertLogData(LogDataModel.COURSES_DB_ERROR, studentModel, 0,
 						" for " + course.getEventName() + ": " + e2.getMessage());
@@ -2177,13 +2259,15 @@ public class MySqlDbImports {
 				deleteClassStmt.close();
 				break;
 
-			} catch (CommunicationsException | MySQLNonTransientConnectionException | NullPointerException e1) {
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
 				if (i == 0) {
 					// First attempt to re-connect
+					System.out.println("removeCourseFromSchedule: " + e1.getMessage() + ", " + e1);
 					sqlDb.connectDatabase();
 				}
 
-			} catch (SQLException e2) {
+			} catch (SQLException | NullPointerException e2) {
+				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.COURSES_DB_ERROR, null, 0, ": " + e2.getMessage());
 				break;
 			}
