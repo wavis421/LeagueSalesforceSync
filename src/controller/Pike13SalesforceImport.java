@@ -17,7 +17,6 @@ public class Pike13SalesforceImport {
 	private final String GITHUB_FIELD = "custom_field_127885";
 	private final String GRAD_YEAR_FIELD = "custom_field_145902";
 	private final String SCHOOL_ATTENDING_FIELD = "custom_field_106316";
-	private final String TSHIRT_SIZE_FIELD = "custom_field_106318";
 	private final String EMERG_CONTACT_NAME_FIELD = "custom_field_106321";
 	private final String EMERG_CONTACT_PHONE_FIELD = "custom_field_106322";
 	private final String EMERG_CONTACT_EMAIL_FIELD = "custom_field_149434";
@@ -69,28 +68,27 @@ public class Pike13SalesforceImport {
 	private final int CLIENT_FIRST_NAME_IDX = 11;
 	private final int CLIENT_LAST_NAME_IDX = 12;
 	private final int CLIENT_SCHOOL_NAME_IDX = 13;
-	private final int CLIENT_TSHIRT_SIZE_IDX = 14;
-	private final int CLIENT_GENDER_IDX = 15;
-	private final int CLIENT_EMERG_CONTACT_NAME_IDX = 16;
-	private final int CLIENT_EMERG_CONTACT_PHONE_IDX = 17;
-	private final int CLIENT_CURR_GRADE_IDX = 18;
-	private final int CLIENT_HEAR_ABOUT_US_IDX = 19;
-	private final int CLIENT_GRAD_YEAR_IDX = 20;
-	private final int CLIENT_WHO_TO_THANK_IDX = 21;
-	private final int CLIENT_EMERG_CONTACT_EMAIL_IDX = 22;
-	private final int CLIENT_FINANCIAL_AID_IDX = 23;
-	private final int CLIENT_FINANCIAL_AID_PERCENT_IDX = 24;
-	private final int CLIENT_GITHUB_IDX = 25;
-	private final int CLIENT_GRANT_INFO_IDX = 26;
-	private final int CLIENT_LEAVE_REASON_IDX = 27;
-	private final int CLIENT_STOP_EMAIL_IDX = 28;
-	private final int CLIENT_FIRST_VISIT_IDX = 29;
-	private final int CLIENT_HOME_PHONE_IDX = 30;
-	private final int CLIENT_ACCOUNT_MGR_NAMES_IDX = 31;
-	private final int CLIENT_ACCOUNT_MGR_EMAILS_IDX = 32;
-	private final int CLIENT_ACCOUNT_MGR_PHONES_IDX = 33;
-	private final int CLIENT_DEPENDENT_NAMES_IDX = 34;
-	private final int CLIENT_CURRENT_LEVEL_IDX = 35;
+	private final int CLIENT_GENDER_IDX = 14;
+	private final int CLIENT_EMERG_CONTACT_NAME_IDX = 15;
+	private final int CLIENT_EMERG_CONTACT_PHONE_IDX = 16;
+	private final int CLIENT_CURR_GRADE_IDX = 17;
+	private final int CLIENT_HEAR_ABOUT_US_IDX = 18;
+	private final int CLIENT_GRAD_YEAR_IDX = 19;
+	private final int CLIENT_WHO_TO_THANK_IDX = 20;
+	private final int CLIENT_EMERG_CONTACT_EMAIL_IDX = 21;
+	private final int CLIENT_FINANCIAL_AID_IDX = 22;
+	private final int CLIENT_FINANCIAL_AID_PERCENT_IDX = 23;
+	private final int CLIENT_GITHUB_IDX = 24;
+	private final int CLIENT_GRANT_INFO_IDX = 25;
+	private final int CLIENT_LEAVE_REASON_IDX = 26;
+	private final int CLIENT_STOP_EMAIL_IDX = 27;
+	private final int CLIENT_FIRST_VISIT_IDX = 28;
+	private final int CLIENT_HOME_PHONE_IDX = 29;
+	private final int CLIENT_ACCOUNT_MGR_NAMES_IDX = 30;
+	private final int CLIENT_ACCOUNT_MGR_EMAILS_IDX = 31;
+	private final int CLIENT_ACCOUNT_MGR_PHONES_IDX = 32;
+	private final int CLIENT_DEPENDENT_NAMES_IDX = 33;
+	private final int CLIENT_CURRENT_LEVEL_IDX = 34;
 	
 	// Indices for SalesForce enrollment data
 	private final int SF_PERSON_ID_IDX = 0;
@@ -162,7 +160,7 @@ public class Pike13SalesforceImport {
 			+ "\"fields\":[\"person_id\",\"email\",\"phone\",\"address\",\"birthdate\",\"completed_visits\",\"future_visits\","
 			+ "            \"has_signed_waiver\",\"has_membership\",\"current_plans\","
 			+ "            \"home_location_name\",\"first_name\",\"last_name\",\"" + SCHOOL_ATTENDING_FIELD + "\","
-			+ "            \"" + TSHIRT_SIZE_FIELD + "\",\"" + GENDER_FIELD + "\",\"" + EMERG_CONTACT_NAME_FIELD + "\","
+			+ "            \"" + GENDER_FIELD + "\",\"" + EMERG_CONTACT_NAME_FIELD + "\","
 			+ "            \"" + EMERG_CONTACT_PHONE_FIELD + "\",\"" + CURRENT_GRADE_FIELD + "\","
 			+ "            \"" + HEAR_ABOUT_US_FIELD + "\",\"" + GRAD_YEAR_FIELD + "\",\"" + WHO_TO_THANK_FIELD + "\","
 			+ "            \"" + EMERG_CONTACT_EMAIL_FIELD + "\",\"" + FINANCIAL_AID_FIELD + "\",\"" + FINANCIAL_AID_PERCENT_FIELD + "\","
@@ -311,7 +309,7 @@ public class Pike13SalesforceImport {
 						pike13Conn.stripQuotes(personArray.get(CLIENT_GITHUB_IDX).toString()),
 						personArray.getInt(CLIENT_COMPLETED_VISITS_IDX),
 						personArray.getInt(CLIENT_FUTURE_VISITS_IDX),
-						pike13Conn.stripQuotes(personArray.get(CLIENT_TSHIRT_SIZE_IDX).toString()),
+						null, // T-Shirt size no longer used
 						pike13Conn.stripQuotes(personArray.get(CLIENT_HAS_SIGNED_WAIVER_IDX).toString()).equals("t") ? true : false,
 						pike13Conn.stripQuotes(personArray.get(CLIENT_HAS_MEMBERSHIP_IDX).toString()).equals("t") ? "Yes" : "No",
 						pike13Conn.stripQuotes(personArray.get(CLIENT_PASS_ON_FILE_IDX).toString()),
