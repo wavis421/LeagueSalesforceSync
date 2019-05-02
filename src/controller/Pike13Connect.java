@@ -23,10 +23,17 @@ public class Pike13Connect {
 	}
 
 	private HttpURLConnection connectUrl(String endPoint) {
+		HttpURLConnection conn = null;
+		
 		try {
 			// Get URL connection with authorization
 			URL url = new URL("https://jtl.pike13.com/desk/api/v3/reports/" + endPoint + "/queries");
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn = (HttpURLConnection) url.openConnection();
+			if (conn == null) {
+				MySqlDbLogging.insertLogData(LogDataModel.PIKE13_CONNECTION_ERROR, new StudentNameModel("", "", false), 0,
+						": Failed to open connection for endpoint '" + endPoint + "'");
+				return null;
+			}
 			String basicAuth = "Bearer " + pike13Token;
 			conn.setRequestProperty("Authorization", basicAuth);
 			conn.setRequestProperty("User-Agent", USER_AGENT);
@@ -37,9 +44,13 @@ public class Pike13Connect {
 			conn.setDoInput(true);
 			return conn;
 
-		} catch (IOException e) {
-			MySqlDbLogging.insertLogData(LogDataModel.PIKE13_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+		} catch (Exception e) {
+			MySqlDbLogging.insertLogData(LogDataModel.PIKE13_CONNECTION_ERROR, new StudentNameModel("", "", false), 0,
 					": " + e.getMessage());
+			e.printStackTrace();
+		
+			if (conn != null)
+				conn.disconnect();
 		}
 		return null;
 	}
@@ -50,6 +61,8 @@ public class Pike13Connect {
 			for (int i = 0; i < 2; i++) {
 				// Get URL connection with authorization
 				HttpURLConnection conn = connectUrl(connName);
+				if (conn == null)
+					continue;
 
 				// Send the query
 				OutputStream outputStream = conn.getOutputStream();
@@ -62,13 +75,14 @@ public class Pike13Connect {
 				if (responseCode == HttpURLConnection.HTTP_OK)
 					return conn;
 				else {
+					MySqlDbLogging.insertLogData(LogDataModel.PIKE13_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+							" " + responseCode + " for '" + connName + "' (attempt #" + (i + 1) + "): " + conn.getResponseMessage());
 					conn.disconnect();
-					MySqlDbLogging.insertLogData(LogDataModel.PIKE13_CONNECTION_ERROR, new StudentNameModel("", "", false), 0,
-							" " + responseCode + " (attempt #" + (i + 1) + "): " + conn.getResponseMessage());
 				}
 			}
 
 		} catch (IOException e) {
+			e.printStackTrace();
 			MySqlDbLogging.insertLogData(LogDataModel.PIKE13_IMPORT_ERROR, new StudentNameModel("", "", false), 0, 
 					": " + e.getMessage());
 		}
@@ -88,6 +102,7 @@ public class Pike13Connect {
 			return object;
 
 		} catch (IOException e) {
+			e.printStackTrace();
 			MySqlDbLogging.insertLogData(LogDataModel.PIKE13_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
 					": " + e.getMessage());
 		}
