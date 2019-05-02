@@ -64,12 +64,16 @@ public class SalesForceApi {
 		config.setPassword(SALES_FORCE_PASSWORD);
 		config.setTraceMessage(false);
 
-		try {
-			salesForceApi = Connector.newConnection(config);
+		for (int i = 0; i < 2; i++) { // Try twice
+			try {
+				salesForceApi = Connector.newConnection(config);
+				break;
 
-		} catch (ConnectionException e1) {
-			e1.printStackTrace();
-			exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
+			} catch (ConnectionException e1) {
+				e1.printStackTrace();
+				if (i > 0)
+					exitProgram(LogDataModel.SALES_FORCE_CONNECTION_ERROR, e1.getMessage());
+			}
 		}
 
 		// Perform the update to SalesForce
