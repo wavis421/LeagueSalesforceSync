@@ -49,7 +49,8 @@ public class UpdateRecordsInSalesForce {
 
 	private boolean attendanceUpsertError = false;
 	
-	private static final String[] gitEmojis = {":smile:", ":sunglasses:", ":sleeping:", ":confused:", ":neutral_face:", ":unamused:", ":cry:", ":tada:" };
+	private static final String[] gitEmojis = {":smile:", ":smiley:", ":sweat_smile:", ":thumbsup:", ":sunglasses:", ":sleeping:", ":confused:", ":astonished:", 
+			":neutral_face:", ":unamused:", ":cry:", ":tada:", ":question:", ":100:", ":+1:", ":-1:" };
 
 	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, MySqlDbImports dbImports, EnterpriseConnection connection,
 			GetRecordsFromSalesForce getRecords) {
@@ -375,6 +376,15 @@ public class UpdateRecordsInSalesForce {
 			if (description.contains(gitEmojis[i]))
 				return gitEmojis[i];
 		}
+		
+		// If no standard emoji found, extract any emoji
+		int colon1 = description.indexOf(':');
+		if (colon1 >= 0 && description.length() > colon1 + 2) {
+			int colon2 = description.indexOf(':', colon1 + 1);
+			if (colon2 - colon1 > 1) {
+				System.out.println("Emoji: " + description.substring(colon1, colon2 + 1));
+			}
+		}
 		return "";
 	}
 
@@ -648,9 +658,9 @@ public class UpdateRecordsInSalesForce {
 				String clientID = staff.getClientID();
 				String accountID, contactType = "Adult";
 
-				if (firstName.startsWith("TA-")) {
-					// Remove TA- from front of string
-					firstName = firstName.substring(3);
+				if (firstName.startsWith("TA-") || firstName.toLowerCase().startsWith("trainee-")) {
+					// Remove TA- or Trainee- from front of string
+					firstName = firstName.substring(firstName.indexOf("-") + 1);
 
 					// TA's must have valid SFClientID that is different from ClientID
 					if (clientID.equals(staff.getSfClientID())) {
@@ -663,6 +673,8 @@ public class UpdateRecordsInSalesForce {
 					// TA's use SF Client ID
 					clientID = staff.getSfClientID();
 					contactType = "Student";
+					if (staff.getFirstName().toLowerCase().startsWith("trainee-"))
+						System.out.println("Trainee: " + firstName + ", " + staff.getFullName());
 				}
 
 				// Get account ID, create account if needed
@@ -1147,8 +1159,6 @@ public class UpdateRecordsInSalesForce {
 			c.setHome_Location_Long__c(contact.getHomeLocAsString());
 		if (contact.getSchoolName() != null)
 			c.setCurrent_School__c(contact.getSchoolName());
-		if (contact.gettShirtSize() != null)
-			c.setShirt_Size__c(contact.gettShirtSize());
 		if (contact.getGenderString() != null)
 			c.setGender__c(contact.getGenderString());
 		if (contact.getEmergContactName() != null)
@@ -1238,8 +1248,6 @@ public class UpdateRecordsInSalesForce {
 			c.setOccupation__c(staff.getOccupation());
 		if (staff.getStartInfo() != null)
 			c.setAdditional_Details_1__c(staff.getStartInfo());
-		if (staff.getTShirt() != null)
-			c.setShirt_Size__c(staff.getTShirt());
 		if (staff.getWhereDidYouHear() != null)
 			c.setHow_you_heard_about_us__c(staff.getWhereDidYouHear());
 		if (staff.getTitle() != null && !staff.getTitle().trim().equals(""))
@@ -1300,7 +1308,8 @@ public class UpdateRecordsInSalesForce {
 			return staff.getAccountID();
 
 		// Check if student-teacher or parent
-		if (staff.getFirstName().startsWith("TA-") || staff.isAlsoClient()) {
+		if (staff.getFirstName().startsWith("TA-") || staff.getFirstName().toLowerCase().startsWith("trainee-") 
+				|| staff.isAlsoClient()) {
 			// All TA's and existing clients must already have an account
 			MySqlDbLogging.insertLogData(LogDataModel.MISSING_ACCOUNT_FOR_TA_OR_PARENT,
 					new StudentNameModel(staff.getFullName(), "", false), 0, " " + staff.getFullName());
