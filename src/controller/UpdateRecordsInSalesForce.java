@@ -272,14 +272,14 @@ public class UpdateRecordsInSalesForce {
 				if (dbAttend != null) {
 					if (!dbAttend.getGithubComments().equals("")) {
 						a.setNote__c(dbAttend.getGithubComments());
-						a.setEmoji_Feedback__c(getEmojiFeedback(dbAttend.getGithubComments()));
+						a.setEmoji_Feedback__c(getEmojiFeedback(dbAttend.getGithubComments().toLowerCase()));
 					}
 					if (dbAttend.getRepoName() != null && !dbAttend.getRepoName().equals(""))
 						a.setRepo_Name__c(dbAttend.getRepoName());
 					if (!dbAttend.getGitDescription().equals("")) {
 						a.setGit_Description__c(dbAttend.getGitDescription());
 						if (a.getEmoji_Feedback__c().equals(""))
-							a.setEmoji_Feedback__c(getEmojiFeedback(dbAttend.getGitDescription()));
+							a.setEmoji_Feedback__c(getEmojiFeedback(dbAttend.getGitDescription().toLowerCase()));
 					}
 				}
 
