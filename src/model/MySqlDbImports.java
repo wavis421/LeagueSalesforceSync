@@ -2285,7 +2285,7 @@ public class MySqlDbImports {
 		String[] values = origTeachers.split("\\s*,\\s*");
 		for (int i = 0; i < values.length; i++) {
 			String valueLC = values[i].toLowerCase();
-			if (values[i].startsWith("TA-") || valueLC.startsWith("open lab") || valueLC.startsWith("sub teacher")
+			if (values[i].startsWith("TA-") || valueLC.startsWith("trainee-") || valueLC.startsWith("open lab") || valueLC.startsWith("sub teacher")
 					|| valueLC.startsWith("padres game") || valueLC.startsWith("make-up")
 					|| valueLC.startsWith("intro to java") || valueLC.startsWith("league admin")
 					|| valueLC.startsWith("summer prog") || valueLC.startsWith("need assist")

@@ -174,6 +174,7 @@ public class Pike13SalesforceImport {
 	private final String getClientDataForSF2student = "},"
 			// Filter on Dependents NULL, visited within the last year OR has future visits
 			+ "\"filter\":[\"and\",[[\"emp\",\"dependent_names\"],"
+			+ "                     [\"ne\",\"first_name\",\"TestChild\"],"
 			+ "                     [\"eq\",\"person_state\",\"active\"],"
 			+ "                     [\"or\",[[\"and\",[[\"emp\",\"days_since_last_visit\"],[\"gt\",\"future_visits\",0]]],"
 			+ "                              [\"and\",[[\"nemp\",\"days_since_last_visit\"],[\"lt\",\"days_since_last_visit\",366]]]]]]]}}}";
