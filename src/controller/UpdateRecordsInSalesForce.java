@@ -382,7 +382,10 @@ public class UpdateRecordsInSalesForce {
 		if (colon1 >= 0 && description.length() > colon1 + 2) {
 			int colon2 = description.indexOf(':', colon1 + 1);
 			if (colon2 - colon1 > 1) {
-				System.out.println("Emoji: " + description.substring(colon1, colon2 + 1));
+				String foundEmoji = description.substring(colon1, colon2 + 1);
+				if (!foundEmoji.contains(" ")) {
+					return foundEmoji;
+				}
 			}
 		}
 		return "";
