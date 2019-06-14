@@ -2,6 +2,7 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -49,7 +50,7 @@ public class UpdateRecordsInSalesForce {
 
 	private boolean attendanceUpsertError = false;
 	
-	private static final String[] gitEmojis = {":smile:", ":smiley:", ":sweat_smile:", ":thumbsup:", ":sunglasses:", ":sleeping:", ":confused:", ":astonished:", 
+	private static final String[] gitEmojis = {":smile:", ":sweat_smile:", ":thumbsup:", ":sunglasses:", ":sleeping:", ":confused:", ":astonished:", 
 			":neutral_face:", ":unamused:", ":cry:", ":tada:", ":question:", ":100:", ":+1:", ":-1:" };
 
 	public UpdateRecordsInSalesForce(MySqlDatabase mySqlDb, MySqlDbImports dbImports, EnterpriseConnection connection,
@@ -274,8 +275,10 @@ public class UpdateRecordsInSalesForce {
 						a.setNote__c(dbAttend.getGithubComments());
 						a.setEmoji_Feedback__c(getEmojiFeedback(dbAttend.getGithubComments().toLowerCase()));
 					}
-					if (dbAttend.getRepoName() != null && !dbAttend.getRepoName().equals(""))
+					if (dbAttend.getRepoName() != null && !dbAttend.getRepoName().equals("")) {
 						a.setRepo_Name__c(dbAttend.getRepoName());
+						updateAttendanceModule(a);
+					}
 					if (!dbAttend.getGitDescription().equals("")) {
 						a.setGit_Description__c(dbAttend.getGitDescription());
 						if (a.getEmoji_Feedback__c().equals(""))
@@ -370,6 +373,65 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
+	private void updateAttendanceModule(Student_Attendance__c a) {
+		// Extract module from repo name
+		String repoName = a.getRepo_Name__c().toLowerCase();
+		String levelName, moduleName = null;	
+		int moduleStartIdx = 0;
+		
+		// Github classroom names are formatted level-0-module-3 OR level3-module1
+		if (repoName.contains("intro-to-java-workshop"))
+			return;
+		else if (repoName.startsWith("level") && repoName.substring(6).startsWith("-module")) {
+			levelName = repoName.substring(5, 6);
+			moduleStartIdx = 13;
+		} else if (repoName.startsWith("level-") && repoName.substring(7).startsWith("-module")) {
+			levelName = repoName.substring(6, 7);
+			moduleStartIdx = 14;
+		} else if (repoName.startsWith("old-level") && repoName.substring(10).startsWith("-module")) {
+			levelName = repoName.substring(9, 10);
+			moduleStartIdx = 17;
+		} else if (repoName.length() > 10 && repoName.startsWith("level5-0") && repoName.charAt(9) == '-') {
+			levelName = repoName.substring(8, 9);
+			moduleStartIdx = 8;
+		} else if (repoName.startsWith("processingsnake-")) {
+			levelName = "2";
+			moduleName = "2";
+		} else if (repoName.startsWith("league-invaders-")) {
+			levelName = "2";
+			moduleName = "3";
+		} else if (repoName.startsWith("league-level2-game-")) {
+			levelName = "2";
+			moduleName = "4";
+		} else if (repoName.startsWith("level") && 
+				(repoName.substring(6).startsWith("-coding-exam-") || repoName.substring(6).startsWith("-codingexam-"))) {
+			levelName = repoName.substring(5, 6);
+			moduleName = "E";
+		} else if (repoName.startsWith("level-") &&
+				(repoName.substring(7).startsWith("-coding-exam-") || repoName.substring(7).startsWith("-codingexam-"))) {
+			levelName = repoName.substring(6, 7);
+			moduleName = "E";
+		} else {
+			System.out.println("Failed to parse repo: " + repoName);
+			return; // No matching level in repo name
+		}
+
+		if (moduleName == null) {
+			if (repoName.charAt(moduleStartIdx) == '-')
+				moduleStartIdx++;
+
+			// Now find module
+			if (repoName.charAt(moduleStartIdx) >= '0' && repoName.charAt(moduleStartIdx) <= '9' // module #
+				&& (repoName.length() == (moduleStartIdx + 1) || repoName.charAt(moduleStartIdx + 1) == '-')) {
+				moduleName = repoName.substring(moduleStartIdx, moduleStartIdx + 1);
+			}
+		}
+			
+		// Set the values in the attendance record
+		a.setGit_Level__c(levelName);
+		a.setGit_Module__c(moduleName);
+	}
+
 	private String getEmojiFeedback(String description) {
 		// Check if description contains any of the emojis in the emoji list
 		for (int i = 0; i < gitEmojis.length; i++) {
@@ -383,6 +445,10 @@ public class UpdateRecordsInSalesForce {
 			int colon2 = description.indexOf(':', colon1 + 1);
 			if (colon2 - colon1 > 1) {
 				String foundEmoji = description.substring(colon1, colon2 + 1);
+				if (foundEmoji.equals(":nuetral_face:"))
+					return ":neutral_face:";
+				if (foundEmoji.equals(":smiley:"))
+					return ":smile:";
 				if (!foundEmoji.contains(" ")) {
 					return foundEmoji;
 				}
