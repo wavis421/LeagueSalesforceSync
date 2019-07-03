@@ -724,6 +724,10 @@ public class MySqlDbImports {
 					newModuleName="3";
 				} else if (currLevel.equals("2") && repoName.startsWith("league-level2-game-")) {
 					newModuleName="4";
+				} else if (repoName.startsWith("level" + currLevel + "-coding-exam-") || repoName.startsWith("level" + currLevel + "-codingexam-")) {
+					newModuleName = "E";
+				} else if (repoName.startsWith("level-" + currLevel + "-coding-exam-") || repoName.startsWith("level-" + currLevel + "-codingexam-")) {
+					newModuleName = "E";
 				} else {
 					System.out.println(clientID + ": (unknown) " + repoName + " [" + currLevel + "][" + student.getCurrentModule() + "]");
 					return; // No matching level in repo name
@@ -742,7 +746,7 @@ public class MySqlDbImports {
 				
 				if (newModuleName != null) {
 					// Done parsing repo name; update student module if changed
-					if (student.getCurrentModule() == null || newModuleName.compareTo(student.getCurrentModule()) > 0) {
+					if (student.getCurrentModule() == null || newModuleName.compareTo(student.getCurrentModule()) > 0 || newModuleName.equals("E")) {
 						System.out.println("Update module for " + clientID + " to [" + currLevel + "][" + newModuleName + "], repo = " + repoName);
 						updateLastEventInfoByStudent(clientID, null, null, newModuleName);
 					}
