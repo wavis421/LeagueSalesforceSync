@@ -77,7 +77,8 @@ public class UpdateRecordsInSalesForce {
 						|| student.getFullName().equalsIgnoreCase("barrio logan college institute")
 						|| student.getFullName().equalsIgnoreCase("monroe middle school")
 						|| student.getFirstName().startsWith("HOLIDAY")
-						|| student.getFullName().startsWith("Need Assistant"))
+						|| student.getFullName().startsWith("Need Assistant")
+						|| student.getFullName().startsWith("Accepting Students"))
 					continue;
 
 				// Check for account manager names
@@ -153,7 +154,8 @@ public class UpdateRecordsInSalesForce {
 				// Ignore test accounts
 				if (adult.getFirstName().startsWith("HOLIDAY")
 						|| adult.getFullName().equalsIgnoreCase("sample customer")
-						|| adult.getFullName().startsWith("Need Assistant"))
+						|| adult.getFullName().startsWith("Need Assistant")
+						|| adult.getFullName().startsWith("Accepting Students"))
 					continue;
 
 				// Get 1st dependent name, use this to get SalesForce Account
@@ -789,7 +791,8 @@ public class UpdateRecordsInSalesForce {
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
 				if (inputModel.getFullName().startsWith("Intro to Java")
 						|| inputModel.getFullName().startsWith("Summer Programs")
-						|| inputModel.getFullName().startsWith("Need Assist"))
+						|| inputModel.getFullName().startsWith("Need Assist")
+						|| inputModel.getFullName().startsWith("Accepting Students"))
 					continue;
 
 				StaffMemberModel staff = ListUtilities.findStaffIDInList(LogDataModel.MISSING_PIKE13_STAFF_MEMBER,
@@ -1519,7 +1522,8 @@ public class UpdateRecordsInSalesForce {
 			if (valueLowerCase.startsWith("league admin") || valueLowerCase.startsWith("summer prog")
 					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres")
 					|| valueLowerCase.startsWith("open lab") || valueLowerCase.startsWith("make-up")
-					|| valueLowerCase.startsWith("need assist") || valueLowerCase.startsWith("league workshop"))
+					|| valueLowerCase.startsWith("need assist") || valueLowerCase.startsWith("league workshop")
+					|| valueLowerCase.startsWith("accepting students"))
 				continue;
 
 			// Add teacher to new teachers string
