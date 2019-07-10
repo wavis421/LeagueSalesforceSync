@@ -19,6 +19,7 @@ import com.sforce.soap.enterprise.sobject.Contact_Diary__c;
 import com.sforce.soap.enterprise.sobject.SObject;
 import com.sforce.soap.enterprise.sobject.Staff_Hours__c;
 import com.sforce.soap.enterprise.sobject.Student_Attendance__c;
+import com.sforce.soap.enterprise.sobject.Workshop_by_Teacher__c;
 import com.sforce.ws.ConnectionException;
 
 import model.AttendanceEventModel;
@@ -193,6 +194,7 @@ public class UpdateRecordsInSalesForce {
 			ArrayList<StudentImportModel> pike13Students, ArrayList<StaffMemberModel> staffMembers) {
 		ArrayList<Student_Attendance__c> recordList = new ArrayList<Student_Attendance__c>();
 		ArrayList<Contact> workShopGrads = new ArrayList<Contact>();
+		ArrayList<Workshop_by_Teacher__c> wshopByTeacherList = new ArrayList<Workshop_by_Teacher__c>();
 		ArrayList<AttendanceEventModel> attendLevelChanges = new ArrayList<AttendanceEventModel>();
 		String startBillingDate = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).minusDays(7)
 				.toString("yyyy-MM-dd");
@@ -318,6 +320,9 @@ public class UpdateRecordsInSalesForce {
 				updateWorkshopGrad(workShopGrads, inputModel);
 
 				recordList.add(a);
+				
+				if (a.getEvent_Name__c().contains("Intro to Java") && a.getStatus__c().equals("completed"))
+					createWorkshopByTeacherRecord(wshopByTeacherList, a, c);
 			}
 
 			// Copy up to 200 records to array at a time (max allowed)
@@ -365,6 +370,11 @@ public class UpdateRecordsInSalesForce {
 		// Update modified clients to SalesForce
 		if (workShopGrads.size() > 0) {
 			upsertContactRecordList(workShopGrads, "WorkS grad");
+		}
+		
+		// Update workshops by teacher to SalesForce
+		if (wshopByTeacherList.size() > 0) {
+			upsertWorkshopByTeacherRecordList(wshopByTeacherList);
 		}
 
 		System.out.println(attendLevelChanges.size() + " Attendance completed");
@@ -414,7 +424,7 @@ public class UpdateRecordsInSalesForce {
 			levelName = repoName.substring(6, 7);
 			moduleName = "E";
 		} else {
-			System.out.println("Failed to parse repo: " + repoName);
+			System.out.println("Failed to parse repo: " + a.getContact__r().getFront_Desk_Id__c() + ", " + repoName);
 			return; // No matching level in repo name
 		}
 
@@ -1183,6 +1193,76 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
+	private void upsertWorkshopByTeacherRecordList(ArrayList<Workshop_by_Teacher__c> recordList) {
+		// Copy up to 200 records to array at a time (max allowed)
+		Workshop_by_Teacher__c[] recordArray;
+		int numRecords = recordList.size();
+		int remainingRecords = numRecords;
+		int arrayIdx = 0;
+
+		System.out.println(numRecords + " Workshop by Teacher records");
+		if (numRecords > MAX_NUM_UPSERT_RECORDS)
+			recordArray = new Workshop_by_Teacher__c[MAX_NUM_UPSERT_RECORDS];
+		else
+			recordArray = new Workshop_by_Teacher__c[numRecords];
+
+		for (int i = 0; i < numRecords; i++) {
+			recordArray[arrayIdx] = recordList.get(i);
+
+			arrayIdx++;
+			if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
+				upsertWorkshopByTeacherRecords(recordArray);
+				remainingRecords -= MAX_NUM_UPSERT_RECORDS;
+				arrayIdx = 0;
+
+				if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
+					recordArray = new Workshop_by_Teacher__c[MAX_NUM_UPSERT_RECORDS];
+				else if (remainingRecords > 0)
+					recordArray = new Workshop_by_Teacher__c[remainingRecords];
+			}
+		}
+
+		// Update remaining records in Salesforce.com
+		if (arrayIdx > 0)
+			upsertWorkshopByTeacherRecords(recordArray);
+	}
+	
+	private void upsertWorkshopByTeacherRecords(Workshop_by_Teacher__c[] records) {
+		UpsertResult[] upsertResults = null;
+
+		try {
+			// Update the records in Salesforce.com
+			upsertResults = connection.upsert("Unique_Id__c", records);
+
+		} catch (ConnectionException e) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+						new StudentNameModel("", "", false), 0, " (wshop by teacher)");
+				e.printStackTrace();
+			} else
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+						new StudentNameModel("", "", false), 0, " (wshop by teacher): " + e.getMessage());
+			return;
+		}
+
+		// check the returned results for any errors
+		for (int i = 0; i < upsertResults.length; i++) {
+			if (!upsertResults[i].isSuccess()) {
+				// If client ID is numeric, then use this in error log
+				int clientID = 0;
+				if (records[i].getWShop_Contact__r() != null && records[i].getWShop_Contact__r().getFront_Desk_Id__c().matches("\\d+"))
+					clientID = Integer.parseInt(records[i].getWShop_Contact__r().getFront_Desk_Id__c());
+
+				Error[] errors = upsertResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+							new StudentNameModel("", "", false), clientID,
+							" (wshop by teacher): " + errors[j].getMessage());
+				}
+			}
+		}
+	}
+
 	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account,
 			ArrayList<StudentImportModel> pike13Students, ArrayList<Contact> dependents) {
 		// Create contact and add fields
@@ -1371,6 +1451,41 @@ public class UpdateRecordsInSalesForce {
 			}
 			return false;
 		}
+	}
+
+	private void createWorkshopByTeacherRecord(ArrayList<Workshop_by_Teacher__c> wshopList,
+			Student_Attendance__c sfAttend, Contact contact) {
+		String uniqueID = ((Integer) sfAttend.getService_Date__c().get(Calendar.YEAR)).toString() 
+				+ ((Integer) sfAttend.getService_Date__c().get(Calendar.MONTH)).toString()
+				+ ((Integer) sfAttend.getService_Date__c().get(Calendar.DAY_OF_MONTH)).toString() 
+				+ contact.getFront_Desk_Id__c();
+		
+		// Add a record for each teacher of this workshop. Mark a single record for record filtering.
+		boolean firstTeach = true;
+		firstTeach = addWorkshopRecord(wshopList, firstTeach, sfAttend, contact, uniqueID, sfAttend.getTeacher_1__c().trim());
+		firstTeach = addWorkshopRecord(wshopList, firstTeach, sfAttend, contact, uniqueID, sfAttend.getTeacher_2__c().trim());
+		firstTeach = addWorkshopRecord(wshopList, firstTeach, sfAttend, contact, uniqueID, sfAttend.getTeacher_3_Vol__c().trim());
+		addWorkshopRecord(wshopList, firstTeach, sfAttend, contact, uniqueID, sfAttend.getTeacher_4_Vol__c().trim());
+	}
+	
+	private boolean addWorkshopRecord(ArrayList<Workshop_by_Teacher__c> wshopList, boolean firstFlag,
+			Student_Attendance__c sfAttend, Contact contact, String uniqueID, String teacherName) {
+		
+		if (!teacherName.equals("")) {
+			Workshop_by_Teacher__c wshop = new Workshop_by_Teacher__c();
+			
+			wshop.setVisit_Marker__c(firstFlag);
+			wshop.setEvent_Name__c(sfAttend.getEvent_Name__c());
+			wshop.setService_Date__c(sfAttend.getService_Date__c());
+			wshop.setWShop_Contact__r(contact);
+			wshop.setTeacher__c(teacherName);
+			wshop.setUnique_Id__c(uniqueID + teacherName.replaceAll("\\s",""));
+			
+			wshopList.add(wshop);
+			return false;
+			
+		} else
+			return firstFlag;
 	}
 
 	private String getStaffAccountID(StaffMemberModel staff, ArrayList<Account> sfAccounts) {
