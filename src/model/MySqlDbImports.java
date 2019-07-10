@@ -158,7 +158,7 @@ public class MySqlDbImports {
 
 	private boolean isJavaClass(String className) {
 		if (className.startsWith("AD@") || className.startsWith("AG@") || className.startsWith("PG@")
-				|| className.startsWith("EL@"))
+				|| className.startsWith("Java@") || className.startsWith("EL@"))
 			return true;
 		else
 			return false;
@@ -656,7 +656,8 @@ public class MySqlDbImports {
 					&& !eventName.substring(0, 1).equals(student.getCurrentLevel()))
 					|| (eventName.startsWith("AD") && (levelChar < '0' || levelChar > '2'))
 					|| (eventName.startsWith("AG") && (levelChar < '3' || levelChar > '5'))
-					|| (eventName.startsWith("PG") && (levelChar < '6' || levelChar > '7'))) {
+					|| (eventName.startsWith("PG") && (levelChar < '6' || levelChar > '7'))
+					|| (eventName.startsWith("Java") && (levelChar < '0' || levelChar > '7'))) {
 				// Class mismatch
 				MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH, student.getNameModel(),
 						importEvent.getClientID(), " for " + eventName + " on " + importEvent.getServiceDateString()
@@ -1271,7 +1272,7 @@ public class MySqlDbImports {
 		if (importEvent.getState().equals("completed") && importEvent.getServiceDateString().compareTo(today) <= 0
 				&& ((importEvent.getEventName().charAt(0) >= '0' && importEvent.getEventName().charAt(0) <= '7')
 						|| importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
-						|| importEvent.getEventName().startsWith("PG")
+						|| importEvent.getEventName().startsWith("PG") || importEvent.getEventName().startsWith("Java@")
 						|| ((importEvent.getServiceCategory().startsWith("class jlab")
 								|| importEvent.getServiceCategory().startsWith("class jslam"))
 								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
@@ -1345,7 +1346,7 @@ public class MySqlDbImports {
 				&& importEvent.getState().equals("completed") && importEvent.getServiceDateString().compareTo(today) <= 0
 				&& ((importEvent.getEventName().charAt(0) >= '0' && importEvent.getEventName().charAt(0) <= '7')
 						|| importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
-						|| importEvent.getEventName().startsWith("PG")
+						|| importEvent.getEventName().startsWith("PG") || importEvent.getEventName().startsWith("Java@")
 						|| ((importEvent.getServiceCategory().startsWith("class jlab")
 								|| importEvent.getServiceCategory().startsWith("class jslam"))
 								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
@@ -1903,7 +1904,7 @@ public class MySqlDbImports {
 						.prepareStatement("SELECT Students.ClientID, EventName "
 								+ "FROM Attendance, Students WHERE Attendance.ClientID = Students.ClientID "
 								+ "AND ((LEFT(EventName,1) >= '0' AND LEFT(EventName,1) <= '7') OR "
-								+ "      LEFT(EventName,2) = 'AD' OR LEFT(EventName,2) = 'AG' OR LEFT(EventName,2) = 'PG') "
+								+ "      LEFT(EventName,2) = 'AD' OR LEFT(EventName,2) = 'AG' OR LEFT(EventName,2) = 'PG' OR LEFT(EventName,4) = 'Java') "
 								+ "AND CurrentClass != EventName AND State = 'registered' "
 								+ "AND ServiceDate >= ? AND ServiceDate <= ? ORDER BY Students.ClientID, ServiceDate ASC;");
 				selectStmt.setString(1, today.toString("yyyy-MM-dd"));
@@ -2293,7 +2294,7 @@ public class MySqlDbImports {
 					|| valueLC.startsWith("padres game") || valueLC.startsWith("make-up")
 					|| valueLC.startsWith("intro to java") || valueLC.startsWith("league admin")
 					|| valueLC.startsWith("summer prog") || valueLC.startsWith("need assist")
-					|| valueLC.startsWith("league workshop"))
+					|| valueLC.startsWith("league workshop") || valueLC.startsWith("accepting student"))
 				continue;
 
 			if (!teachers.equals(""))
