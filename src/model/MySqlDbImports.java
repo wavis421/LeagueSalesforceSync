@@ -634,7 +634,7 @@ public class MySqlDbImports {
 
 	private void updateStudentLastVisit(StudentModel student, AttendanceEventModel importEvent) {
 		if (importEvent.getServiceCategory().equals("class java")) {
-			String eventName = importEvent.getEventName();
+			String eventName = importEvent.getEventName().trim();
 			char levelChar = '0';
 
 			// Report error if no current level (assume level 0)
@@ -931,10 +931,18 @@ public class MySqlDbImports {
 
 				// Compare attendance; if matched, also check state & teachers
 				compare = dbAttendance.compareTo(importEvent);
+				boolean eventChanged = (!importEvent.getEventName().contains("(") && !dbAttendance.getEventName().trim().equals(importEvent.getEventName().trim()));
 				if (compare == 0 && (!dbAttendance.getState().equals(importEvent.getState())
 						|| !dbAttendance.getTeacherNames().equals(teachers)
-						|| (dbAttendance.getServiceTime().equals("") && !importEvent.getServiceTime().equals(""))))
+						|| eventChanged
+						|| (dbAttendance.getServiceTime().equals("") && !importEvent.getServiceTime().equals("")))) {
+					// Debug: track changing event names
+					if (eventChanged)
+						System.out.println("Event name changed: " + importEvent.getServiceDateString() + ", " + dbAttendance.getEventName().trim() 
+								+ " (" + dbAttendance.getVisitID() + ") to " + importEvent.getEventName().trim() + " (" + importEvent.getVisitID()
+								+ ") [" + importEvent.getStudentNameModel().getFirstName() + ", " + importEvent.getClientID() + ", " + importEvent.getState() + "]");
 					compare = 2;
+				}
 			} else
 				dbAttendance = null;
 
@@ -961,10 +969,18 @@ public class MySqlDbImports {
 
 					// Compare attendance; if matched, also check state & teachers
 					compare = dbAttendance.compareTo(importEvent);
+					boolean eventChanged = (!importEvent.getEventName().contains("(") && !dbAttendance.getEventName().trim().equals(importEvent.getEventName().trim()));
 					if (compare == 0 && (!dbAttendance.getState().equals(importEvent.getState())
 							|| !dbAttendance.getTeacherNames().equals(teachers)
-							|| (dbAttendance.getServiceTime().equals("") && !importEvent.getServiceTime().equals(""))))
+							|| eventChanged
+							|| (dbAttendance.getServiceTime().equals("") && !importEvent.getServiceTime().equals("")))) {
+						// Debug: track changing event names
+						if (eventChanged)
+							System.out.println("Event name changed: " + importEvent.getServiceDateString() + ", " + dbAttendance.getEventName().trim() 
+									+ " (" + dbAttendance.getVisitID() + ") to " + importEvent.getEventName().trim() + " (" + importEvent.getVisitID()
+									+ ") [" + importEvent.getStudentNameModel().getFirstName() + ", " + importEvent.getClientID() + ", " + importEvent.getState() + "]");
 						compare = 2;
+					}
 				} else
 					dbAttendance = null;
 
@@ -983,7 +999,7 @@ public class MySqlDbImports {
 						MySqlDbLogging.insertLogData(LogDataModel.STUDENT_NOT_FOUND,
 								new StudentNameModel(importEvent.getStudentNameModel().getFirstName(), "", false),
 								importEvent.getClientID(),
-								": " + importEvent.getEventName() + " on " + importEvent.getServiceDateString());
+								": " + importEvent.getEventName().trim() + " on " + importEvent.getServiceDateString());
 				}
 
 			} else {
@@ -1002,7 +1018,7 @@ public class MySqlDbImports {
 					MySqlDbLogging.insertLogData(LogDataModel.STUDENT_NOT_FOUND,
 							new StudentNameModel(importEvent.getStudentNameModel().getFirstName(), "", false),
 							importEvent.getClientID(),
-							": " + importEvent.getEventName() + " on " + importEvent.getServiceDateString());
+							": " + importEvent.getEventName().trim() + " on " + importEvent.getServiceDateString());
 				}
 			}
 		}
@@ -1250,7 +1266,7 @@ public class MySqlDbImports {
 						&& pendingGit.getGitUser().toLowerCase().equals(event.getGithubName().toLowerCase())) {
 					// Update comments & repo name
 					event.setGithubComments(pendingGit.getComments());
-					updateAttendance(event.getClientID(), event.getStudentNameModel(), commitDate, event.getEventName(),
+					updateAttendance(event.getClientID(), event.getStudentNameModel(), commitDate, event.getEventName().trim(),
 							pendingGit.getRepoName(), event.getGithubComments(), event.getGitDescription());
 					foundMatch = true;
 				}
@@ -1298,7 +1314,7 @@ public class MySqlDbImports {
 				addAttendanceStmt.setInt(col++, importEvent.getClientID());
 				addAttendanceStmt.setDate(col++, java.sql.Date.valueOf(importEvent.getServiceDateString()));
 				addAttendanceStmt.setString(col++, importEvent.getServiceTime());
-				addAttendanceStmt.setString(col++, importEvent.getEventName());
+				addAttendanceStmt.setString(col++, importEvent.getEventName().trim());
 				addAttendanceStmt.setInt(col++, importEvent.getVisitID());
 				addAttendanceStmt.setString(col++, teacherNames);
 				addAttendanceStmt.setString(col++, importEvent.getServiceCategory());
@@ -1360,20 +1376,21 @@ public class MySqlDbImports {
 				// The only fields that should be updated are the State & Teacher fields
 				if (addLevel)
 					updateAttendanceStmt = sqlDb.dbConnection.prepareStatement(
-							"UPDATE Attendance SET State=?, TeacherNames=?, ServiceTime=?, ClassLevel=? "
-									+ "WHERE ClientID=? AND EventName=? AND ServiceDate=? AND (ServiceTime='' OR ServiceTime=?);");
+							"UPDATE Attendance SET State=?, TeacherNames=?, ServiceTime=?, ClassLevel=?, EventName=? "
+									+ "WHERE ClientID=? AND VisitID=? AND ServiceDate=? AND (ServiceTime='' OR ServiceTime=?);");
 				else
 					updateAttendanceStmt = sqlDb.dbConnection
-							.prepareStatement("UPDATE Attendance SET State=?, TeacherNames=?, ServiceTime=? "
-									+ "WHERE ClientID=? AND EventName=? AND ServiceDate=? AND (ServiceTime='' OR ServiceTime=?);");
+							.prepareStatement("UPDATE Attendance SET State=?, TeacherNames=?, ServiceTime=?, EventName=? "
+									+ "WHERE ClientID=? AND VisitID=? AND ServiceDate=? AND (ServiceTime='' OR ServiceTime=?);");
 				int col = 1;
 				updateAttendanceStmt.setString(col++, importEvent.getState());
 				updateAttendanceStmt.setString(col++, teachers);
 				updateAttendanceStmt.setString(col++, importEvent.getServiceTime());
 				if (addLevel)
 					updateAttendanceStmt.setString(col++, student.getCurrentLevel());
+				updateAttendanceStmt.setString(col++,  importEvent.getEventName().trim());
 				updateAttendanceStmt.setInt(col++, importEvent.getClientID());
-				updateAttendanceStmt.setString(col++, importEvent.getEventName());
+				updateAttendanceStmt.setInt(col++, importEvent.getVisitID());
 				updateAttendanceStmt.setDate(col++, java.sql.Date.valueOf(importEvent.getServiceDateString()));
 				updateAttendanceStmt.setString(col++, importEvent.getServiceTime());
 
@@ -2191,7 +2208,7 @@ public class MySqlDbImports {
 
 				int col = 1;
 				addCourseStmt.setInt(col++, courseEvent.getScheduleID());
-				addCourseStmt.setString(col++, courseEvent.getEventName());
+				addCourseStmt.setString(col++, courseEvent.getEventName().trim());
 				addCourseStmt.setInt(col, courseEvent.getEnrollment());
 
 				addCourseStmt.executeUpdate();
@@ -2226,7 +2243,7 @@ public class MySqlDbImports {
 						.prepareStatement("UPDATE Courses SET EventName=?, Enrolled=? WHERE CourseID=?;");
 
 				int col = 1;
-				updateCourseStmt.setString(col++, course.getEventName());
+				updateCourseStmt.setString(col++, course.getEventName().trim());
 				updateCourseStmt.setInt(col++, course.getEnrollment());
 				updateCourseStmt.setInt(col, course.getScheduleID());
 
@@ -2245,7 +2262,7 @@ public class MySqlDbImports {
 				e2.printStackTrace();
 				StudentNameModel studentModel = new StudentNameModel("", "", true);
 				MySqlDbLogging.insertLogData(LogDataModel.COURSES_DB_ERROR, studentModel, 0,
-						" for " + course.getEventName() + ": " + e2.getMessage());
+						" for " + course.getEventName().trim() + ": " + e2.getMessage());
 				break;
 			}
 		}

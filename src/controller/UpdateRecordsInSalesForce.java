@@ -1236,12 +1236,12 @@ public class UpdateRecordsInSalesForce {
 
 		} catch (ConnectionException e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
-				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
-						new StudentNameModel("", "", false), 0, " (wshop by teacher)");
+				MySqlDbLogging.insertLogData(LogDataModel.SF_UPSERT_WSHOP_BY_TEACHER_ERROR,
+						new StudentNameModel("", "", false), 0, "");
 				e.printStackTrace();
 			} else
-				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
-						new StudentNameModel("", "", false), 0, " (wshop by teacher): " + e.getMessage());
+				MySqlDbLogging.insertLogData(LogDataModel.SF_UPSERT_WSHOP_BY_TEACHER_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
 			return;
 		}
 
@@ -1255,9 +1255,9 @@ public class UpdateRecordsInSalesForce {
 
 				Error[] errors = upsertResults[i].getErrors();
 				for (int j = 0; j < errors.length; j++) {
-					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ATTENDANCE_ERROR,
+					MySqlDbLogging.insertLogData(LogDataModel.SF_UPSERT_WSHOP_BY_TEACHER_ERROR,
 							new StudentNameModel("", "", false), clientID,
-							" (wshop by teacher): " + errors[j].getMessage());
+							": " + errors[j].getMessage());
 				}
 			}
 		}
