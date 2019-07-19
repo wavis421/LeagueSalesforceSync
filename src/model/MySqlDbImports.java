@@ -2318,6 +2318,17 @@ public class MySqlDbImports {
 				teachers += ", ";
 			teachers += values[i];
 		}
+		
+		// No teachers for this class; use the TA's instead
+		if (teachers.equals("")) {
+			for (int i = 0; i < values.length; i++) {
+				if (values[i].startsWith("TA-")) {
+					if (!teachers.equals(""))
+						teachers += ", ";
+					teachers += values[i];
+				}
+			}
+		}
 		return teachers;
 	}
 
