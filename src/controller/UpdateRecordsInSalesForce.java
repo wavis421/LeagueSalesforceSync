@@ -1630,6 +1630,7 @@ public class UpdateRecordsInSalesForce {
 		// Parse teachers into CSV
 		String newTeachers = "";
 		String[] values = teachers.split("\\s*,\\s*");
+		String studentTA = "";
 
 		for (int i = 0; i < values.length; i++) {
 			// Ignore unwanted field values (only want 'Sub Teacher')
@@ -1662,7 +1663,15 @@ public class UpdateRecordsInSalesForce {
 					attend.setTeacher_3_Vol__c(values[i]);
 				else if (attend.getTeacher_4_Vol__c().trim().equals(""))
 					attend.setTeacher_4_Vol__c(values[i]);
-			}
+				
+			} else if (staff.getCategory().equals("Student TA") && studentTA.equals(""))
+				studentTA = values[i];
+		}
+		
+		// If no teachers, then add TA
+		if (!studentTA.equals("") && attend.getTeacher_1__c().trim().equals("") && attend.getTeacher_2__c().trim().equals("")
+				&& attend.getTeacher_3_Vol__c().trim().equals("") && attend.getTeacher_4_Vol__c().trim().equals("")) {
+			attend.setTeacher_4_Vol__c(studentTA);
 		}
 
 		return newTeachers;
