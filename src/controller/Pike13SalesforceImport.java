@@ -273,9 +273,9 @@ public class Pike13SalesforceImport {
 			else
 				cmd2 = getClientDataForSF2student;
 			if (hasMore)
-				conn = pike13Conn.sendQueryToUrl("clients", getClientDataForSF + ",\"starting_after\":\"" + lastKey + "\"" + cmd2);
+				conn = pike13Conn.sendQueryToUrl("clients", getClientDataForSF + ",\"starting_after\":\"" + lastKey + "\"" + cmd2, false);
 			else
-				conn = pike13Conn.sendQueryToUrl("clients", getClientDataForSF + cmd2);
+				conn = pike13Conn.sendQueryToUrl("clients", getClientDataForSF + cmd2, false);
 
 			// Check result
 			if (conn == null)
@@ -361,9 +361,9 @@ public class Pike13SalesforceImport {
 			// Get URL connection and send the query; add page info if necessary
 			HttpURLConnection conn;
 			if (hasMore)
-				conn = pike13Conn.sendQueryToUrl("enrollments", getEnrollmentSalesForce + ",\"starting_after\":\"" + lastKey + "\"" + enroll2);
+				conn = pike13Conn.sendQueryToUrl("enrollments", getEnrollmentSalesForce + ",\"starting_after\":\"" + lastKey + "\"" + enroll2, false);
 			else
-				conn = pike13Conn.sendQueryToUrl("enrollments", getEnrollmentSalesForce + enroll2);
+				conn = pike13Conn.sendQueryToUrl("enrollments", getEnrollmentSalesForce + enroll2, false);
 
 			if (conn == null)
 				return null;
@@ -411,7 +411,7 @@ public class Pike13SalesforceImport {
 		ArrayList<StaffMemberModel> staffList = new ArrayList<StaffMemberModel>();
 
 		// Get URL connection and send the query
-		HttpURLConnection conn = pike13Conn.sendQueryToUrl("staff_members", getStaffMemberData);
+		HttpURLConnection conn = pike13Conn.sendQueryToUrl("staff_members", getStaffMemberData, false);
 		if (conn == null)
 			return null;
 
@@ -483,9 +483,9 @@ public class Pike13SalesforceImport {
 			HttpURLConnection conn;
 			if (hasMore)
 				conn = pike13Conn.sendQueryToUrl("event_occurrence_staff_members",
-						getStaffHoursSalesForce + ",\"starting_after\":\"" + lastKey + "\"" + staffHours2);
+						getStaffHoursSalesForce + ",\"starting_after\":\"" + lastKey + "\"" + staffHours2, false);
 			else
-				conn = pike13Conn.sendQueryToUrl("event_occurrence_staff_members", getStaffHoursSalesForce + staffHours2);
+				conn = pike13Conn.sendQueryToUrl("event_occurrence_staff_members", getStaffHoursSalesForce + staffHours2, false);
 
 			if (conn == null)
 				return null;
