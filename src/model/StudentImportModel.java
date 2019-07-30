@@ -245,6 +245,10 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		return currLevel;
 	}
 
+	public void setCurrLevel(String level) {
+		currLevel = level;
+	}
+	
 	public String getCurrClass() {
 		return currentClass;
 	}

@@ -150,9 +150,12 @@ public class MySqlDbImports {
 	private void checkMissingLevel(StudentImportModel dbStudent, StudentImportModel importStudent) {
 		if (importStudent.getCurrLevel().equals("")
 				&& (isJavaClass(dbStudent.getCurrClass()) || isJavaClass(dbStudent.getRegClass()))) {
+			String currLevel = "";
+			if (!dbStudent.getCurrLevel().equals(""))
+				currLevel = " (student level " + dbStudent.getCurrLevel() + ")";
 			MySqlDbLogging.insertLogData(LogDataModel.MISSING_CURRENT_LEVEL,
 					new StudentNameModel(importStudent.getFirstName(), importStudent.getLastName(), true),
-					importStudent.getClientID(), "");
+					importStudent.getClientID(), currLevel);
 		}
 	}
 
@@ -1549,7 +1552,7 @@ public class MySqlDbImports {
 				return;
 			}
 
-			else if (importLevelNum > dbCurrLevelNum
+			else if (importLevelNum == (dbCurrLevelNum + 1) && dbCurrLevelNum <= 7
 					&& importStudent.getLastExamScore().startsWith("L" + dbStudent.getCurrLevel() + " ")) {
 				// New graduate: If score just 'Ln ' or student promoted/skipped, then no score
 				if (!isPromoted && !isSkip && importStudent.getLastExamScore().length() > 3)
@@ -1562,11 +1565,19 @@ public class MySqlDbImports {
 					score = importStudent.getLastExamScore().substring(3);
 				dbCurrLevelNum -= 1;
 
+			} else if (importStudent.getLastExamScore().contains("Oracle")
+					|| importStudent.getLastExamScore().contains("AP")) {
+				System.out.println("TO BE IMPLEMENTED: " + dbStudent.getFirstName() + ", " 
+					+ importStudent.getLastExamScore() + ", Curr Level " + importStudent.getCurrLevel());
+				importStudent.setCurrLevel(dbStudent.getCurrLevel());
+				return;
+					
 			} else {
 				MySqlDbLogging.insertLogData(LogDataModel.EXAM_SCORE_INVALID,
 						new StudentNameModel(dbStudent.getFirstName(), dbStudent.getLastName(), true),
 						dbStudent.getClientID(),
 						" for Level " + dbStudent.getCurrLevel() + ": " + importStudent.getLastExamScore());
+				importStudent.setCurrLevel(dbStudent.getCurrLevel());
 				return;
 			}
 
@@ -2096,8 +2107,8 @@ public class MySqlDbImports {
 			try {
 				// If Database no longer connected, the exception code will re-connect
 				PreparedStatement updateScheduleStmt = sqlDb.dbConnection.prepareStatement(
-						"UPDATE Schedule SET NumStudents=?, Youngest=?, Oldest=?, AverageAge=?, ModuleCount=? "
-								+ "WHERE ScheduleID=?;");
+						"UPDATE Schedule SET NumStudents=?, Youngest=?, Oldest=?, AverageAge=?, ModuleCount=?, "
+								+ "Room=?, RoomMismatch=? WHERE ScheduleID=?;");
 
 				int col = 1;
 				updateScheduleStmt.setInt(col++, pike13Event.getAttCount());
@@ -2105,6 +2116,8 @@ public class MySqlDbImports {
 				updateScheduleStmt.setString(col++, pike13Event.getOldest());
 				updateScheduleStmt.setString(col++, pike13Event.getAverageAge());
 				updateScheduleStmt.setString(col++, pike13Event.getModuleCount());
+				updateScheduleStmt.setString(col++, pike13Event.getRoom());
+				updateScheduleStmt.setBoolean(col++, pike13Event.getRoomMismatch());
 				updateScheduleStmt.setInt(col, dbEvent.getScheduleID());
 
 				updateScheduleStmt.executeUpdate();

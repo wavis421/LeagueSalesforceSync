@@ -22,12 +22,20 @@ public class Pike13Connect {
 		this.pike13Token = pike13Token;
 	}
 
-	private HttpURLConnection connectUrl(String endPoint) {
+	private HttpURLConnection connectUrl(String endPoint, boolean coreApi) {
 		HttpURLConnection conn = null;
+		String urlString;
 		
+		// Typically the 'reporting' API is used; occasionally fields are not available
+		// in the reporting API so the core API must be used instead.
+		if (coreApi)
+			urlString = "https://jtl.pike13.com/api/v2/desk/" + endPoint;
+		else
+			urlString = "https://jtl.pike13.com/desk/api/v3/reports/" + endPoint + "/queries";
+
 		try {
 			// Get URL connection with authorization
-			URL url = new URL("https://jtl.pike13.com/desk/api/v3/reports/" + endPoint + "/queries");
+			URL url = new URL(urlString);
 			conn = (HttpURLConnection) url.openConnection();
 			if (conn == null) {
 				MySqlDbLogging.insertLogData(LogDataModel.PIKE13_CONNECTION_ERROR, new StudentNameModel("", "", false), 0,
@@ -38,7 +46,10 @@ public class Pike13Connect {
 			conn.setRequestProperty("Authorization", basicAuth);
 			conn.setRequestProperty("User-Agent", USER_AGENT);
 
-			conn.setRequestMethod("POST");
+			if (coreApi)
+				conn.setRequestMethod("GET");
+			else
+				conn.setRequestMethod("POST");
 			conn.setRequestProperty("Content-type", "application/vnd.api+json; charset=UTF-8");
 			conn.setDoOutput(true);
 			conn.setDoInput(true);
@@ -55,20 +66,22 @@ public class Pike13Connect {
 		return null;
 	}
 
-	public HttpURLConnection sendQueryToUrl(String connName, String getCommand) {
+	public HttpURLConnection sendQueryToUrl(String connName, String getCommand, boolean coreApi) {
 		try {
 			// If necessary, try twice to send query
 			for (int i = 0; i < 2; i++) {
 				// Get URL connection with authorization
-				HttpURLConnection conn = connectUrl(connName);
+				HttpURLConnection conn = connectUrl(connName, coreApi);
 				if (conn == null)
 					continue;
 
 				// Send the query
-				OutputStream outputStream = conn.getOutputStream();
-				outputStream.write(getCommand.getBytes("UTF-8"));
-				outputStream.flush();
-				outputStream.close();
+				if (!coreApi) {
+					OutputStream outputStream = conn.getOutputStream();
+					outputStream.write(getCommand.getBytes("UTF-8"));
+					outputStream.flush();
+					outputStream.close();
+				}
 
 				// Check result
 				int responseCode = conn.getResponseCode();
@@ -105,6 +118,25 @@ public class Pike13Connect {
 			e.printStackTrace();
 			MySqlDbLogging.insertLogData(LogDataModel.PIKE13_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
 					": " + e.getMessage());
+		}
+		return null;
+	}
+	
+	public JsonObject readCoreInputStream(HttpURLConnection conn) {
+		try {
+			// Get input stream and read data
+			InputStream inputStream = conn.getInputStream();
+			JsonReader repoReader = Json.createReader(inputStream);
+			JsonObject object = ((JsonObject) repoReader.read());
+
+			repoReader.close();
+			inputStream.close();
+			return object;
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			MySqlDbLogging.insertLogData(LogDataModel.PIKE13_IMPORT_ERROR, new StudentNameModel("", "", false), 0,
+					" for Core API: " + e.getMessage());
 		}
 		return null;
 	}
