@@ -666,6 +666,14 @@ public class MySqlDbImports {
 						importEvent.getClientID(), " for " + eventName + " on " + importEvent.getServiceDateString()
 								+ ", Pike13 Level = " + student.getCurrentLevel());
 			}
+			
+		} else if (((importEvent.getServiceCategory().equals("class jlab") 
+						&& importEvent.getEventName().toLowerCase().contains("make-up")) 
+					|| (importEvent.getServiceCategory().equals("class jslam") 
+						&& importEvent.getEventName().toLowerCase().contains("summer slam")))
+				&& student.getLastVisitDate() != null && student.getLastVisitDateString().compareTo(importEvent.getServiceDateString()) < 0) {
+			// Update last visit date for make-up labs & summer slams
+			updateLastEventInfoByStudent(student.getClientID(), null, importEvent.getServiceDateString(), null);
 		}
 	}
 
@@ -707,6 +715,7 @@ public class MySqlDbImports {
 	private void updateStudentModule(int clientID, StudentModel student, String repoName) {
 		// Extract module from repo name: level must match student current level
 		if (repoName != null && student != null) {
+			repoName = repoName.toLowerCase();
 			String currLevel = student.getCurrentLevel();
 			String newModuleName = null;
 			
@@ -1425,11 +1434,17 @@ public class MySqlDbImports {
 	private void updateLastVisitDate(AttendanceEventModel importEvent, StudentModel student, String today) {
 		if (importEvent.getState().equals("completed")
 				&& importEvent.getServiceDateString().compareTo(today) <= 0
-				&& !importEvent.getEventName().toLowerCase().contains("leave")
 				&& (student.getLastVisitDate() == null ||
 				    student.getLastVisitDateString().compareTo(importEvent.getServiceDateString()) < 0)) {
 			// Update last visit date for this student
-			updateLastEventInfoByStudent(student.getClientID(), null, importEvent.getServiceDateString(), null);
+			if (importEvent.getEventName().toLowerCase().contains("leave")) {
+				// For student on LOA, do not update last visit date but set current class to LOA
+				System.out.println("LOA: " + student.getClientID() + ", " + student.getFirstName() + " " + student.getLastName() 
+					+ ", " + importEvent.getServiceDateString() + ", " + importEvent.getEventName());
+				updateLastEventInfoByStudent(student.getClientID(), "LOA", null, null);
+			}
+			else
+				updateLastEventInfoByStudent(student.getClientID(), null, importEvent.getServiceDateString(), null);
 		}
 	}
 
