@@ -125,27 +125,30 @@ public class ListUtilities {
 				if (m.getAccountID() == null || m.getAccountID().equals(student.getAccountID())) {
 					return m;
 				} else {
+					System.out.println("SF partial Acct match: " + student.getFullName() + ", " + student.getAccountID() + ", " + student.getAccountMgrNames() + ", " 
+							+ accountMgrName + ", " + m.getAccountID() + ", " + m.getDependentNames() + ", " + student.getClientID());
 					partialMatch = m;
 				}
 			}
 		}
 
 		// Since there was no better match in the list, use the partial match
-		if (partialMatch != null)
-			return partialMatch;
+		if (partialMatch != null) {
+			//return partialMatch;
+		}
 
 		return null;
 	}
 
-	public static Account findAccountNameInList(String studentName, ArrayList<StudentImportModel> studentList,
+	public static Account findAccountNameInList(String studentName, String adultAccountID, ArrayList<StudentImportModel> studentList,
 			ArrayList<StudentImportModel> adultList, ArrayList<Account> sfAcctList) {
 		// Find matching student, then get Account using account manager name
 		for (StudentImportModel s : studentList) {
-			if (studentName.equalsIgnoreCase(s.getFullName())) {
+			if (studentName.equalsIgnoreCase(s.getFullName()) && s.getAccountID().equals(adultAccountID)) {
 				String accountMgrName = getFirstNameInString(s.getAccountMgrNames());
 				if (!accountMgrName.equals("")) {
 					StudentImportModel acctMgrModel = findAcctManagerInList(s, accountMgrName, adultList);
-					if (acctMgrModel != null) {
+					if (acctMgrModel != null && acctMgrModel.getAccountID().equals(adultAccountID)) {
 						String acctName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
 						return findAccountInSalesForceList(acctName, acctMgrModel, sfAcctList);
 					}

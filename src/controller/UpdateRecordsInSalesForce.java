@@ -161,11 +161,11 @@ public class UpdateRecordsInSalesForce {
 
 				// Get 1st dependent name, use this to get SalesForce Account
 				String dependentName = ListUtilities.getFirstNameInString(adult.getDependentNames());
-				Account account = ListUtilities.findAccountNameInList(dependentName, pike13Students, pike13Adults,
+				Account account = ListUtilities.findAccountNameInList(dependentName, adult.getAccountID(), pike13Students, pike13Adults,
 						sfAccounts);
 
 				if (account.getName().equals(""))
-					// Dependent is either hidden/deleted or this is test account or school
+					// Dependent is either hidden/deleted/inactive or this is test account/school
 					continue;
 
 				// Create contact and add to list
