@@ -125,7 +125,7 @@ public class ListUtilities {
 				if (m.getAccountID() == null || m.getAccountID().equals(student.getAccountID())) {
 					return m;
 				} else {
-					System.out.println("SF partial Acct match: " + student.getFullName() + ", " + student.getAccountID() + ", " + student.getAccountMgrNames() + ", " 
+					System.out.println("Partial Acct Mgr match: " + student.getFullName() + ", " + student.getAccountID() + ", " + student.getAccountMgrNames() + ", " 
 							+ accountMgrName + ", " + m.getAccountID() + ", " + m.getDependentNames() + ", " + student.getClientID());
 					partialMatch = m;
 				}
@@ -144,13 +144,15 @@ public class ListUtilities {
 			ArrayList<StudentImportModel> adultList, ArrayList<Account> sfAcctList) {
 		// Find matching student, then get Account using account manager name
 		for (StudentImportModel s : studentList) {
-			if (studentName.equalsIgnoreCase(s.getFullName()) && s.getAccountID().equals(adultAccountID)) {
+			if (studentName.equalsIgnoreCase(s.getFullName()) && (adultAccountID == null || s.getAccountID().equals(adultAccountID))) {
 				String accountMgrName = getFirstNameInString(s.getAccountMgrNames());
 				if (!accountMgrName.equals("")) {
 					StudentImportModel acctMgrModel = findAcctManagerInList(s, accountMgrName, adultList);
-					if (acctMgrModel != null && acctMgrModel.getAccountID().equals(adultAccountID)) {
+					if (acctMgrModel != null && (adultAccountID == null || acctMgrModel.getAccountID().equals(adultAccountID))) {
 						String acctName = acctMgrModel.getLastName() + " " + acctMgrModel.getFirstName() + " Family";
 						return findAccountInSalesForceList(acctName, acctMgrModel, sfAcctList);
+					} else {
+						System.out.println("Find Account fail: " + adultAccountID + ", " + acctMgrModel.getAccountID() + studentName);
 					}
 				}
 			}
@@ -171,14 +173,17 @@ public class ListUtilities {
 			if (accountMgrName.equalsIgnoreCase(a.getName())) {
 				if (accountMgrModel.getAccountID() == null || accountMgrModel.getAccountID().equals(a.getId()))
 					return a;
-				else
+				else {
+					System.out.println("Partial SF Acct match: " + accountMgrName + ", " + a.getId());
 					partialMatch = a;
+				}
 			}
 		}
 
 		// Since there was no better match in the list, use the partial match
-		if (partialMatch != null)
-			return partialMatch;
+		if (partialMatch != null) {
+			//return partialMatch;
+		}
 
 		// Account not in list, so create new account with empty name
 		Account account = new Account();
