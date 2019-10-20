@@ -1580,12 +1580,26 @@ public class MySqlDbImports {
 					score = importStudent.getLastExamScore().substring(3);
 				dbCurrLevelNum -= 1;
 
-			} else if (importStudent.getLastExamScore().contains("Oracle")
-					|| importStudent.getLastExamScore().contains("AP")) {
-				System.out.println("TO BE IMPLEMENTED: " + dbStudent.getFirstName() + ", " 
-					+ importStudent.getLastExamScore() + ", Curr Level " + importStudent.getCurrLevel());
+			} else if (importStudent.getLastExamScore().startsWith("AP")) {
+				// No level switch for AP
 				importStudent.setCurrLevel(dbStudent.getCurrLevel());
-				return;
+				dbCurrLevelNum = 8;  // 8 indicates AP
+				if (importStudent.getLastExamScore().length() > 2)
+					score = importStudent.getLastExamScore().substring(2).trim();
+				System.out.println("AP Exam: " + dbStudent.getFirstName() + " " + dbStudent.getLastName() + ", Curr Level " 
+					+ dbStudent.getCurrLevel() + ", Score " + score);
+				
+			} else if (importStudent.getLastExamScore().startsWith("Oracle")) {
+				// Increase level only if student already at level 8
+				if (dbCurrLevelNum == 8)
+					importStudent.setCurrLevel("9");
+				else
+					importStudent.setCurrLevel(dbStudent.getCurrLevel());
+				dbCurrLevelNum = 9;  // represents Oracle exam
+				if (importStudent.getLastExamScore().length() > 6)
+					score = importStudent.getLastExamScore().substring(6).trim();
+				System.out.println("Oracle Exam: " + dbStudent.getFirstName() + " " + dbStudent.getLastName() + ", Curr Level " 
+					+ dbStudent.getCurrLevel() + ", Score " + score);
 					
 			} else {
 				MySqlDbLogging.insertLogData(LogDataModel.EXAM_SCORE_INVALID,
@@ -1779,6 +1793,10 @@ public class MySqlDbImports {
 	private String getStartDateByClientIdAndLevel(int clientID, int level) {
 		String levelString = ((Integer) level).toString();
 
+		// Start date doesn't apply to AP or Oracle exams
+		if (level > 7)
+			return "";
+		
 		for (int i = 0; i < 2; i++) {
 			try {
 				// If Database no longer connected, the exception code will re-connect
