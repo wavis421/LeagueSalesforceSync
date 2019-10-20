@@ -115,7 +115,7 @@ public class ListUtilities {
 
 	public static StudentImportModel findAcctManagerInList(StudentImportModel student, String accountMgrName,
 			ArrayList<StudentImportModel> mgrList) {
-		StudentImportModel partialMatch = null;
+		StudentImportModel partialMatch = null, match = null;
 
 		for (StudentImportModel m : mgrList) {
 			String dependents = m.getDependentNames().toLowerCase();
@@ -124,6 +124,11 @@ public class ListUtilities {
 					&& dependents.contains(student.getFullName().toLowerCase())) {
 				if (m.getAccountID() == null || m.getAccountID().equals(student.getAccountID())) {
 					return m;
+					
+				} else if (student.getAccountID() == null) {
+					student.setAccountID(m.getAccountID());
+					match = m;
+					
 				} else {
 					System.out.println("Partial Acct Mgr match: " + student.getFullName() + ", " + student.getAccountID() + ", " + student.getAccountMgrNames() + ", " 
 							+ accountMgrName + ", " + m.getAccountID() + ", " + m.getDependentNames() + ", " + student.getClientID());
@@ -133,8 +138,11 @@ public class ListUtilities {
 		}
 
 		// Since there was no better match in the list, use the partial match
-		if (partialMatch != null) {
-			//return partialMatch;
+		if (match != null)
+			return match;
+		
+		else if (partialMatch != null) {
+			return partialMatch;
 		}
 
 		return null;
@@ -144,7 +152,7 @@ public class ListUtilities {
 			ArrayList<StudentImportModel> adultList, ArrayList<Account> sfAcctList) {
 		// Find matching student, then get Account using account manager name
 		for (StudentImportModel s : studentList) {
-			if (studentName.equalsIgnoreCase(s.getFullName()) && (adultAccountID == null || s.getAccountID().equals(adultAccountID))) {
+			if (studentName.equalsIgnoreCase(s.getFullName()) && (adultAccountID == null || adultAccountID.equals(s.getAccountID()))) {
 				String accountMgrName = getFirstNameInString(s.getAccountMgrNames());
 				if (!accountMgrName.equals("")) {
 					StudentImportModel acctMgrModel = findAcctManagerInList(s, accountMgrName, adultList);

@@ -44,6 +44,8 @@ public class UpdateRecordsInSalesForce {
 	private static final int MAX_BILLING_NOTES_FIELD_LENGTH = 100;
 	private static final String ADMIN_STAFF_CLIENT_ID = "999999";
 	private static final String ADMIN_STAFF_NAME = "Staff Admin";
+	private static final double PASSING_GRADE_FOR_CLASSES = 70.0;
+	private static final double PASSING_GRADE_FOR_ORACLE = 65.0;
 
 	private MySqlDbImports dbImports;
 	private EnterpriseConnection connection;
@@ -647,6 +649,7 @@ public class UpdateRecordsInSalesForce {
 	public void updateGraduates(ArrayList<GraduationModel> gradStudents, ArrayList<Contact> sfContacts,
 			ArrayList<Contact_Diary__c> sfDiary) {
 		ArrayList<Contact_Diary__c> recordList = new ArrayList<Contact_Diary__c>();
+		ArrayList<Contact> contactList = new ArrayList<Contact>();
 
 		try {
 			for (int i = 0; i < gradStudents.size(); i++) {
@@ -670,9 +673,41 @@ public class UpdateRecordsInSalesForce {
 				if (id != null)
 					diaryEntry.setId(id);
 				diaryEntry.setPike_13_ID_Level__c(clientLevelKey);
-				diaryEntry.setLevel__c(student.getGradLevelString());
-				diaryEntry.setDiary_Type__c("Level");
-				diaryEntry.setDescription__c("Level " + student.getGradLevel());
+				
+				if (student.getGradLevel() == 8) {  // AP Exam
+					diaryEntry.setDiary_Type__c("Test");
+					diaryEntry.setDescription__c("AP Exam");
+					diaryEntry.setLevel__c("8");
+					Contact gradContact = new Contact();
+					if (student.getScore().equals("3") || student.getScore().equals("4") || student.getScore().equals("5")) {
+						gradContact.setId(c.getId());
+						gradContact.setFront_Desk_Id__c(c.getFront_Desk_Id__c());
+						gradContact.setPassed_AP_Comp_A__c(true);
+						contactList.add(gradContact);
+					}
+					System.out.println("AP grad: " + student.getStudentName() + ", grad lvl " + student.getGradLevel() 
+						+ ", score " + student.getScore() + ", passed " + gradContact.getPassed_AP_Comp_A__c());
+					
+				} else if (student.getGradLevel() == 9) {  // Oracle Exam
+					diaryEntry.setDiary_Type__c("Test");
+					diaryEntry.setDescription__c("Oracle Exam");
+					diaryEntry.setLevel__c("9");
+					if (student.getScore().toLowerCase().contains("pass") 
+							|| isPassingGrade(student.getScore(), PASSING_GRADE_FOR_ORACLE)) {
+						Contact gradContact = new Contact();
+						gradContact.setId(c.getId());
+						gradContact.setFront_Desk_Id__c(c.getFront_Desk_Id__c());
+						gradContact.setPassed_Oracle__c(true);
+						contactList.add(gradContact);
+					}
+					System.out.println("Oracle grad: " + student.getStudentName() + ", grad lvl " + student.getGradLevel() 
+						+ ", score " + student.getScore() + ", passed " + c.getPassed_Oracle__c());
+					
+				} else {  // Class levels 0 - 7
+					diaryEntry.setLevel__c(student.getGradLevelString());
+					diaryEntry.setDiary_Type__c("Level");
+					diaryEntry.setDescription__c("Level " + student.getGradLevel());
+				}
 
 				Calendar endDate = convertDateStringToCalendar(student.getEndDate());
 				diaryEntry.setEnd_Date__c(endDate);
@@ -687,12 +722,15 @@ public class UpdateRecordsInSalesForce {
 					diaryEntry.setStart_Date__c(endDate);
 				} else if (student.getScore() != null && !student.getScore().equals("")) {
 					diaryEntry.setScore__c(student.getScore());
-					if (isPassingGrade(student.getScore()))
+					if (student.getGradLevel() <= 7 && isPassingGrade(student.getScore(), PASSING_GRADE_FOR_CLASSES))
 						diaryEntry.setPromoted__c(false);
 				}
 
-				int numClasses = getNumClassesByLevel(student.getClientID(), student.getGradLevelString());
-				diaryEntry.setNum_Classes__c((double) numClasses);
+				int numClasses = 0;
+				if (student.getGradLevel() <= 7) {   // ignore AP and Oracle
+					numClasses = getNumClassesByLevel(student.getClientID(), student.getGradLevelString());
+					diaryEntry.setNum_Classes__c((double) numClasses);
+				}
 
 				recordList.add(diaryEntry);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_GRADUATION,
@@ -701,6 +739,8 @@ public class UpdateRecordsInSalesForce {
 			}
 
 			upsertDiaryRecordList(recordList);
+			if (contactList.size() > 0)
+				upsertContactRecordList(contactList, "Oracle-AP Exam");
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
@@ -713,10 +753,10 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
-	private boolean isPassingGrade(String score) {
+	private boolean isPassingGrade(String score, double passingGrade) {
 		try {
 			// Try converting to double
-			if (Double.parseDouble(score) >= 70.0)
+			if (Double.parseDouble(score) >= passingGrade)
 				return true;
 
 		} catch (NumberFormatException e) {
@@ -1280,6 +1320,7 @@ public class UpdateRecordsInSalesForce {
 			c.setRecordTypeId(RECORD_TYPE_ID_STUDENT);
 			updateFamilyEmail(contact, c);
 		}
+
 		if (contact.getEmail() != null)
 			c.setEmail(contact.getEmail());
 		if (contact.getMobilePhone() != null)
@@ -1694,18 +1735,18 @@ public class UpdateRecordsInSalesForce {
 
 		// Concatenate student email, account manager emails & emergency email
 		if (model.getEmail() != null && !model.getEmail().equals(""))
-			emails += model.getEmail().toLowerCase();
+			emails += model.getEmail().toLowerCase().trim();
 		if (model.getAccountMgrEmails() != null && !model.getAccountMgrEmails().equals("")
 				&& !emails.contains(model.getAccountMgrEmails())) {
 			if (!emails.equals(""))
 				emails += ", ";
-			emails += model.getAccountMgrEmails().toLowerCase();
+			emails += model.getAccountMgrEmails().toLowerCase().trim();
 		}
 		if (model.getEmergContactEmail() != null && !model.getEmergContactEmail().equals("")
 				&& !emails.contains(model.getEmergContactEmail())) {
 			if (!emails.equals(""))
 				emails += ", ";
-			emails += model.getEmergContactEmail().toLowerCase();
+			emails += model.getEmergContactEmail().toLowerCase().trim();
 		}
 
 		// Now add email string to SalesForce contact
