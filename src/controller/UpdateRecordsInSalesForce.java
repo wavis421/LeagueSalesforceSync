@@ -637,8 +637,10 @@ public class UpdateRecordsInSalesForce {
 				}
 
 				// Delete obsolete attendance records
-				if (deleteList.size() > 0)
-					deleteAttendanceRecords((String[]) deleteList.toArray(new String[0]));
+				// WENDY: TEMPORARY -- fix this
+				System.out.println("Attendance record delete from " + startDate + " to " + endDate + ", count: " + deleteList.size());
+				//if (deleteList.size() > 0)
+				//	deleteAttendanceRecords((String[]) deleteList.toArray(new String[0]));
 			}
 
 		} catch (Exception e) {

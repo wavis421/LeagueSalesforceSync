@@ -190,7 +190,7 @@ public class ListUtilities {
 
 		// Since there was no better match in the list, use the partial match
 		if (partialMatch != null) {
-			//return partialMatch;
+			return partialMatch;      // WENDY: FIX THIS!!
 		}
 
 		// Account not in list, so create new account with empty name
