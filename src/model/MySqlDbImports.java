@@ -1580,13 +1580,13 @@ public class MySqlDbImports {
 					score = importStudent.getLastExamScore().substring(3);
 				dbCurrLevelNum -= 1;
 
-			} else if (importStudent.getLastExamScore().startsWith("AP")) {
+			} else if (importStudent.getLastExamScore().startsWith("AP CompA")) {
 				// No level switch for AP
 				importStudent.setCurrLevel(dbStudent.getCurrLevel());
 				dbCurrLevelNum = 8;  // 8 indicates AP
-				if (importStudent.getLastExamScore().length() > 2)
-					score = importStudent.getLastExamScore().substring(2).trim();
-				System.out.println("AP Exam: " + dbStudent.getFirstName() + " " + dbStudent.getLastName() + ", Curr Level " 
+				if (importStudent.getLastExamScore().length() > 8)
+					score = importStudent.getLastExamScore().substring(8).trim();
+				System.out.println("AP CompA Exam: " + dbStudent.getFirstName() + " " + dbStudent.getLastName() + ", Curr Level " 
 					+ dbStudent.getCurrLevel() + ", Score " + score);
 				
 			} else if (importStudent.getLastExamScore().startsWith("Oracle")) {
