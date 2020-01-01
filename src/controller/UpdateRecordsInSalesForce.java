@@ -613,11 +613,11 @@ public class UpdateRecordsInSalesForce {
 
 		try {
 			queryResult = connection
-					.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c, CreatedBy.Name "
+					.query("SELECT Id, Visit_Id__c, Service_Date__c, Front_Desk_ID__c, Event_Name__c, CreatedBy.Name, Status__c "
 							+ "FROM Student_Attendance__c WHERE CreatedBy.Name = 'League Bot' AND Visit_Id__c != NULL "
-							+ "AND Service_Date__c >= " + startDate + " AND Service_Date__c <= " + endDate
-							+ " ORDER BY Visit_Id__c ASC");
-			System.out.println(queryResult.getSize() + " Salesforce attendance records for League Bot");
+							+ "AND Service_Date__c >= " + startDate + " AND Service_Date__c <= " + endDate + " AND Status__c != 'Completed' "
+							+ "ORDER BY Visit_Id__c ASC");
+			System.out.println(queryResult.getSize() + " future Salesforce attendance records for League Bot");
 
 			if (queryResult.getSize() > 0) {
 				while (!done) {
@@ -636,11 +636,10 @@ public class UpdateRecordsInSalesForce {
 						queryResult = connection.queryMore(queryResult.getQueryLocator());
 				}
 
-				// Delete obsolete attendance records
-				// WENDY: TEMPORARY -- fix this
+				// Delete cancelled (future) attendance records
 				System.out.println("Attendance record delete from " + startDate + " to " + endDate + ", count: " + deleteList.size());
-				//if (deleteList.size() > 0)
-				//	deleteAttendanceRecords((String[]) deleteList.toArray(new String[0]));
+				if (deleteList.size() > 0)
+					deleteAttendanceRecords((String[]) deleteList.toArray(new String[0]));
 			}
 
 		} catch (Exception e) {
