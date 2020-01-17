@@ -85,7 +85,7 @@ public class SalesForceImportEngine {
 					pike13StudentContactList, pike13StaffMembers);
 
 			// (4) Delete canceled attendance records
-			updateRecords.removeExtraAttendanceRecords(pike13Attendance, today, endDate, pike13StudentContactList);
+			updateRecords.removeExtraAttendanceRecords(pike13Attendance, startDate, endDate, pike13StudentContactList);
 		}
 
 		// === UPDATE GRADUATION DIARY ENTRIES ===

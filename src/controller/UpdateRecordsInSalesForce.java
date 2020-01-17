@@ -42,6 +42,7 @@ public class UpdateRecordsInSalesForce {
 	private static final String RECORD_TYPE_ID_ADULT = "012o000000089wzAAA";
 	private static final int MAX_SALESFORCE_FIELD_LENGTH = 100;
 	private static final int MAX_BILLING_NOTES_FIELD_LENGTH = 100;
+	private static final int MAX_EMOJI_FIELD_LENGTH = 35;
 	private static final String ADMIN_STAFF_CLIENT_ID = "999999";
 	private static final String ADMIN_STAFF_NAME = "Staff Admin";
 	private static final double PASSING_GRADE_FOR_CLASSES = 70.0;
@@ -459,6 +460,9 @@ public class UpdateRecordsInSalesForce {
 			int colon2 = description.indexOf(':', colon1 + 1);
 			if (colon2 - colon1 > 1) {
 				String foundEmoji = description.substring(colon1, colon2 + 1);
+				if (foundEmoji.length() > MAX_EMOJI_FIELD_LENGTH)
+					foundEmoji = foundEmoji.substring(0, MAX_EMOJI_FIELD_LENGTH);
+				
 				if (foundEmoji.equals(":nuetral_face:"))
 					return ":neutral_face:";
 				if (foundEmoji.equals(":smiley:"))
