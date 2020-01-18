@@ -667,12 +667,8 @@ public class MySqlDbImports {
 								+ ", Pike13 Level = " + student.getCurrentLevel());
 			}
 			
-		} else if (((importEvent.getServiceCategory().equals("class jlab") 
-						&& importEvent.getEventName().toLowerCase().contains("make-up")) 
-					|| (importEvent.getServiceCategory().equals("class jslam") 
-						&& importEvent.getEventName().toLowerCase().contains("summer slam")))
-				&& student.getLastVisitDate() != null && student.getLastVisitDateString().compareTo(importEvent.getServiceDateString()) < 0) {
-			// Update last visit date for make-up labs & summer slams
+		} else if (student.getLastVisitDate() != null && student.getLastVisitDateString().compareTo(importEvent.getServiceDateString()) < 0) {
+			// Update last visit date for jslam, jlab, extra, and ee classes 
 			updateLastEventInfoByStudent(student.getClientID(), null, importEvent.getServiceDateString(), null);
 		}
 	}
@@ -737,10 +733,14 @@ public class MySqlDbImports {
 					newModuleName="3";
 				} else if (currLevel.equals("2") && repoName.startsWith("league-level2-game-")) {
 					newModuleName="4";
-				} else if (repoName.startsWith("level" + currLevel + "-coding-exam-") || repoName.startsWith("level" + currLevel + "-codingexam-")) {
+				} else if (repoName.startsWith("level" + currLevel + "-exam") || repoName.startsWith("level" + currLevel + "-coding-exam") || repoName.startsWith("level" + currLevel + "-codingexam")) {
 					newModuleName = "E";
-				} else if (repoName.startsWith("level-" + currLevel + "-coding-exam-") || repoName.startsWith("level-" + currLevel + "-codingexam-")) {
+				} else if (repoName.startsWith("level-" + currLevel + "-coding-exam") || repoName.startsWith("level-" + currLevel + "-codingexam")) {
 					newModuleName = "E";
+				} else if (repoName.startsWith("level-" + currLevel + "-practice-coding-exam")) {
+					newModuleName="P";
+				} else if (repoName.startsWith("level" + currLevel + "-checkpoint")) {
+					idx = 17;
 				} else {
 					System.out.println(clientID + ": (unknown) " + repoName + " [" + currLevel + "][" + student.getCurrentModule() + "]");
 					return; // No matching level in repo name
@@ -1298,11 +1298,9 @@ public class MySqlDbImports {
 		String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
 
 		if (importEvent.getState().equals("completed") && importEvent.getServiceDateString().compareTo(today) <= 0
-				&& ((importEvent.getEventName().charAt(0) >= '0' && importEvent.getEventName().charAt(0) <= '7')
-						|| importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
+				&& (importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
 						|| importEvent.getEventName().startsWith("PG") || importEvent.getEventName().startsWith("Java@")
-						|| ((importEvent.getServiceCategory().startsWith("class jlab")
-								|| importEvent.getServiceCategory().startsWith("class jslam"))
+						|| (importEvent.getServiceCategory().startsWith("class ")
 								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
 			// Update student's current level and last visit date
 			addLevel = true;
@@ -1372,11 +1370,9 @@ public class MySqlDbImports {
 
 		if ((dbAttendance == null || !dbAttendance.getState().equals("completed"))
 				&& importEvent.getState().equals("completed") && importEvent.getServiceDateString().compareTo(today) <= 0
-				&& ((importEvent.getEventName().charAt(0) >= '0' && importEvent.getEventName().charAt(0) <= '7')
-						|| importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
+				&& (importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
 						|| importEvent.getEventName().startsWith("PG") || importEvent.getEventName().startsWith("Java@")
-						|| ((importEvent.getServiceCategory().startsWith("class jlab")
-								|| importEvent.getServiceCategory().startsWith("class jslam"))
+						|| (importEvent.getServiceCategory().startsWith("class ")
 								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
 			addLevel = true;
 			updateStudentLastVisit(student, importEvent);
