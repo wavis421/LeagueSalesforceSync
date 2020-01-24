@@ -655,9 +655,7 @@ public class MySqlDbImports {
 			}
 
 			// Check if attendance event matches student's current level
-			if ((eventName.charAt(0) >= '0' && eventName.charAt(0) <= '7'
-					&& !eventName.substring(0, 1).equals(student.getCurrentLevel()))
-					|| (eventName.startsWith("AD") && (levelChar < '0' || levelChar > '2'))
+			if ((eventName.startsWith("AD") && (levelChar < '0' || levelChar > '2'))
 					|| (eventName.startsWith("AG") && (levelChar < '3' || levelChar > '5'))
 					|| (eventName.startsWith("PG") && (levelChar < '6' || levelChar > '7'))
 					|| (eventName.startsWith("Java") && (levelChar < '0' || levelChar > '7'))) {
