@@ -636,7 +636,7 @@ public class MySqlDbImports {
 	}
 
 	private void updateStudentLastVisit(StudentModel student, AttendanceEventModel importEvent) {
-		if (importEvent.getServiceCategory().equals("class java")) {
+		if (importEvent.getServiceCategory().equals("class java") && !importEvent.getEventName().startsWith("EL@")) {
 			String eventName = importEvent.getEventName().trim();
 			char levelChar = '0';
 
@@ -1254,6 +1254,9 @@ public class MySqlDbImports {
 
 	public void updatePendingGithubComments(ArrayList<PendingGithubModel> githubList, String startDate,
 			ArrayList<AttendanceEventModel> eventList) {
+		
+		int origSize = githubList.size();
+		
 		// Process all the pending commits
 		for (int i = 0; i < githubList.size(); i++) {
 			// Get commit date
@@ -1288,6 +1291,9 @@ public class MySqlDbImports {
 				i--;
 			}
 		}
+		
+		if (origSize > githubList.size())
+			System.out.println((origSize - githubList.size()) + " pending github processed");
 	}
 
 	private int addAttendance(AttendanceEventModel importEvent, String teacherNames, StudentModel student) {
