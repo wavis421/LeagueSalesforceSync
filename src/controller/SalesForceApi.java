@@ -50,8 +50,8 @@ public class SalesForceApi {
 		endDate = t.plusDays(DATE_RANGE_FUTURE_IN_DAYS).toString("yyyy-MM-dd");
 
 		new MySqlDbLogging(sqlDb);
-		MySqlDbLogging.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
-				" from " + startDate + " to " + endDate + " ***");
+		//MySqlDbLogging.insertLogData(LogDataModel.STARTING_SALES_FORCE_IMPORT, new StudentNameModel("", "", false), 0,
+		//		" from " + startDate + " to " + endDate + " ***");
 
 		// Connect to Pike13
 		String pike13Token = readFile("./pike13Token.txt");

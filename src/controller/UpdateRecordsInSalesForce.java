@@ -82,6 +82,7 @@ public class UpdateRecordsInSalesForce {
 						|| student.getFullName().equalsIgnoreCase("monroe middle school")
 						|| student.getFirstName().startsWith("HOLIDAY")
 						|| student.getFullName().startsWith("Need Assistant")
+						|| student.getFullName().startsWith("Needs Assistant")
 						|| student.getFullName().startsWith("Accepting Students"))
 					continue;
 
@@ -159,6 +160,7 @@ public class UpdateRecordsInSalesForce {
 				if (adult.getFirstName().startsWith("HOLIDAY")
 						|| adult.getFullName().equalsIgnoreCase("sample customer")
 						|| adult.getFullName().startsWith("Need Assistant")
+						|| adult.getFullName().startsWith("Needs Assistant")
 						|| adult.getFullName().startsWith("Accepting Students"))
 					continue;
 
