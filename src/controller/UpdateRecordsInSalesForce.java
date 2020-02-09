@@ -861,6 +861,7 @@ public class UpdateRecordsInSalesForce {
 				if (inputModel.getFullName().startsWith("Intro to Java")
 						|| inputModel.getFullName().startsWith("Summer Programs")
 						|| inputModel.getFullName().startsWith("Need Assist")
+						|| inputModel.getFullName().startsWith("Needs Assist")
 						|| inputModel.getFullName().startsWith("Accepting Students"))
 					continue;
 
@@ -1698,8 +1699,8 @@ public class UpdateRecordsInSalesForce {
 			if (valueLowerCase.startsWith("league admin") || valueLowerCase.startsWith("summer prog")
 					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres")
 					|| valueLowerCase.startsWith("open lab") || valueLowerCase.startsWith("make-up")
-					|| valueLowerCase.startsWith("need assist") || valueLowerCase.startsWith("league workshop")
-					|| valueLowerCase.startsWith("accepting students"))
+					|| valueLowerCase.startsWith("need assist") || valueLowerCase.startsWith("needs assist")
+					|| valueLowerCase.startsWith("league workshop") || valueLowerCase.startsWith("accepting students"))
 				continue;
 
 			// Add teacher to new teachers string
