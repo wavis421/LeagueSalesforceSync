@@ -1261,10 +1261,14 @@ public class MySqlDbImports {
 		for (int i = 0; i < githubList.size(); i++) {
 			// Get commit date
 			PendingGithubModel pendingGit = githubList.get(i);
+			String gitUser = pendingGit.getGitUser().toLowerCase();
 			String commitDate = pendingGit.getServiceDate().substring(0, 10);
 
-			// Record is out-of-date (attendance never updated!), so remove
-			if (commitDate.compareTo(startDate) < 0) {
+			// Record is out-of-date (attendance never updated!), or teacher, so remove
+			if (commitDate.compareTo(startDate) < 0 || gitUser.equals("wavis421") || gitUser.equals("keithagroves")
+					|| gitUser.equals("davedleague") || gitUser.equals("jaleague") || gitUser.equals("sebastiantroncoso93")
+					|| gitUser.equals("dencee") || gitUser.equals("mjfre") || gitUser.equals("awasicek")) 
+			{
 				deletePendingGithubEvent(pendingGit.getPrimaryID());
 				githubList.remove(i);
 				i--;
