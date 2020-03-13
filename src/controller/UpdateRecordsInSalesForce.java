@@ -66,7 +66,7 @@ public class UpdateRecordsInSalesForce {
 
 	public void updateStudents(ArrayList<StudentImportModel> pike13Students,
 			ArrayList<StudentImportModel> pike13Managers, ArrayList<Account> sfAccounts) {
-		ArrayList<Contact> recordList = new ArrayList<Contact>();
+		ArrayList<Contact> contactList = new ArrayList<Contact>();
 
 		try {
 			for (int i = 0; i < pike13Students.size(); i++) {
@@ -130,10 +130,10 @@ public class UpdateRecordsInSalesForce {
 				}
 
 				// Create contact and add to list
-				recordList.add(createContactRecord(false, student, account, pike13Students, null));
+				contactList.add(createContactRecord(false, student, account, pike13Students));
 			}
 
-			upsertContactRecordList(recordList, "student");
+			upsertContactRecordList(contactList, "student");
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
@@ -148,8 +148,8 @@ public class UpdateRecordsInSalesForce {
 
 	public void updateAdults(ArrayList<StudentImportModel> pike13Students, ArrayList<StudentImportModel> pike13Adults,
 			ArrayList<Account> sfAccounts) {
-		ArrayList<Contact> recordList = new ArrayList<Contact>();
-		ArrayList<Contact> dependentUpdates = new ArrayList<Contact>();
+		ArrayList<Contact> contactList = new ArrayList<Contact>();
+		ArrayList<Account> accountList = new ArrayList<Account>();
 
 		try {
 			for (int i = 0; i < pike13Adults.size(); i++) {
@@ -174,10 +174,14 @@ public class UpdateRecordsInSalesForce {
 					continue;
 
 				// Create contact and add to list
-				recordList.add(createContactRecord(true, adult, account, pike13Students, dependentUpdates));
+				contactList.add(createContactRecord(true, adult, account, pike13Students));
+				if (account.getName().equals(adult.getLastName() + " " + adult.getFirstName() + " Family")) {
+					accountList.add(updateAccountRecord(adult, account));
+				}
 			}
 
-			upsertContactRecordList(recordList, "adult");
+			upsertContactRecordList(contactList, "adult");
+			upsertAccountRecordList(accountList, "account");
 
 		} catch (Exception e) {
 			if (e.getMessage() == null || e.getMessage().equals("null")) {
@@ -188,10 +192,6 @@ public class UpdateRecordsInSalesForce {
 				MySqlDbLogging.insertLogData(LogDataModel.SF_CLIENT_IMPORT_ERROR, new StudentNameModel("", "", false),
 						0, ": " + e.getMessage());
 		}
-
-		// Update modified clients to SalesForce
-		if (dependentUpdates.size() > 0)
-			upsertContactRecordList(dependentUpdates, "Thank and Hear From");
 	}
 
 	public void updateAttendance(ArrayList<SalesForceAttendanceModel> pike13Attendance,
@@ -522,11 +522,8 @@ public class UpdateRecordsInSalesForce {
 					} else if (dbAttend.getEventName().startsWith("EL")) {
 						// Ignore elective classes
 						newAttendRecord.setInternal_level__c("");
-					} else if (highestLevel < 7) {
+					} else if (highestLevel < 8) {
 						newAttendRecord.setInternal_level__c(((Integer) (highestLevel + 1)).toString());
-					} else if (highestLevel == 8) {
-						// Passed oracle, but not finished levels 0-7
-						newAttendRecord.setInternal_level__c(dbAttend.getClassLevel());
 					} else {
 						// This will show up as an error in salesforce report
 						newAttendRecord.setInternal_level__c("");
@@ -691,12 +688,12 @@ public class UpdateRecordsInSalesForce {
 				String id = ListUtilities.findDiaryIdInList(clientLevelKey, sfDiary);
 				if (id != null)
 					diaryEntry.setId(id);
-				diaryEntry.setPike_13_ID_Level__c(clientLevelKey);
+				diaryEntry.setPike_13_ID_Level__c (clientLevelKey);
+				diaryEntry.setLevel__c (student.getGradLevelString());
 				
-				if (student.getGradLevel() == 8) {  // AP Exam
+				if (student.getGradLevel() == GraduationModel.AP_COMPA_EXAM) {
 					diaryEntry.setDiary_Type__c("Test");
-					diaryEntry.setDescription__c("AP Exam");
-					diaryEntry.setLevel__c("8");
+					diaryEntry.setDescription__c("AP CompA Exam");
 					Contact gradContact = new Contact();
 					if (student.getScore().equals("3") || student.getScore().equals("4") || student.getScore().equals("5")) {
 						gradContact.setId(c.getId());
@@ -704,26 +701,37 @@ public class UpdateRecordsInSalesForce {
 						gradContact.setPassed_AP_Comp_A__c(true);
 						contactList.add(gradContact);
 					}
-					System.out.println("AP grad: " + student.getStudentName() + ", grad lvl " + student.getGradLevel() 
-						+ ", score " + student.getScore() + ", passed " + gradContact.getPassed_AP_Comp_A__c());
-					
-				} else if (student.getGradLevel() == 9) {  // Oracle Exam
+					System.out.println("AP CompA grad: " + student.getStudentName() + ", score " + student.getScore() 
+						+ ", passed " + gradContact.getPassed_AP_Comp_A__c());
+				}
+				else if (student.getGradLevel() == GraduationModel.AP_PRINC_EXAM) {
+					diaryEntry.setDiary_Type__c("Test");
+					diaryEntry.setDescription__c("AP Principles Exam");
+					Contact gradContact = new Contact();
+					if (student.getScore().equals("3") || student.getScore().equals("4") || student.getScore().equals("5")) {
+						gradContact.setId(c.getId());
+						gradContact.setFront_Desk_Id__c(c.getFront_Desk_Id__c());
+						gradContact.setPassed_Ap_Comp_Priciples__c(true);
+						contactList.add(gradContact);
+					}
+					System.out.println("AP Principles grad: " + student.getStudentName() + ", score " + student.getScore() 
+						+ ", passed " + gradContact.getPassed_Ap_Comp_Priciples__c());
+				} 
+				else if (student.getGradLevel() == GraduationModel.ORACLE_EXAM) {
 					diaryEntry.setDiary_Type__c("Test");
 					diaryEntry.setDescription__c("Oracle Exam");
-					diaryEntry.setLevel__c("9");
+					Contact gradContact = new Contact();
 					if (student.getScore().toLowerCase().contains("pass") 
 							|| isPassingGrade(student.getScore(), PASSING_GRADE_FOR_ORACLE)) {
-						Contact gradContact = new Contact();
 						gradContact.setId(c.getId());
 						gradContact.setFront_Desk_Id__c(c.getFront_Desk_Id__c());
 						gradContact.setPassed_Oracle__c(true);
 						contactList.add(gradContact);
 					}
-					System.out.println("Oracle grad: " + student.getStudentName() + ", grad lvl " + student.getGradLevel() 
-						+ ", score " + student.getScore() + ", passed " + c.getPassed_Oracle__c());
+					System.out.println("Oracle grad: " + student.getStudentName() + ", score " + student.getScore() 
+						+ ", passed " + gradContact.getPassed_Oracle__c());
 					
-				} else {  // Class levels 0 - 7
-					diaryEntry.setLevel__c(student.getGradLevelString());
+				} else {  // Class levels 0 - 8
 					diaryEntry.setDiary_Type__c("Level");
 					diaryEntry.setDescription__c("Level " + student.getGradLevel());
 				}
@@ -734,27 +742,31 @@ public class UpdateRecordsInSalesForce {
 				if (student.getStartDate() != null && !student.getStartDate().equals(""))
 					diaryEntry.setStart_Date__c(convertDateStringToCalendar(student.getStartDate()));
 
-				if (student.isPromoted())
+				if (student.isPromoted()) {
 					diaryEntry.setPromoted__c(true); // Did not pass test
+					diaryEntry.setSkipped_Level__c(false);
+				}
 				else if (student.isSkipLevel()) {
 					diaryEntry.setSkipped_Level__c(true);
+					diaryEntry.setPromoted__c(false);
 					diaryEntry.setStart_Date__c(endDate);
-				} else if (student.getScore() != null && !student.getScore().equals("")) {
+				} 
+				else if (student.getScore() != null && !student.getScore().equals("")) {
 					diaryEntry.setScore__c(student.getScore());
-					if (student.getGradLevel() <= 7 && isPassingGrade(student.getScore(), PASSING_GRADE_FOR_CLASSES))
+					if (student.getGradLevel() <= 8 && isPassingGrade(student.getScore(), PASSING_GRADE_FOR_CLASSES))
 						diaryEntry.setPromoted__c(false);
 				}
 
 				int numClasses = 0;
-				if (student.getGradLevel() <= 7) {   // ignore AP and Oracle
+				if (student.getGradLevel() <= 8) {   // ignore AP and Oracle
 					numClasses = getNumClassesByLevel(student.getClientID(), student.getGradLevelString());
 					diaryEntry.setNum_Classes__c((double) numClasses);
 				}
 
 				recordList.add(diaryEntry);
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_GRADUATION,
-						new StudentNameModel(student.getStudentName(), "", false), student.getClientID(), " Level "
-								+ student.getGradLevel() + " on " + student.getEndDate() + ", # Classes " + numClasses);
+						new StudentNameModel(student.getStudentName(), "", false), student.getClientID(), " "
+								+ diaryEntry.getDescription__c() + " on " + student.getEndDate() + ", # Classes " + numClasses);
 			}
 
 			upsertDiaryRecordList(recordList);
@@ -1039,6 +1051,37 @@ public class UpdateRecordsInSalesForce {
 		}
 	}
 
+	private void upsertAccountRecords(Account[] records) {
+		UpsertResult[] upsertResults = null;
+
+		try {
+			// Update the Account records in Salesforce.com
+			upsertResults = connection.upsert("Id", records);
+
+		} catch (ConnectionException e) {
+			if (e.getMessage() == null || e.getMessage().equals("null")) {
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+						new StudentNameModel("", "", false), 0, "");
+				e.printStackTrace();
+			} else
+				MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+						new StudentNameModel("", "", false), 0, ": " + e.getMessage());
+			return;
+		}
+
+		// check the returned results for any errors
+		for (int i = 0; i < upsertResults.length; i++) {
+			if (!upsertResults[i].isSuccess()) {
+				Error[] errors = upsertResults[i].getErrors();
+				for (int j = 0; j < errors.length; j++) {
+					MySqlDbLogging.insertLogData(LogDataModel.SALES_FORCE_UPSERT_ACCOUNT_ERROR,
+							new StudentNameModel(records[i].getName(), "", false), 0,
+							": " + errors[j].getMessage());
+				}
+			}
+		}
+	}
+
 	private void upsertAttendanceRecords(Student_Attendance__c[] records) {
 		UpsertResult[] upsertResults = null;
 
@@ -1171,6 +1214,40 @@ public class UpdateRecordsInSalesForce {
 		// Update remaining records in Salesforce.com
 		if (arrayIdx > 0)
 			upsertClientRecords(recordArray);
+	}
+
+	private void upsertAccountRecordList(ArrayList<Account> recordList, String recordType) {
+		// Copy up to 200 records to array at a time (max allowed)
+		Account[] recordArray;
+		int numRecords = recordList.size();
+		int remainingRecords = numRecords;
+		int arrayIdx = 0;
+
+		System.out.println(numRecords + " Pike13 " + recordType + " records");
+		if (numRecords > MAX_NUM_UPSERT_RECORDS)
+			recordArray = new Account[MAX_NUM_UPSERT_RECORDS];
+		else
+			recordArray = new Account[numRecords];
+
+		for (int i = 0; i < numRecords; i++) {
+			recordArray[arrayIdx] = recordList.get(i);
+
+			arrayIdx++;
+			if (arrayIdx == MAX_NUM_UPSERT_RECORDS) {
+				upsertAccountRecords(recordArray);
+				remainingRecords -= MAX_NUM_UPSERT_RECORDS;
+				arrayIdx = 0;
+
+				if (remainingRecords > MAX_NUM_UPSERT_RECORDS)
+					recordArray = new Account[MAX_NUM_UPSERT_RECORDS];
+				else if (remainingRecords > 0)
+					recordArray = new Account[remainingRecords];
+			}
+		}
+
+		// Update remaining records in Salesforce.com
+		if (arrayIdx > 0)
+			upsertAccountRecords(recordArray);
 	}
 
 	private void upsertDiaryRecordList(ArrayList<Contact_Diary__c> recordList) {
@@ -1324,7 +1401,7 @@ public class UpdateRecordsInSalesForce {
 	}
 
 	private Contact createContactRecord(boolean adult, StudentImportModel contact, Account account,
-			ArrayList<StudentImportModel> pike13Students, ArrayList<Contact> dependents) {
+			ArrayList<StudentImportModel> pike13Students) {
 		// Create contact and add fields
 		Contact c = new Contact();
 
@@ -1343,10 +1420,60 @@ public class UpdateRecordsInSalesForce {
 
 		if (contact.getEmail() != null)
 			c.setEmail(contact.getEmail());
-		if (contact.getMobilePhone() != null)
-			c.setMobilePhone(parsePhone(contact.getMobilePhone()));
-		if (contact.getHomePhone() != null)
-			c.setHomePhone(parsePhone(contact.getHomePhone()));
+		
+		if (contact.getPhone1() != null) {
+			if (contact.phone1_type.equals("Cell"))
+				c.setMobilePhone (parsePhone(contact.getPhone1()));
+			else if (contact.phone1_type.equals("Work"))
+				c.setWork_Phone__c (parsePhone(contact.getPhone1()));
+			else if (contact.phone1_type.equals("Home"))
+				c.setHomePhone (parsePhone(contact.getPhone1()));
+			else if (contact.phone1_type.equals("Other"))
+				c.setOtherPhone (parsePhone(contact.getPhone1()));
+			else if (contact.phone1_type.equals(""))
+				// Historically, before this field existed, phone1 field was the MOBILE phone
+				c.setMobilePhone (parsePhone(contact.getPhone1()));
+			else  
+				// This should never happen; phone type field is a drop-down menu in Pike13
+				System.out.println(contact.getFullName() + (adult ? " (adult)" : " (student)") +": Unknown phone-1 type '" + contact.phone1_type + "'");
+		}
+		if (contact.getPhone2() != null) {
+			if (contact.phone2_type.equals("Cell")) {
+				// If 2 cell phones, set 2nd cell to "other"
+				if (contact.phone1_type.equals("Cell"))
+					c.setOtherPhone (parsePhone(contact.getPhone2()));
+				else
+					c.setMobilePhone (parsePhone(contact.getPhone2()));
+			}
+			else if (contact.phone2_type.equals("Work")) {
+				// If 2 work phones, set 2nd phone to "other"
+				if (contact.phone1_type.equals("Work"))
+					c.setOtherPhone (parsePhone(contact.getPhone2()));
+				else
+					c.setWork_Phone__c (parsePhone(contact.getPhone2()));
+			}
+			else if (contact.phone2_type.equals("Home")) {
+				// If 2 home phones, set 2nd phone to "other"
+				if (contact.phone1_type.equals("Home"))
+					c.setOtherPhone (parsePhone(contact.getPhone2()));
+				else
+					c.setHomePhone (parsePhone(contact.getPhone2()));
+			}
+			else if (contact.phone2_type.equals("Other")) {
+				// If 2 'other' phones, just set this phone to 'cell'
+				if (contact.phone1_type.equals("Other"))
+					c.setMobilePhone (parsePhone(contact.getPhone2()));
+				else
+					c.setOtherPhone (parsePhone(contact.getPhone2()));
+			}
+			else if (contact.phone2_type.equals(""))
+				// Historically, before this field existed, phone2 field was the HOME phone
+				c.setHomePhone (parsePhone(contact.getPhone2()));
+			else  
+				// This should never happen; phone type field is a drop-down menu in Pike13
+				System.out.println(contact.getFullName() + (adult ? " (adult)" : " (student)") +": Unknown phone-2 type '" + contact.phone2_type + "'");
+		}
+		
 		if (contact.getAddress() != null) {
 			c.setFull_Address__c(contact.getAddress());
 			Address addr = parseAddress(contact.getAddress());
@@ -1382,12 +1509,8 @@ public class UpdateRecordsInSalesForce {
 			c.setEmergency_Email__c(contact.getEmergContactEmail());
 		if (contact.getCurrGrade() != null)
 			c.setGrade__c(contact.getCurrGrade());
-		if (adult && contact.getHearAboutUs() != null && !contact.getHearAboutUs().trim().equals(""))
-			updateWhereDidYouHear(contact, c, pike13Students, dependents);
 		if (contact.getGradYearString() != null)
 			c.setGrad_Year__c(contact.getGradYearString());
-		if (adult && contact.getWhoToThank() != null && !contact.getWhoToThank().trim().equals(""))
-			updateWhoToThank(contact, c, pike13Students, dependents);
 		if (contact.getGithubName() != null)
 			c.setGIT_HUB_acct_name__c(contact.getGithubName());
 		if (contact.getGrantInfo() != null)
@@ -1402,7 +1525,34 @@ public class UpdateRecordsInSalesForce {
 		if (contact.getBirthDate() != null && !contact.getBirthDate().equals(""))
 			c.setDate_of_Birth__c(convertDateStringToCalendar(contact.getBirthDate()));
 
+		c.setStudent_Address__c (contact.studAddrIfDiff);
+		c.setEthnicity_of_Student__c (contact.studEthnicity);
+		c.setPreferred_Language_of_Contact__c (contact.prefContactLang);
+		c.setPreferred_Method_of_Contact__c (contact.prefContactMethod);
+		c.setPrimary_Language__c (contact.primaryLanguage);
+		c.setRace_of_Student__c (contact.studRace);
+		c.setRelationship_to_Student__c (contact.relationToStudent);
+
 		return c;
+	}
+
+	private Account updateAccountRecord (StudentImportModel contact, Account account) {
+		// Create account and add fields
+		Account a = new Account();
+
+		a.setId (account.getId());
+		a.setAddress_same_as_above__c (contact.studAddrSame);
+		a.setAny_Questions_Comments__c (contact.questions);
+		a.setAnyone_in_family_work_with_Computers__c (contact.workComputers ? "Yes" : "No");
+		a.setEmergency_Contact_Relationship_to_Studen__c (contact.emergRelationToStud);
+		a.setHighest_School_completed_Parent_1__c (contact.schoolLevel1);
+		a.setHighest_School_Completed_Parent_2__c (contact.schoolLevel2);
+		a.setPreferred_League_Class_Location__c (contact.prefClassLoc);
+		a.setTechnologies_Student_has_access_to__c (contact.techAccess);
+		a.setWhere_did_you_hear_about_us__c (contact.getHearAboutUs());
+		a.setWho_can_we_thank__c (contact.getWhoToThank());
+		
+		return a;
 	}
 
 	private Contact createStaffRecord(StaffMemberModel staff, String firstName, String clientID, String accountID,
@@ -1772,72 +1922,6 @@ public class UpdateRecordsInSalesForce {
 		// Now add email string to SalesForce contact
 		if (!emails.equals(""))
 			c.setFamily_Email__c(emails);
-	}
-
-	private void updateWhoToThank(StudentImportModel contact, Contact c, ArrayList<StudentImportModel> pike13Students,
-			ArrayList<Contact> dependents) {
-
-		// Set field for adult
-		c.setWho_can_we_thank__c(contact.getWhoToThank());
-
-		if (contact.getDependentNames() != null) {
-			// Parse dependents string and update field for each dependent
-			String[] values = contact.getDependentNames().split("\\s*,\\s*");
-			for (int i = 0; i < values.length; i++) {
-				// Get each dependent by Name and Account ID
-				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(), pike13Students);
-				if (dep == null)
-					continue;
-
-				// See if contact already in list
-				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), null, null,
-						dependents);
-
-				if (duplicate == null) {
-					// Not already in list, so add
-					Contact newContact = new Contact();
-					newContact.setFront_Desk_Id__c(dep.getFront_Desk_Id__c());
-					newContact.setWho_can_we_thank__c(contact.getWhoToThank());
-					dependents.add(newContact);
-
-				} else {
-					duplicate.setWho_can_we_thank__c(contact.getWhoToThank());
-				}
-			}
-		}
-	}
-
-	private void updateWhereDidYouHear(StudentImportModel contact, Contact c,
-			ArrayList<StudentImportModel> pike13Students, ArrayList<Contact> dependents) {
-
-		// Set field for adult
-		c.setHow_you_heard_about_us__c(contact.getHearAboutUs());
-
-		if (contact.getDependentNames() != null) {
-			// Parse dependents string and update field for each dependent
-			String[] values = contact.getDependentNames().split("\\s*,\\s*");
-			for (int i = 0; i < values.length; i++) {
-				// Get each dependent by Name and Account ID
-				Contact dep = ListUtilities.findStudentContactInPike13List(values[i], c.getAccountId(), pike13Students);
-				if (dep == null)
-					continue;
-
-				// See if contact already in list
-				Contact duplicate = ListUtilities.findClientIDInList(-1, dep.getFront_Desk_Id__c(), null, null,
-						dependents);
-
-				if (duplicate == null) {
-					// Not already in list, so add
-					Contact newContact = new Contact();
-					newContact.setFront_Desk_Id__c(dep.getFront_Desk_Id__c());
-					newContact.setHow_you_heard_about_us__c(contact.getHearAboutUs());
-					dependents.add(newContact);
-
-				} else {
-					duplicate.setHow_you_heard_about_us__c(contact.getHearAboutUs());
-				}
-			}
-		}
 	}
 
 	private int getNumClassesByLevel(int clientID, String level) {

@@ -1,27 +1,32 @@
 package model;
 
 public class StudentImportModel implements Comparable<StudentImportModel> {
-	private int clientID;
-	private String lastName, firstName, githubName, startDate, homeLocString, currLevel;
-	private int homeLocation, gender, gradYear, isInMasterDb;
+	private int     clientID;
+	private String  lastName, firstName, githubName, startDate, homeLocString, currLevel;
+	private int     homeLocation, gender, gradYear, isInMasterDb;
 
 	// Additional fields for importing contacts to SalesForce
-	private String gradYearString;
-	private String genderString;
-	private String birthDate = "";
-	private String currGrade, lastExamScore = "", currentClass, registerClass;
-	private String email, mobilePhone, homePhone, address, schoolName, tShirtSize, financialAidPercent, grantInfo;
-	private String membership, passOnFile, leaveReason, hearAboutUs, whoToThank;
-	private String emergContactName, emergContactPhone, emergContactEmail;
-	private String accountID, accountMgrNames, accountMgrPhones, accountMgrEmails, dependentNames;
-	private String staffSinceDate = "";
-	private int completedVisits, futureVisits, staffPastEvents;
+	private String  gradYearString;
+	private String  genderString;
+	private String  birthDate = "";
+	private String  currGrade, lastExamScore = "", currentClass, registerClass;
+	private String  email, phone1, phone2, address, schoolName, financialAidPercent, grantInfo;
+	private String  membership, passOnFile, leaveReason, hearAboutUs, whoToThank;
+	private String  emergContactName, emergContactPhone, emergContactEmail;
+	private String  accountID, accountMgrNames, accountMgrPhones, accountMgrEmails, dependentNames;
+	private String  staffSinceDate = "";
+	private int     completedVisits, futureVisits, staffPastEvents;
 	private boolean signedWaiver, stopEmail, financialAid;
-	private Object sfContact;
+	private Object  sfContact;
+	
+	public String   relationToStudent, phone1_type, phone2_type, prefContactMethod, primaryLanguage;
+	public String   prefContactLang, emergRelationToStud, prefClassLoc, studAddrIfDiff;
+	public String   schoolLevel1, schoolLevel2, studEthnicity, studRace,techAccess, questions;
+	public boolean  studAddrSame, workComputers;
 
 	public StudentImportModel(int clientID, String lastName, String firstName, String githubName, String gender,
 			String startDate, String homeLocation, String gradYear, String email, String acctMgrEmail,
-			String emergEmail, String mobilePhone, String acctMgrPhones, String homePhone, String emergContactPhone,
+			String emergEmail, String phone_1, String acctMgrPhones, String phone_2, String emergContactPhone,
 			String birthDate, String currentLevel, int futureVisits, String lastExamScore) {
 
 		// Pike13 import data
@@ -58,12 +63,12 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		if (emergEmail != null)
 			this.emergContactEmail = emergEmail.trim().replaceAll("[\t\n\r]", "");
 
-		if (mobilePhone != null)
-			this.mobilePhone = parsePhone(mobilePhone);
+		if (phone_1 != null)
+			this.phone1 = parsePhone(phone_1);
 		if (acctMgrPhones != null)
 			this.accountMgrPhones = parsePhone(acctMgrPhones);
-		if (homePhone != null)
-			this.homePhone = parsePhone(homePhone);
+		if (phone_2 != null)
+			this.phone2 = parsePhone(phone_2);
 		if (emergContactPhone != null)
 			this.emergContactPhone = parsePhone(emergContactPhone);
 
@@ -72,7 +77,7 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 
 	public StudentImportModel(int clientID, String lastName, String firstName, String githubName, int gender,
 			String startDate, int homeLocation, int gradYear, int isInMasterDb, String email, String acctMgrEmail,
-			String emergEmail, String mobilePhone, String acctMgrPhones, String homePhone, String emergContactPhone,
+			String emergEmail, String phone_1, String acctMgrPhones, String phone_2, String emergContactPhone,
 			String birthdate, String staffSinceDate, int staffPastEvents, String currentLevel, String currentClass,
 			String lastScore, String registerClass) {
 
@@ -97,19 +102,19 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		this.email = email;
 		this.accountMgrEmails = acctMgrEmail;
 		this.emergContactEmail = emergEmail;
-		this.mobilePhone = mobilePhone;
+		this.phone1 = phone_1;
 		this.accountMgrPhones = acctMgrPhones;
-		this.homePhone = homePhone;
+		this.phone2 = phone_2;
 		this.emergContactPhone = emergContactPhone;
 	}
 
 	public StudentImportModel(int clientID, String firstName, String lastName, String gender, String birthDate,
-			String currGrade, String gradYear, String startDate, String homeLocation, String email, String mobilePhone,
+			String currGrade, String gradYear, String startDate, String homeLocation, String email, String phone_1,
 			String address, String schoolName, String githubName, int completedVisits, int futureVisits,
-			String tShirtSize, boolean signedWaiver, String membership, String passOnFile, boolean stopEmail,
+			boolean signedWaiver, String membership, String passOnFile, boolean stopEmail,
 			boolean financialAid, String financialAidPercent, String grantInfo, String leaveReason, String hearAboutUs,
 			String whoToThank, String emergContactName, String emergContactPhone, String emergContactEmail,
-			String homePhone, String accountMgrNames, String accountMgrPhones, String accountMgrEmails,
+			String phone_2, String accountMgrNames, String accountMgrPhones, String accountMgrEmails,
 			String dependentNames, String currentLevel) {
 
 		this.clientID = clientID;
@@ -122,13 +127,12 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		this.startDate = startDate;
 		this.homeLocString = homeLocation;
 		this.email = email;
-		this.mobilePhone = mobilePhone;
+		this.phone1 = phone_1;
 		this.address = address;
 		this.schoolName = schoolName;
 		this.githubName = parseGithubName(githubName);
 		this.completedVisits = completedVisits;
 		this.futureVisits = futureVisits;
-		this.tShirtSize = tShirtSize;
 		this.signedWaiver = signedWaiver;
 		this.membership = membership;
 		this.passOnFile = passOnFile;
@@ -145,14 +149,37 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		this.accountMgrNames = accountMgrNames;
 		this.accountMgrPhones = accountMgrPhones;
 		this.accountMgrEmails = accountMgrEmails;
-		this.homePhone = homePhone;
+		this.phone2 = phone_2;
 		this.currLevel = currentLevel;
 		if (dependentNames == null)
 			this.dependentNames = "";
 		else
 			this.dependentNames = dependentNames;
 	}
-
+	
+	public void addMoreFields (String relation, String phn1_type, String phn2_type, String contactMethod,
+			String primLang, String contactLang, String emergRelation, String prefLoc, boolean addrSame, String studAddr, boolean workComp,
+			String level1, String level2, String ethnicity, String race, String tech, String questions)
+	{
+		this.relationToStudent = relation;
+		this.phone1_type = phn1_type;
+		this.phone2_type = phn2_type;
+		this.prefContactMethod = contactMethod;
+		this.primaryLanguage = primLang;
+		this.prefContactLang = contactLang;
+		this.emergRelationToStud = emergRelation;
+		this.prefClassLoc = prefLoc;
+		this.studAddrSame = addrSame;
+		this.studAddrIfDiff = studAddr;
+		this.workComputers = workComp;
+		this.schoolLevel1 = level1;
+		this.schoolLevel2 = level2;
+		this.studEthnicity = ethnicity;
+		this.studRace = race;
+		this.techAccess = tech;
+		this.questions = questions;
+	}
+	
 	private String parseGithubName(String githubName) {
 		if (githubName == null || githubName.equals("") || githubName.equals("\"\""))
 			githubName = "";
@@ -265,8 +292,8 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		return email;
 	}
 
-	public String getMobilePhone() {
-		return mobilePhone;
+	public String getPhone1() {
+		return phone1;
 	}
 
 	public String getAddress() {
@@ -275,10 +302,6 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 
 	public String getSchoolName() {
 		return schoolName;
-	}
-
-	public String gettShirtSize() {
-		return tShirtSize;
 	}
 
 	public String getFinancialAidPercent() {
@@ -344,8 +367,8 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 		return financialAid;
 	}
 
-	public String getHomePhone() {
-		return homePhone;
+	public String getPhone2() {
+		return phone2;
 	}
 
 	public String getAccountMgrNames() {
@@ -400,8 +423,8 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 				&& homeLocation == other.getHomeLocation() && gender == other.getGender()
 				&& gradYear == other.getGradYear() && isInMasterDb == other.getIsInMasterDb()
 				&& email.equals(other.getEmail()) && emergContactEmail.equals(other.getEmergContactEmail())
-				&& accountMgrEmails.equals(other.getAccountMgrEmails()) && mobilePhone.equals(other.getMobilePhone())
-				&& accountMgrPhones.equals(other.getAccountMgrPhones()) && homePhone.equals(other.getHomePhone())
+				&& accountMgrEmails.equals(other.getAccountMgrEmails()) && phone1.equals(other.getPhone1())
+				&& accountMgrPhones.equals(other.getAccountMgrPhones()) && phone2.equals(other.getPhone2())
 				&& emergContactPhone.equals(other.getEmergContactPhone()) && birthDate.equals(other.getBirthDate())
 				&& staffSinceDate.equals(other.getStaffSinceDate()) && staffPastEvents == other.getStaffPastEvents()
 				&& currLevel.equals(other.currLevel) && lastExamScore.equals(other.lastExamScore)) {
@@ -447,6 +470,7 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 				resultPhone += ", ";
 			resultPhone += phone;
 		}
+
 		return resultPhone;
 	}
 }

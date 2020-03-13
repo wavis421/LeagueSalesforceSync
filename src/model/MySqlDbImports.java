@@ -277,9 +277,9 @@ public class MySqlDbImports {
 				addStudentStmt.setString(col++, student.getEmail());
 				addStudentStmt.setString(col++, student.getEmergContactEmail());
 				addStudentStmt.setString(col++, student.getAccountMgrEmails());
-				addStudentStmt.setString(col++, student.getMobilePhone());
+				addStudentStmt.setString(col++, student.getPhone1());
 				addStudentStmt.setString(col++, student.getAccountMgrPhones());
-				addStudentStmt.setString(col++, student.getHomePhone());
+				addStudentStmt.setString(col++, student.getPhone2());
 				addStudentStmt.setString(col++, student.getEmergContactPhone());
 				addStudentStmt.setString(col++, student.getBirthDate());
 				addStudentStmt.setString(col++, student.getStaffSinceDate());
@@ -364,9 +364,9 @@ public class MySqlDbImports {
 				updateStudentStmt.setString(col++, importStudent.getEmail());
 				updateStudentStmt.setString(col++, importStudent.getEmergContactEmail());
 				updateStudentStmt.setString(col++, importStudent.getAccountMgrEmails());
-				updateStudentStmt.setString(col++, importStudent.getMobilePhone());
+				updateStudentStmt.setString(col++, importStudent.getPhone1());
 				updateStudentStmt.setString(col++, importStudent.getAccountMgrPhones());
-				updateStudentStmt.setString(col++, importStudent.getHomePhone());
+				updateStudentStmt.setString(col++, importStudent.getPhone2());
 				updateStudentStmt.setString(col++, importStudent.getEmergContactPhone());
 				updateStudentStmt.setString(col++, importStudent.getBirthDate());
 				updateStudentStmt.setString(col++, importStudent.getStaffSinceDate());
@@ -448,7 +448,7 @@ public class MySqlDbImports {
 			else
 				changes += ", Start Date";
 		}
-		if (!importStudent.getMobilePhone().equals(dbStudent.getMobilePhone())) {
+		if (!importStudent.getPhone1().equals(dbStudent.getPhone1())) {
 			if (changes.equals(""))
 				changes += " (Mobile phone";
 			else
@@ -460,7 +460,7 @@ public class MySqlDbImports {
 			else
 				changes += ", Acct mgr phone";
 		}
-		if (!importStudent.getHomePhone().equals(dbStudent.getHomePhone())) {
+		if (!importStudent.getPhone2().equals(dbStudent.getPhone2())) {
 			if (changes.equals(""))
 				changes += " (Home phone";
 			else
@@ -655,10 +655,7 @@ public class MySqlDbImports {
 			}
 
 			// Check if attendance event matches student's current level
-			if ((eventName.startsWith("AD") && (levelChar < '0' || levelChar > '2'))
-					|| (eventName.startsWith("AG") && (levelChar < '3' || levelChar > '5'))
-					|| (eventName.startsWith("PG") && (levelChar < '6' || levelChar > '7'))
-					|| (eventName.startsWith("Java") && (levelChar < '0' || levelChar > '7'))) {
+			if (eventName.startsWith("Java") && (levelChar < '0' || levelChar > '8')) {
 				// Class mismatch
 				MySqlDbLogging.insertLogData(LogDataModel.CLASS_LEVEL_MISMATCH, student.getNameModel(),
 						importEvent.getClientID(), " for " + eventName + " on " + importEvent.getServiceDateString()
@@ -1266,8 +1263,14 @@ public class MySqlDbImports {
 
 			// Record is out-of-date (attendance never updated!), or teacher, so remove
 			if (commitDate.compareTo(startDate) < 0 || gitUser.equals("wavis421") || gitUser.equals("keithagroves")
-					|| gitUser.equals("davedleague") || gitUser.equals("jaleague") || gitUser.equals("sebastiantroncoso93")
-					|| gitUser.equals("dencee") || gitUser.equals("mjfre") || gitUser.equals("awasicek")) 
+					|| gitUser.equals("davedleague") || gitUser.equals("sebastiantroncoso93")
+					|| gitUser.equals("codybsauer") || gitUser.equals("shacheeparikh")
+					|| gitUser.equals("mwoguri")      // Michiyo
+					|| gitUser.equals("jaleague")     // Jackie
+					|| gitUser.equals("zaelix")       // Mike
+					|| gitUser.equals("dencee")       // Daniel
+					|| gitUser.equals("mjfre")        // Matt
+					|| gitUser.equals("awasicek"))    // Andrew 
 			{
 				deletePendingGithubEvent(pendingGit.getPrimaryID());
 				githubList.remove(i);
@@ -1301,7 +1304,7 @@ public class MySqlDbImports {
 	}
 
 	private int addAttendance(AttendanceEventModel importEvent, String teacherNames, StudentModel student) {
-		// Update class level if <= L7
+		// Update class level if <= L8
 		boolean addLevel = false;
 		String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
 
@@ -1309,7 +1312,7 @@ public class MySqlDbImports {
 				&& (importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
 						|| importEvent.getEventName().startsWith("PG") || importEvent.getEventName().startsWith("Java@")
 						|| (importEvent.getServiceCategory().startsWith("class ")
-								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
+								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '8'))) {
 			// Update student's current level and last visit date
 			addLevel = true;
 			updateStudentLastVisit(student, importEvent);
@@ -1371,17 +1374,16 @@ public class MySqlDbImports {
 
 	private int updateAttendanceState(AttendanceEventModel importEvent, AttendanceEventModel dbAttendance,
 			String teachers, StudentModel student) {
-		// When transitioning to completed, update current level for students <= L7.
-		// Only set level for old levels 0-7, AD/AG/PG, Slams & Make-ups.
+		// When transitioning to completed, update current level for students <= L8.
+		// Only set level for Slams & Make-ups.
 		boolean addLevel = false;
 		String today = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles")).toString("yyyy-MM-dd");
 
 		if ((dbAttendance == null || !dbAttendance.getState().equals("completed"))
 				&& importEvent.getState().equals("completed") && importEvent.getServiceDateString().compareTo(today) <= 0
-				&& (importEvent.getEventName().startsWith("AD") || importEvent.getEventName().startsWith("AG")
-						|| importEvent.getEventName().startsWith("PG") || importEvent.getEventName().startsWith("Java@")
+				&& (importEvent.getEventName().startsWith("Java@")
 						|| (importEvent.getServiceCategory().startsWith("class ")
-								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '7'))) {
+								&& !student.getCurrentLevel().equals("") && student.getCurrentLevel().charAt(0) <= '8'))) {
 			addLevel = true;
 			updateStudentLastVisit(student, importEvent);
 		}
@@ -1571,7 +1573,7 @@ public class MySqlDbImports {
 				return;
 			}
 
-			else if (importLevelNum == (dbCurrLevelNum + 1) && dbCurrLevelNum <= 7
+			else if (importLevelNum == (dbCurrLevelNum + 1) && dbCurrLevelNum <= 8
 					&& importStudent.getLastExamScore().startsWith("L" + dbStudent.getCurrLevel() + " ")) {
 				// New graduate: If score just 'Ln ' or student promoted/skipped, then no score
 				if (!isPromoted && !isSkip && importStudent.getLastExamScore().length() > 3)
@@ -1587,19 +1589,25 @@ public class MySqlDbImports {
 			} else if (importStudent.getLastExamScore().startsWith("AP CompA")) {
 				// No level switch for AP
 				importStudent.setCurrLevel(dbStudent.getCurrLevel());
-				dbCurrLevelNum = 8;  // 8 indicates AP
+				dbCurrLevelNum = GraduationModel.AP_COMPA_EXAM;
 				if (importStudent.getLastExamScore().length() > 8)
 					score = importStudent.getLastExamScore().substring(8).trim();
 				System.out.println("AP CompA Exam: " + dbStudent.getFirstName() + " " + dbStudent.getLastName() + ", Curr Level " 
 					+ dbStudent.getCurrLevel() + ", Score " + score);
 				
+			} else if (importStudent.getLastExamScore().startsWith("AP Princ")) {
+				// No level switch for AP
+				importStudent.setCurrLevel(dbStudent.getCurrLevel());
+				dbCurrLevelNum = GraduationModel.AP_PRINC_EXAM;
+				if (importStudent.getLastExamScore().length() > 8)
+					score = importStudent.getLastExamScore().substring(8).trim();
+				System.out.println("AP Principles Exam: " + dbStudent.getFirstName() + " " + dbStudent.getLastName() + ", Curr Level " 
+					+ dbStudent.getCurrLevel() + ", Score " + score);
+				
 			} else if (importStudent.getLastExamScore().startsWith("Oracle")) {
-				// Increase level only if student already at level 8
-				if (dbCurrLevelNum == 8)
-					importStudent.setCurrLevel("9");
-				else
-					importStudent.setCurrLevel(dbStudent.getCurrLevel());
-				dbCurrLevelNum = 9;  // represents Oracle exam
+				// No level switch for Oracle
+				importStudent.setCurrLevel(dbStudent.getCurrLevel());
+				dbCurrLevelNum = GraduationModel.ORACLE_EXAM;
 				if (importStudent.getLastExamScore().length() > 6)
 					score = importStudent.getLastExamScore().substring(6).trim();
 				System.out.println("Oracle Exam: " + dbStudent.getFirstName() + " " + dbStudent.getLastName() + ", Curr Level " 
@@ -1798,7 +1806,7 @@ public class MySqlDbImports {
 		String levelString = ((Integer) level).toString();
 
 		// Start date doesn't apply to AP or Oracle exams
-		if (level > 7)
+		if (level > 8)
 			return "";
 		
 		for (int i = 0; i < 2; i++) {
@@ -1968,8 +1976,7 @@ public class MySqlDbImports {
 				PreparedStatement selectStmt = sqlDb.dbConnection
 						.prepareStatement("SELECT Students.ClientID, EventName "
 								+ "FROM Attendance, Students WHERE Attendance.ClientID = Students.ClientID "
-								+ "AND ((LEFT(EventName,1) >= '0' AND LEFT(EventName,1) <= '7') OR "
-								+ "      LEFT(EventName,2) = 'AD' OR LEFT(EventName,2) = 'AG' OR LEFT(EventName,2) = 'PG' OR LEFT(EventName,4) = 'Java') "
+								+ "AND LEFT(EventName,4) = 'Java' "
 								+ "AND CurrentClass != EventName AND State = 'registered' "
 								+ "AND ServiceDate >= ? AND ServiceDate <= ? ORDER BY Students.ClientID, ServiceDate ASC;");
 				selectStmt.setString(1, today.toString("yyyy-MM-dd"));
