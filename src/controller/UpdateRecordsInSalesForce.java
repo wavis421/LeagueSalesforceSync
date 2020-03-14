@@ -689,7 +689,6 @@ public class UpdateRecordsInSalesForce {
 				if (id != null)
 					diaryEntry.setId(id);
 				diaryEntry.setPike_13_ID_Level__c (clientLevelKey);
-				diaryEntry.setLevel__c (student.getGradLevelString());
 				
 				if (student.getGradLevel() == GraduationModel.AP_COMPA_EXAM) {
 					diaryEntry.setDiary_Type__c("Test");
@@ -734,6 +733,7 @@ public class UpdateRecordsInSalesForce {
 				} else {  // Class levels 0 - 8
 					diaryEntry.setDiary_Type__c("Level");
 					diaryEntry.setDescription__c("Level " + student.getGradLevel());
+					diaryEntry.setLevel__c (student.getGradLevelString());
 				}
 
 				Calendar endDate = convertDateStringToCalendar(student.getEndDate());
@@ -1289,7 +1289,7 @@ public class UpdateRecordsInSalesForce {
 				if (clientID > 0) {
 					// Graduation diary entry successfully added to SF, so update SQL DB flag
 					String graduateName = recordArray[i].getStudent_Contact__r().getFull_Name__c();
-					dbImports.updateGradInSfField(clientID, graduateName, recordArray[i].getLevel__c(), true);
+					dbImports.updateGradInSfField(clientID, graduateName, recordArray[i].getPike_13_ID_Level__c(), true);
 				}
 
 			} else {
@@ -1541,6 +1541,7 @@ public class UpdateRecordsInSalesForce {
 		Account a = new Account();
 
 		a.setId (account.getId());
+		a.setName(account.getName());
 		a.setAddress_same_as_above__c (contact.studAddrSame);
 		a.setAny_Questions_Comments__c (contact.questions);
 		a.setAnyone_in_family_work_with_Computers__c (contact.workComputers ? "Yes" : "No");

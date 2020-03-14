@@ -1516,7 +1516,7 @@ public class MySqlDbImports {
 	/*
 	 * ------- Graduation Import Database Queries -------
 	 */
-	public void updateGradInSfField(int clientID, String studentName, String gradLevel, boolean newValue) {
+	public void updateGradInSfField(int clientID, String studentName, String clientLevelKey, boolean newValue) {
 		// Graduation records are uniquely identified by clientID & level pair.
 		for (int i = 0; i < 2; i++) {
 			try {
@@ -1526,7 +1526,7 @@ public class MySqlDbImports {
 
 				updateGraduateStmt.setInt(1, newValue ? 1 : 0);
 				updateGraduateStmt.setInt(2, clientID);
-				updateGraduateStmt.setInt(3, Integer.parseInt(gradLevel));
+				updateGraduateStmt.setInt(3, Integer.parseInt(clientLevelKey.substring(7)));  // Level is appended after 7-digit ClientID
 
 				updateGraduateStmt.executeUpdate();
 				updateGraduateStmt.close();
@@ -1542,7 +1542,7 @@ public class MySqlDbImports {
 			} catch (SQLException | NullPointerException e2) {
 				e2.printStackTrace();
 				MySqlDbLogging.insertLogData(LogDataModel.STUDENT_DB_ERROR,
-						new StudentNameModel(studentName, "", false), clientID, " for Graduation: " + e2.getMessage());
+						new StudentNameModel("", "", false), clientID, " for Graduation: " + e2.getMessage());
 				break;
 			}
 		}
