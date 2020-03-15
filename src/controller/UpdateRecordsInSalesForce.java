@@ -1420,7 +1420,7 @@ public class UpdateRecordsInSalesForce {
 
 		if (contact.getEmail() != null)
 			c.setEmail(contact.getEmail());
-		
+
 		if (contact.getPhone1() != null) {
 			if (contact.phone1_type.equals("Cell"))
 				c.setMobilePhone (parsePhone(contact.getPhone1()));
@@ -1582,7 +1582,7 @@ public class UpdateRecordsInSalesForce {
 			}
 		}
 		if (staff.getPhone() != null)
-			c.setPhone(parsePhone(staff.getPhone()));
+			c.setMobilePhone(parsePhone(staff.getPhone()));
 		if (staff.getHomePhone() != null)
 			c.setHomePhone(parsePhone(staff.getHomePhone()));
 		if (staff.getCategory() != null)
