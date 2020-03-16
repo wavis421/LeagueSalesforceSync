@@ -1198,9 +1198,13 @@ public class MySqlDbImports {
 				ResultSet result = selectStmt.executeQuery();
 
 				while (result.next()) {
+					// Detect dates that are GMT and convert them to Pacific time
+					String date = result.getString("ServiceDate");
+					if (date.length() == 20 && date.charAt(19) == 'Z')
+						date = (new DateTime(date).withZone(DateTimeZone.forID("America/Los_Angeles"))).toString("yyyy-MM-dd HH:mm:ss");
+
 					eventList.add(new PendingGithubModel(result.getInt("PrimaryID"), result.getString("GitUser"),
-							result.getString("RepoName"), result.getString("ServiceDate"),
-							result.getString("Comments")));
+							result.getString("RepoName"), date, result.getString("Comments")));
 				}
 
 				result.close();
