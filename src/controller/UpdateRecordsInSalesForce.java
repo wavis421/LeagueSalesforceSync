@@ -320,6 +320,8 @@ public class UpdateRecordsInSalesForce {
 
 				a.setService_Date__c(convertDateStringToCalendar(inputModel.getServiceDate()));
 				a.setService_TIme__c(inputModel.getServiceTime());
+				a.setEnd_Time__c(inputModel.getEndTime());
+				a.setHours__c(inputModel.getDuration());
 
 				// Update contact's Intro to Java workshop grad dates
 				updateWorkshopGrad(workShopGrads, inputModel);

@@ -4,8 +4,8 @@ package model;
 public class SalesForceAttendanceModel {
 	private String clientID;
 	private String fullName;
-	private String serviceDate;
-	private String serviceTime;
+	private String serviceDate, serviceTime, endTime;
+	private double duration;
 	private String eventName;
 	private String eventType;
 	private String serviceName;
@@ -15,14 +15,16 @@ public class SalesForceAttendanceModel {
 	private String location;
 	private String staff;
 
-	public SalesForceAttendanceModel(String clientID, String fullName, String serviceDate, String serviceTime,
-			String eventName, String eventType, String serviceName, String status, String visitID, String scheduleID,
-			String location, String staff) {
+	public SalesForceAttendanceModel(String clientID, String fullName, String serviceDate, String serviceTime, 
+			String endTime, double duration, String eventName, String eventType, String serviceName, String status, 
+			String visitID, String scheduleID, String location, String staff) {
 
 		this.clientID = clientID;
 		this.fullName = fullName;
 		this.serviceDate = serviceDate;
 		this.serviceTime = serviceTime;
+		this.endTime = endTime;
+		this.duration = duration;
 		this.eventName = eventName;
 		this.eventType = eventType;
 		this.serviceName = serviceName;
@@ -49,6 +51,14 @@ public class SalesForceAttendanceModel {
 		return serviceTime;
 	}
 
+	public String getEndTime() {
+		return endTime;
+	}
+	
+	public double getDuration() {
+		return duration;
+	}
+	
 	public String getEventName() {
 		return eventName;
 	}

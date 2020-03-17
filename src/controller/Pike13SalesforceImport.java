@@ -139,6 +139,8 @@ public class Pike13SalesforceImport {
 	private final int SF_LOCATION_NAME_IDX = 9;
 	private final int SF_INSTRUCTOR_NAMES_IDX = 10;
 	private final int SF_FULL_NAME_IDX = 11;
+	private final int SF_END_AT_IDX = 12;
+	private final int SF_DURATION_IDX = 13;
 
 	// Indices for Staff Member data
 	private final int TEACHER_CLIENT_ID_IDX = 0;
@@ -234,7 +236,7 @@ public class Pike13SalesforceImport {
 			// Select fields
 			+ "\"fields\":[\"person_id\",\"service_date\",\"service_time\",\"event_name\",\"service_name\","
 			+ "            \"service_category\",\"state\",\"visit_id\",\"event_occurrence_id\","
-			+ "            \"service_location_name\",\"instructor_names\",\"full_name\"],"
+			+ "            \"service_location_name\",\"instructor_names\",\"full_name\",\"end_at\",\"duration_in_hours\"],"
 			// Page limit max is 500
 			+ "\"page\":{\"limit\":500";
 
@@ -446,6 +448,8 @@ public class Pike13SalesforceImport {
 						pike13Conn.stripQuotes(eventArray.get(SF_FULL_NAME_IDX).toString()),
 						pike13Conn.stripQuotes(eventArray.get(SF_SERVICE_DATE_IDX).toString()),
 						pike13Conn.stripQuotes(eventArray.get(SF_SERVICE_TIME_IDX).toString()),
+						pike13Conn.stripQuotes(eventArray.get(SF_END_AT_IDX).toString()).substring(11, 16),
+						eventArray.getJsonNumber(SF_DURATION_IDX).doubleValue(),
 						pike13Conn.stripQuotes(eventArray.get(SF_EVENT_NAME_IDX).toString()),
 						pike13Conn.stripQuotes(eventArray.get(SF_SERVICE_CATEGORY_IDX).toString()),
 						pike13Conn.stripQuotes(eventArray.get(SF_SERVICE_NAME_IDX).toString()),
