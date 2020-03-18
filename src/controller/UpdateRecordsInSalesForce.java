@@ -734,7 +734,10 @@ public class UpdateRecordsInSalesForce {
 					
 				} else {  // Class levels 0 - 8
 					diaryEntry.setDiary_Type__c("Level");
-					diaryEntry.setDescription__c("Level " + student.getGradLevel());
+					if (student.getGradLevel() == 8)
+						diaryEntry.setDescription__c("Level 8 Oracle Prep");
+					else
+						diaryEntry.setDescription__c("Level " + student.getGradLevel());
 					diaryEntry.setLevel__c (student.getGradLevelString());
 				}
 
