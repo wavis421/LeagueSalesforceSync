@@ -1,5 +1,6 @@
 package model;
 
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -917,10 +918,10 @@ public class MySqlDbImports {
 		return eventList;
 	}
 
-	public void importAttendance(String startDate, ArrayList<AttendanceEventModel> importList, boolean fullList) {
+	public void importAttendance(String startDate, ArrayList<AttendanceEventModel> importList, 
+			                     ArrayList<StudentModel> studentList, boolean fullList) {
 		// Import attendance from Pike13 to the Tracker database
 		ArrayList<AttendanceEventModel> dbList = getAllEvents(startDate);
-		ArrayList<StudentModel> studentList = getActiveStudents();
 		int dbListIdx = 0;
 		int dbListSize = dbList.size();
 		Collections.sort(importList);
@@ -1254,15 +1255,16 @@ public class MySqlDbImports {
 	}
 
 	public void updatePendingGithubComments(ArrayList<PendingGithubModel> githubList, String startDate,
-			ArrayList<AttendanceEventModel> eventList) {
+			ArrayList<AttendanceEventModel> attendList, ArrayList<AttendanceEventModel> incompAttendList, ArrayList<StudentModel> studentList) {
 		
 		int origSize = githubList.size();
+		clearAllPendGithubStatus();
 		
 		// Process all the pending commits
 		for (int i = 0; i < githubList.size(); i++) {
 			// Get commit date
 			PendingGithubModel pendingGit = githubList.get(i);
-			String gitUser = pendingGit.getGitUser().toLowerCase();
+			String gitUser = pendingGit.getGitUser().toLowerCase().trim();
 			String commitDate = pendingGit.getServiceDate().substring(0, 10);
 
 			// Record is out-of-date (attendance never updated!), or teacher, so remove
@@ -1284,10 +1286,10 @@ public class MySqlDbImports {
 
 			// Find gituser & date match in event list; append multiple comments
 			boolean foundMatch = false;
-			for (int j = 0; j < eventList.size(); j++) {
-				AttendanceEventModel event = eventList.get(j);
+			for (int j = 0; j < attendList.size(); j++) {
+				AttendanceEventModel event = attendList.get(j);
 				if (commitDate.equals(event.getServiceDateString())
-						&& pendingGit.getGitUser().toLowerCase().equals(event.getGithubName().toLowerCase())) {
+						&& gitUser.equals(event.getGithubName().toLowerCase())) {
 					// Update comments & repo name
 					event.setGithubComments(pendingGit.getComments());
 					updateAttendance(event.getClientID(), event.getStudentNameModel(), commitDate, event.getEventName().trim(),
@@ -1301,12 +1303,27 @@ public class MySqlDbImports {
 				githubList.remove(i);
 				i--;
 			}
+			else {
+				// No completed attendance found for this GitUser; now check incomplete attendance
+				StudentModel stud = findGithubUser (studentList, gitUser);
+				if (stud == null) {
+					// This GitUser is not attached to any student in the DB, so mark as missing
+					setMissingGithub (pendingGit);
+				}
+				else {
+					// Found student, so search incomplete attendance and update state in pending Github table
+					for (AttendanceEventModel att : incompAttendList) {
+						if (commitDate.equals(att.getServiceDateString()) && att.getClientID() == stud.getClientID())
+							setGithubStatus (pendingGit, att.getState());
+					}
+				}
+			}
 		}
 		
 		if (origSize > githubList.size())
 			System.out.println((origSize - githubList.size()) + " pending github processed");
 	}
-
+	
 	private int addAttendance(AttendanceEventModel importEvent, String teacherNames, StudentModel student) {
 		// Update class level if <= L8
 		boolean addLevel = false;
@@ -2357,6 +2374,100 @@ public class MySqlDbImports {
 		}
 	}
 
+	/*
+	 * ------- Github utilities -------
+	 */
+	private StudentModel findGithubUser (ArrayList<StudentModel> students, String gitUser)
+	{
+		// Find the Git User name in the student list
+		for (StudentModel s : students) {
+			if (s.getGithubName() != null && gitUser.equals(s.getGithubName().toLowerCase().trim()))
+				return s;
+		}
+		return null;
+	}
+	
+	private void clearAllPendGithubStatus ()
+	{
+		// Clear all the missed Git and Git state in the Pending Github table
+		PreparedStatement clrPendingGitStmt;
+		for (int i = 0; i < 2; i++) {
+			try {
+				clrPendingGitStmt = sqlDb.dbConnection.prepareStatement("UPDATE PendingGithub SET GotGit='', Status='';");
+				clrPendingGitStmt.executeUpdate();
+				clrPendingGitStmt.close();
+
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
+				if (i == 0) {
+					// First attempt to re-connect
+					System.out.println("clearAllGithubStatus: " + e1.getMessage());
+					sqlDb.connectDatabase();
+				}
+
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
+				MySqlDbLogging.insertLogData(LogDataModel.GITHUB_DB_ERROR, new StudentNameModel("", "", false), 0,
+						" clearing git status: " + e.getMessage());
+				break;
+			}
+		}
+	}
+	
+	private void setMissingGithub (PendingGithubModel git)
+	{
+		// Set the GotGit field in the given Pending Github record
+		PreparedStatement setMissingGitStmt;
+		for (int i = 0; i < 2; i++) {
+			try {
+				setMissingGitStmt = sqlDb.dbConnection.prepareStatement("UPDATE PendingGithub SET GotGit='?' WHERE PrimaryID=?;");
+				setMissingGitStmt.setInt(1, git.getPrimaryID());
+				setMissingGitStmt.executeUpdate();
+				setMissingGitStmt.close();
+
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
+				if (i == 0) {
+					// First attempt to re-connect
+					System.out.println("setMissingGithub: " + e1.getMessage());
+					sqlDb.connectDatabase();
+				}
+
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
+				MySqlDbLogging.insertLogData(LogDataModel.GITHUB_DB_ERROR, new StudentNameModel("", "", false), 0,
+						" updating missing git in record: " + e.getMessage());
+				break;
+			}
+		}
+	}
+	
+	private void setGithubStatus (PendingGithubModel git, String status)
+	{
+		// Set the State field in the given Pending Github record
+		PreparedStatement setGitStatusStmt;
+		for (int i = 0; i < 2; i++) {
+			try {
+				setGitStatusStmt = sqlDb.dbConnection.prepareStatement("UPDATE PendingGithub SET Status=? WHERE PrimaryID=?;");
+				setGitStatusStmt.setString(1, status);
+				setGitStatusStmt.setInt(2, git.getPrimaryID());
+				setGitStatusStmt.executeUpdate();
+				setGitStatusStmt.close();
+
+			} catch (CommunicationsException | MySQLNonTransientConnectionException e1) {
+				if (i == 0) {
+					// First attempt to re-connect
+					System.out.println("setGithubStatus: " + e1.getMessage());
+					sqlDb.connectDatabase();
+				}
+
+			} catch (SQLException | NullPointerException e) {
+				e.printStackTrace();
+				MySqlDbLogging.insertLogData(LogDataModel.GITHUB_DB_ERROR, new StudentNameModel("", "", false), 0,
+						" updating git status in record: " + e.getMessage());
+				break;
+			}
+		}
+	}
+	
 	/*
 	 * ------- Miscellaneous utilities -------
 	 */

@@ -80,6 +80,10 @@ public class SalesForceApi {
 		SalesForceImportEngine importer = new SalesForceImportEngine(sqlDb, pike13Api, salesForceApi);
 		LocationLookup.setLocationData(sqlDb.getLocationList());
 		importer.updateSalesForce(today, startDate, endDate);
+		
+		// Show runtime
+		DateTime endTime = new DateTime().withZone(DateTimeZone.forID("America/Los_Angeles"));
+		System.out.println("Run time = " + (endTime.getMillis() - t.getMillis()) + " msecs");
 
 		exitProgram(-1, null); // -1 indicates no error
 	}
