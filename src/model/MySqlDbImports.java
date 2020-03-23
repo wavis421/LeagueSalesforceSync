@@ -1148,7 +1148,7 @@ public class MySqlDbImports {
 				// and the comment field is blank
 				PreparedStatement selectStmt = sqlDb.dbConnection.prepareStatement(
 						"SELECT * FROM Attendance, Students WHERE Attendance.ClientID = Students.ClientID AND "
-								+ clientIdFilter + " AND State = 'completed' "
+								+ clientIdFilter + " AND State = 'completed' AND (CurrentLevel = '' OR CurrentLevel <= '5') "
 								+ "AND GithubName IS NOT NULL AND ServiceDate >= ? ORDER BY GithubName;");
 				selectStmt.setDate(1, java.sql.Date.valueOf(startDate));
 				ResultSet result = selectStmt.executeQuery();
