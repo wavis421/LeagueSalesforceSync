@@ -1270,14 +1270,14 @@ public class MySqlDbImports {
 			// Record is out-of-date (attendance never updated!), or teacher, so remove
 			if (commitDate.compareTo(startDate) < 0 || gitUser.equals("wavis421") || gitUser.equals("keithagroves")
 					|| gitUser.equals("davedleague") || gitUser.equals("sebastiantroncoso93")
-					|| gitUser.equals("codybsauer") || gitUser.equals("shacheeparikh")
+					|| gitUser.equals("codybsauer") || gitUser.equals("shacheeparikh") || gitUser.equals("tylercwiltz")
 					|| gitUser.equals("mwoguri")      // Michiyo
 					|| gitUser.equals("jaleague")     // Jackie
 					|| gitUser.equals("zaelix")       // Mike
 					|| gitUser.equals("dencee")       // Daniel
 					|| gitUser.equals("mjfre")        // Matt
-					|| gitUser.equals("awasicek")    // Andrew
-					|| gitUser.equals("dkunkler"))   // David Kunkler, volunteer (parent of 3 students)
+					|| gitUser.equals("awasicek")     // Andrew
+					|| gitUser.equals("dkunkler"))    // David Kunkler, volunteer (parent of 3 students)
 			{
 				deletePendingGithubEvent(pendingGit.getPrimaryID());
 				githubList.remove(i);
