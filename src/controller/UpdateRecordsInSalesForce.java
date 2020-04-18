@@ -328,7 +328,8 @@ public class UpdateRecordsInSalesForce {
 
 				recordList.add(a);
 				
-				if (a.getEvent_Name__c().contains("Intro to Java") && a.getStatus__c().equals("completed"))
+				if ((a.getEvent_Name__c().toLowerCase().contains("intro to java") || a.getEvent_Name__c().toLowerCase().contains("coding camp")) 
+						&& a.getStatus__c().equals("completed"))
 					createWorkshopByTeacherRecord(wshopByTeacherList, a, c);
 			}
 
@@ -875,7 +876,8 @@ public class UpdateRecordsInSalesForce {
 			for (int i = 0; i < pike13StaffHours.size(); i++) {
 				// Add each Pike13 staff hours record to SalesForce list
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
-				if (inputModel.getFullName().startsWith("Intro to Java")
+				if (inputModel.getFullName().toLowerCase().startsWith("intro to java")
+						|| inputModel.getFullName().toLowerCase().startsWith("coding camp")
 						|| inputModel.getFullName().startsWith("Summer Programs")
 						|| inputModel.getFullName().startsWith("Need Assist")
 						|| inputModel.getFullName().startsWith("Needs Assist")
@@ -1312,8 +1314,9 @@ public class UpdateRecordsInSalesForce {
 		if (inputModel.getEventName() == null || inputModel.getStatus() == null || inputModel.getServiceDate() == null)
 			return;
 
-		// If event is Intro to Java Workshop and is completed, add to grad date list
-		if (inputModel.getEventName().contains("Intro to Java Workshop") && inputModel.getStatus().equals("completed")
+		// If event is Intro to Java Workshop (also known as "Coding Camp") and is completed, add to grad date list
+		if ((inputModel.getEventName().toLowerCase().contains("intro to java") || inputModel.getEventName().toLowerCase().contains("coding camp"))
+				&& inputModel.getStatus().equals("completed")
 				&& inputModel.getServiceDate().compareTo(getDateInPastByWeeks(WEEKS_TO_UPDATE_WORKSHOP_GRADS)) > 0) {
 			Contact gradContact = new Contact();
 			Calendar newGradCal = convertDateStringToCalendar(inputModel.getServiceDate());
@@ -1553,7 +1556,8 @@ public class UpdateRecordsInSalesForce {
 		a.setEmergency_Contact_Relationship_to_Studen__c (contact.emergRelationToStud);
 		a.setHighest_School_completed_Parent_1__c (contact.schoolLevel1);
 		a.setHighest_School_Completed_Parent_2__c (contact.schoolLevel2);
-		a.setPreferred_League_Class_Location__c (contact.prefClassLoc);
+		if (contact.prefClassLoc != null && !contact.prefClassLoc.equals("None"))
+			a.setPreferred_League_Class_Location__c (contact.prefClassLoc);
 		a.setTechnologies_Student_has_access_to__c (contact.techAccess);
 		a.setWhere_did_you_hear_about_us__c (contact.getHearAboutUs());
 		a.setWho_can_we_thank__c (contact.getWhoToThank());
@@ -1853,7 +1857,8 @@ public class UpdateRecordsInSalesForce {
 			// Ignore unwanted field values (only want 'Sub Teacher')
 			String valueLowerCase = values[i].toLowerCase();
 			if (valueLowerCase.startsWith("league admin") || valueLowerCase.startsWith("summer prog")
-					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres")
+					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres") 
+					|| valueLowerCase.startsWith("coding camp")
 					|| valueLowerCase.startsWith("open lab") || valueLowerCase.startsWith("make-up")
 					|| valueLowerCase.startsWith("need assist") || valueLowerCase.startsWith("needs assist")
 					|| valueLowerCase.startsWith("league workshop") || valueLowerCase.startsWith("accepting students"))

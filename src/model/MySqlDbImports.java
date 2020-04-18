@@ -2482,7 +2482,7 @@ public class MySqlDbImports {
 			String valueLC = values[i].toLowerCase();
 			if (values[i].startsWith("TA-") || valueLC.startsWith("trainee-") || valueLC.startsWith("open lab") || valueLC.startsWith("sub teacher")
 					|| valueLC.startsWith("padres game") || valueLC.startsWith("make-up")
-					|| valueLC.startsWith("intro to java") || valueLC.startsWith("league admin")
+					|| valueLC.startsWith("intro to java") || valueLC.startsWith("league admin") || valueLC.startsWith("coding camp")
 					|| valueLC.startsWith("summer prog") || valueLC.startsWith("need assist") || valueLC.startsWith("needs assist")
 					|| valueLC.startsWith("league workshop") || valueLC.startsWith("accepting student"))
 				continue;
