@@ -667,6 +667,11 @@ public class MySqlDbImports {
 			// Update last visit date for jslam, jlab, extra, and ee classes 
 			updateLastEventInfoByStudent(student.getClientID(), null, importEvent.getServiceDateString(), null);
 		}
+		
+		else if (student.getLastVisitDate() == null && importEvent.getEventName().contains("CYBERSLAM")) {
+			// Set last-visit-date for students doing only CYBERSLAM, no workshop or classes
+			updateLastEventInfoByStudent(student.getClientID(), null, importEvent.getServiceDateString(), null);
+		}
 	}
 
 	private StudentModel getStudentCurrentLevel(int clientID) {
