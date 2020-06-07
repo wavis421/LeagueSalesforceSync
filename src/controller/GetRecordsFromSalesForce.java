@@ -26,6 +26,7 @@ public class GetRecordsFromSalesForce {
 			// Get SalesForce students and teachers
 			QueryResult queryResults = connection
 					.query("SELECT Front_Desk_ID__c FROM Contact WHERE Front_Desk_ID__c != null "
+							+ "AND Front_Desk_ID__c >= '0000000' AND Front_Desk_ID__c <= '9999999' "   // Must be a 7-digit number
 							+ "AND (Record_Type__c = 'Student' OR Staff_Category__c = 'Vol Teacher' "
 							+ "OR Staff_Category__c = 'Teaching Staff' OR Staff_Category__c = 'Student TA' "
 							+ "OR Staff_Category__c = 'Volunteer' OR Staff_Category__c = 'Admin Staff')");
