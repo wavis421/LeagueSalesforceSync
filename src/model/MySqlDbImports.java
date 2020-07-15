@@ -1297,7 +1297,7 @@ public class MySqlDbImports {
 			for (int j = 0; j < attendList.size(); j++) {
 				AttendanceEventModel event = attendList.get(j);
 				if (commitDate.equals(event.getServiceDateString())
-						&& gitUser.equals(event.getGithubName().toLowerCase())) {
+						&& gitUser.equals(event.getGithubName().trim().toLowerCase())) {
 					// Update comments & repo name
 					event.setGithubComments(pendingGit.getComments());
 					updateAttendance(event.getClientID(), event.getStudentNameModel(), commitDate, event.getEventName().trim(),
@@ -2488,10 +2488,10 @@ public class MySqlDbImports {
 		for (int i = 0; i < values.length; i++) {
 			String valueLC = values[i].toLowerCase();
 			if (values[i].startsWith("TA-") || valueLC.startsWith("trainee-") || valueLC.startsWith("open lab") || valueLC.startsWith("sub teacher")
-					|| valueLC.startsWith("padres game") || valueLC.startsWith("make-up")
-					|| valueLC.startsWith("intro to java") || valueLC.startsWith("league admin") || valueLC.startsWith("coding camp")
-					|| valueLC.startsWith("summer prog") || valueLC.startsWith("need assist") || valueLC.startsWith("needs assist")
-					|| valueLC.startsWith("league workshop") || valueLC.startsWith("accepting student"))
+					|| valueLC.startsWith("padres game")   || valueLC.startsWith("make-up")
+					|| valueLC.startsWith("intro to java") || valueLC.startsWith("league admin")    || valueLC.startsWith("coding camp")
+					|| valueLC.startsWith("summer prog")   || valueLC.startsWith("need assist")     || valueLC.startsWith("needs assist")
+					|| valueLC.startsWith("needs teacher") || valueLC.startsWith("league workshop") || valueLC.startsWith("accepting student"))
 				continue;
 
 			if (!teachers.equals(""))

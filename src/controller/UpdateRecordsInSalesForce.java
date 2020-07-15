@@ -83,6 +83,8 @@ public class UpdateRecordsInSalesForce {
 						|| student.getFirstName().startsWith("HOLIDAY")
 						|| student.getFullName().startsWith("Need Assistant")
 						|| student.getFullName().startsWith("Needs Assistant")
+						|| student.getFullName().toLowerCase().startsWith("needs teacher")
+						|| student.getFullName().toLowerCase().startsWith("sub teacher")
 						|| student.getFullName().startsWith("Accepting Students"))
 					continue;
 
@@ -161,7 +163,9 @@ public class UpdateRecordsInSalesForce {
 						|| adult.getFullName().equalsIgnoreCase("sample customer")
 						|| adult.getFullName().startsWith("Need Assistant")
 						|| adult.getFullName().startsWith("Needs Assistant")
-						|| adult.getFullName().startsWith("Accepting Students"))
+						|| adult.getFullName().toLowerCase().startsWith("needs teacher")
+						|| adult.getFullName().toLowerCase().startsWith("sub teacher")
+						|| adult.getFullName().startsWith("Accepting Student"))
 					continue;
 
 				// Get 1st dependent name, use this to get SalesForce Account
@@ -878,9 +882,14 @@ public class UpdateRecordsInSalesForce {
 				SalesForceStaffHoursModel inputModel = pike13StaffHours.get(i);
 				if (inputModel.getFullName().toLowerCase().startsWith("intro to java")
 						|| inputModel.getFullName().toLowerCase().startsWith("coding camp")
+						|| inputModel.getFullName().toLowerCase().startsWith("league workshop")
+						|| inputModel.getFullName().toLowerCase().startsWith("make-up")
 						|| inputModel.getFullName().startsWith("Summer Programs")
 						|| inputModel.getFullName().startsWith("Need Assist")
 						|| inputModel.getFullName().startsWith("Needs Assist")
+						|| inputModel.getFullName().toLowerCase().startsWith("needs teacher")
+						|| inputModel.getFullName().toLowerCase().startsWith("sub teacher")
+						|| inputModel.getFullName().toLowerCase().startsWith("league admin")
 						|| inputModel.getFullName().startsWith("Accepting Students"))
 					continue;
 
@@ -1857,11 +1866,12 @@ public class UpdateRecordsInSalesForce {
 			// Ignore unwanted field values (only want 'Sub Teacher')
 			String valueLowerCase = values[i].toLowerCase();
 			if (valueLowerCase.startsWith("league admin") || valueLowerCase.startsWith("summer prog")
-					|| valueLowerCase.startsWith("intro to java") || valueLowerCase.startsWith("padres") 
-					|| valueLowerCase.startsWith("coding camp")
-					|| valueLowerCase.startsWith("open lab") || valueLowerCase.startsWith("make-up")
-					|| valueLowerCase.startsWith("need assist") || valueLowerCase.startsWith("needs assist")
-					|| valueLowerCase.startsWith("league workshop") || valueLowerCase.startsWith("accepting students"))
+					|| valueLowerCase.startsWith("intro to java")   || valueLowerCase.startsWith("padres") 
+					|| valueLowerCase.startsWith("coding camp")     || valueLowerCase.startsWith("open lab") 
+					|| valueLowerCase.startsWith("make-up")         || valueLowerCase.startsWith("sub teacher")
+					|| valueLowerCase.startsWith("need assist")    	|| valueLowerCase.startsWith("needs assist")   
+					|| valueLowerCase.startsWith("needs teacher")   || valueLowerCase.startsWith("league workshop") 
+					|| valueLowerCase.startsWith("accepting students"))
 				continue;
 
 			// Add teacher to new teachers string
