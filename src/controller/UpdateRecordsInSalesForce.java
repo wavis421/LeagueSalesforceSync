@@ -254,8 +254,7 @@ public class UpdateRecordsInSalesForce {
 				} else if (!LocationLookup.findLocationCodeMatch(locCode, inputModel.getLocation())) {
 					// Location code is valid, but does not match event location
 					MySqlDbLogging.insertLogData(LogDataModel.ATTENDANCE_LOC_CODE_MISMATCH,
-							new StudentNameModel(inputModel.getFullName(), "", false),
-							Integer.parseInt(inputModel.getClientID()),
+							new StudentNameModel("", "", false), 0,
 							" for event " + inputModel.getEventName() + ", " + inputModel.getLocation());
 				}
 
