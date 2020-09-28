@@ -1284,6 +1284,8 @@ public class MySqlDbImports {
 					|| gitUser.equals("mjfre")        // Matt
 					|| gitUser.equals("awasicek")     // Andrew
 					|| gitUser.equals("dkunkler")     // David Kunkler, volunteer (parent of 3 students)
+					|| gitUser.equals("bschurter")    // Bruce Schurter, limited staff member
+					|| gitUser.equals("tsneuhaus")    // Tammy Neuhaus, limited staff member
 					|| gitUser.equals("rey-rey"))     // Rey Fidel, volunteer teacher
 			{
 				deletePendingGithubEvent(pendingGit.getPrimaryID());

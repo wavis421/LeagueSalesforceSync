@@ -313,7 +313,7 @@ public class StudentImportModel implements Comparable<StudentImportModel> {
 	}
 
 	public String getLeaveReason() {
-		if (leaveReason.equals(""))
+		if (leaveReason == null || leaveReason.equals(""))
 			return " ";
 		else
 			return leaveReason;

@@ -21,39 +21,39 @@ public class Pike13SalesforceImport {
 	private final String EMERG_CONTACT_PHONE_FIELD = "custom_field_106322";
 	private final String EMERG_CONTACT_EMAIL_FIELD = "custom_field_149434";
 	private final String CURRENT_GRADE_FIELD = "custom_field_106463";
-	private final String EXTRA_PHONE_FIELD = "custom_field_106498";
+//	private final String EXTRA_PHONE_FIELD = "custom_field_106498";
 	private final String HEAR_ABOUT_US_FIELD = "custom_field_128371";
 	private final String WHO_TO_THANK_FIELD = "custom_field_147039";
 	private final String FINANCIAL_AID_FIELD = "custom_field_106317";
 	private final String FINANCIAL_AID_PERCENT_FIELD = "custom_field_108413";
 	private final String GRANT_INFO_FIELD = "custom_field_148317";
-	private final String LEAVE_REASON_FIELD = "custom_field_148655";
-	private final String STOP_EMAIL_FIELD = "custom_field_149207";
+//	private final String LEAVE_REASON_FIELD = "custom_field_148655";
+//	private final String STOP_EMAIL_FIELD = "custom_field_149207";
 	private final String CURRENT_LEVEL_FIELD = "custom_field_157737";
 
-	private final String RELATIONSHIP_FIELD        = "custom_field_165170";
-	private final String PHONE_NUM_TYPE_FIELD      = "custom_field_165173";
-	private final String EXTRA_PHONE_TYPE_FIELD    = "custom_field_165174";
-	private final String PREF_CONTACT_METHOD_FIELD = "custom_field_165171";
 	private final String PRIMARY_LANGUAGE_FIELD    = "custom_field_162576";
-	private final String PREF_CONTACT_LANG_FIELD   = "custom_field_165172";
-	private final String EMERG_RELATION_TO_STUD_FIELD = "custom_field_165178";
+	private final String STUDENT_ETHNICITY_FIELD   = "custom_field_163081";
+	private final String STUDENT_RACE_FIELD        = "custom_field_163082";	
+	private final String RELATIONSHIP_FIELD        = "custom_field_165170";
+	private final String PREF_CONTACT_METHOD_FIELD = "custom_field_165171";
+//	private final String PREF_CONTACT_LANG_FIELD   = "custom_field_165172";
+	private final String PHONE_NUM_TYPE_FIELD      = "custom_field_165173";
+//	private final String EXTRA_PHONE_TYPE_FIELD    = "custom_field_165174";
 	private final String PREF_CLASS_LOC_FIELD      = "custom_field_165175";
 	private final String STUD_ADDR_SAME_FIELD      = "custom_field_165176";
 	private final String STUD_ADDR_IF_DIFF_FIELD   = "custom_field_165177";
+	private final String EMERG_RELATION_TO_STUD_FIELD = "custom_field_165178";
+	private final String TECH_ACCESS_FIELD         = "custom_field_165180";
 	private final String WORK_WITH_COMPUTER_FIELD  = "custom_field_165181";
 	private final String SCHOOL_COMPLETED_1_FIELD  = "custom_field_165182";
 	private final String SCHOOL_COMPLETED_2_FIELD  = "custom_field_165183";
-	private final String STUDENT_ETHNICITY_FIELD   = "custom_field_163081";
-	private final String STUDENT_RACE_FIELD        = "custom_field_163082";
-	private final String TECH_ACCESS_FIELD         = "custom_field_165180";
 	private final String QUESTIONS_COMMENTS_FIELD  = "custom_field_165184";
 	
 	// Custom field names for Staff Member data
 	private final String STAFF_SF_CLIENT_ID_FIELD = "custom_field_152501";
 	private final String STAFF_CATEGORY_FIELD = "custom_field_106325";
 	private final String STAFF_GENDER_FIELD = "custom_field_106320";
-	private final String STAFF_HOME_PHONE_FIELD = "custom_field_106498";
+//	private final String STAFF_HOME_PHONE_FIELD = "custom_field_106498";
 	private final String STAFF_OCCUPATION_FIELD = "custom_field_106324";
 	private final String STAFF_EMPLOYER_FIELD = "custom_field_133180";
 	private final String STAFF_START_INFO_FIELD = "custom_field_140367";
@@ -98,33 +98,27 @@ public class Pike13SalesforceImport {
 	private final int CLIENT_FINANCIAL_AID_PERCENT_IDX = 23;
 	private final int CLIENT_GITHUB_IDX = 24;
 	private final int CLIENT_GRANT_INFO_IDX = 25;
-	private final int CLIENT_LEAVE_REASON_IDX = 26;
-	private final int CLIENT_STOP_EMAIL_IDX = 27;
-	private final int CLIENT_FIRST_VISIT_IDX = 28;
-	private final int CLIENT_EXTRA_PHONE_IDX = 29;
-	private final int CLIENT_ACCOUNT_MGR_NAMES_IDX = 30;
-	private final int CLIENT_ACCOUNT_MGR_EMAILS_IDX = 31;
-	private final int CLIENT_ACCOUNT_MGR_PHONES_IDX = 32;
-	private final int CLIENT_DEPENDENT_NAMES_IDX = 33;
-	private final int CLIENT_CURRENT_LEVEL_IDX = 34;
+	private final int CLIENT_FIRST_VISIT_IDX = 26;
+	private final int CLIENT_ACCOUNT_MGR_NAMES_IDX = 27;
+	private final int CLIENT_ACCOUNT_MGR_EMAILS_IDX = 28;
+	private final int CLIENT_ACCOUNT_MGR_PHONES_IDX = 29;
+	private final int CLIENT_DEPENDENT_NAMES_IDX = 30;
+	private final int CLIENT_CURRENT_LEVEL_IDX = 31;
 
-	private final int CLIENT_RELATIONSHIP_IDX = 35;
-	private final int CLIENT_PHONE_NUM_TYPE_IDX = 36;
-	private final int CLIENT_EXTRA_PHONE_TYPE_IDX = 37;
-	private final int CLIENT_PREF_CONTACT_METHOD_IDX = 38;
-	private final int CLIENT_PRIMARY_LANGUAGE_IDX = 39;
-	private final int CLIENT_PREF_CONTACT_LANG_IDX = 40;
-	private final int CLIENT_EMERG_RELATION_TO_STUD_IDX = 41;
-	private final int CLIENT_PREF_CLASS_LOC_IDX = 42;
-	private final int CLIENT_STUD_ADDR_SAME_IDX = 43;
-	private final int CLIENT_STUD_ADDR_IF_DIFF_IDX = 44;
-	private final int CLIENT_WORK_WITH_COMPUTER_IDX = 45;
-	private final int CLIENT_SCHOOL_COMPLETED_1_IDX = 46;
-	private final int CLIENT_SCHOOL_COMPLETED_2_IDX = 47;
-	private final int CLIENT_STUDENT_ETHNICITY_IDX = 48;
-	private final int CLIENT_STUDENT_RACE_IDX = 49;
-	private final int CLIENT_TECH_ACCESS_IDX = 50;
-	private final int CLIENT_QUESTIONS_COMMENTS_IDX = 51;
+	private final int CLIENT_RELATIONSHIP_IDX = 32;
+	private final int CLIENT_PREF_CONTACT_METHOD_IDX = 33;
+	private final int CLIENT_PRIMARY_LANGUAGE_IDX = 34;
+	private final int CLIENT_EMERG_RELATION_TO_STUD_IDX = 35;
+	private final int CLIENT_PREF_CLASS_LOC_IDX = 36;
+	private final int CLIENT_STUD_ADDR_SAME_IDX = 37;
+	private final int CLIENT_STUD_ADDR_IF_DIFF_IDX = 38;
+	private final int CLIENT_WORK_WITH_COMPUTER_IDX = 39;
+	private final int CLIENT_SCHOOL_COMPLETED_1_IDX = 40;
+	private final int CLIENT_SCHOOL_COMPLETED_2_IDX = 41;
+	private final int CLIENT_STUDENT_ETHNICITY_IDX = 42;
+	private final int CLIENT_STUDENT_RACE_IDX = 43;
+	private final int CLIENT_TECH_ACCESS_IDX = 44;
+	private final int CLIENT_QUESTIONS_COMMENTS_IDX = 45;
 	
 	// Indices for SalesForce enrollment data
 	private final int SF_PERSON_ID_IDX = 0;
@@ -154,27 +148,26 @@ public class Pike13SalesforceImport {
 	private final int TEACHER_START_INFO_IDX = 8;
 	private final int TEACHER_GENDER_IDX = 9;
 	private final int TEACHER_PHONE_IDX = 10;
-	private final int TEACHER_HOME_PHONE_IDX = 11;
-	private final int TEACHER_ADDRESS_IDX = 12;
-	private final int TEACHER_EMAIL_IDX = 13;
-	private final int TEACHER_ALTERNATE_EMAIL_IDX = 14;
-	private final int TEACHER_HOME_LOCATION_IDX = 15;
-	private final int TEACHER_GITHUB_USER_IDX = 16;
-	private final int TEACHER_BIRTHDATE_IDX = 17;
-	private final int TEACHER_PAST_EVENTS_IDX = 18;
-	private final int TEACHER_FUTURE_EVENTS_IDX = 19;
-	private final int TEACHER_KEY_HOLDER_IDX = 20;
-	private final int TEACHER_LIVE_SCAN_DATE_IDX = 21;
-	private final int TEACHER_T_SHIRT_IDX = 22;
-	private final int TEACHER_WHERE_DID_YOU_HEAR_IDX = 23;
-	private final int TEACHER_LEAVE_IDX = 24;
-	private final int TEACHER_EMERG_NAME_IDX = 25;
-	private final int TEACHER_EMERG_EMAIL_IDX = 26;
-	private final int TEACHER_EMERG_PHONE_IDX = 27;
-	private final int TEACHER_CURR_BOARD_MEMBER_IDX = 28;
-	private final int TEACHER_CURR_STAFF_MEMBER_IDX = 29;
-	private final int TEACHER_IS_ALSO_CLIENT_IDX = 30;
-	private final int TEACHER_TITLE_IDX = 31;
+	private final int TEACHER_ADDRESS_IDX = 11;
+	private final int TEACHER_EMAIL_IDX = 12;
+	private final int TEACHER_ALTERNATE_EMAIL_IDX = 13;
+	private final int TEACHER_HOME_LOCATION_IDX = 14;
+	private final int TEACHER_GITHUB_USER_IDX = 15;
+	private final int TEACHER_BIRTHDATE_IDX = 16;
+	private final int TEACHER_PAST_EVENTS_IDX = 17;
+	private final int TEACHER_FUTURE_EVENTS_IDX = 18;
+	private final int TEACHER_KEY_HOLDER_IDX = 19;
+	private final int TEACHER_LIVE_SCAN_DATE_IDX = 20;
+	private final int TEACHER_T_SHIRT_IDX = 21;
+	private final int TEACHER_WHERE_DID_YOU_HEAR_IDX = 22;
+	private final int TEACHER_LEAVE_IDX = 23;
+	private final int TEACHER_EMERG_NAME_IDX = 24;
+	private final int TEACHER_EMERG_EMAIL_IDX = 25;
+	private final int TEACHER_EMERG_PHONE_IDX = 26;
+	private final int TEACHER_CURR_BOARD_MEMBER_IDX = 27;
+	private final int TEACHER_CURR_STAFF_MEMBER_IDX = 28;
+	private final int TEACHER_IS_ALSO_CLIENT_IDX = 29;
+	private final int TEACHER_TITLE_IDX = 30;
 
 	// Indices for Staff Hours data
 	private final int STAFF_CLIENT_ID_IDX = 0;
@@ -202,17 +195,16 @@ public class Pike13SalesforceImport {
 			+ "            \"" + EMERG_CONTACT_PHONE_FIELD + "\",\"" + CURRENT_GRADE_FIELD + "\","
 			+ "            \"" + HEAR_ABOUT_US_FIELD + "\",\"" + GRAD_YEAR_FIELD + "\",\"" + WHO_TO_THANK_FIELD + "\","
 			+ "            \"" + EMERG_CONTACT_EMAIL_FIELD + "\",\"" + FINANCIAL_AID_FIELD + "\",\"" + FINANCIAL_AID_PERCENT_FIELD + "\","
-			+ "            \"" + GITHUB_FIELD + "\",\"" + GRANT_INFO_FIELD + "\",\"" + LEAVE_REASON_FIELD + "\","
-			+ "            \"" + STOP_EMAIL_FIELD + "\",\"first_visit_date\",\"" + EXTRA_PHONE_FIELD + "\","
+			+ "            \"" + GITHUB_FIELD + "\",\"" + GRANT_INFO_FIELD + "\",\"first_visit_date\","
 			+ "            \"account_manager_names\",\"account_manager_emails\",\"account_manager_phones\",\"dependent_names\","
 			+ "            \"" + CURRENT_LEVEL_FIELD + "\","
+			
 					// New fields added 3/2020
-			+ "            \"" + RELATIONSHIP_FIELD       + "\",\"" + PHONE_NUM_TYPE_FIELD         + "\",\"" + EXTRA_PHONE_FIELD        + "\","
-			+ "            \"" + EXTRA_PHONE_TYPE_FIELD   + "\",\"" + PREF_CONTACT_METHOD_FIELD    + "\",\"" + PRIMARY_LANGUAGE_FIELD   + "\","
-			+ "            \"" + PREF_CONTACT_LANG_FIELD  + "\",\"" + EMERG_RELATION_TO_STUD_FIELD + "\",\"" + PREF_CLASS_LOC_FIELD     + "\","
-			+ "            \"" + STUD_ADDR_SAME_FIELD     + "\",\"" + STUD_ADDR_IF_DIFF_FIELD      + "\",\"" + WORK_WITH_COMPUTER_FIELD + "\","
-			+ "            \"" + SCHOOL_COMPLETED_1_FIELD + "\",\"" + SCHOOL_COMPLETED_2_FIELD     + "\",\"" + STUDENT_ETHNICITY_FIELD  + "\","
-			+ "            \"" + STUDENT_RACE_FIELD       + "\",\"" + TECH_ACCESS_FIELD            + "\",\"" + QUESTIONS_COMMENTS_FIELD + "\"],"
+			+ "            \"" + RELATIONSHIP_FIELD        + "\",\"" + PREF_CONTACT_METHOD_FIELD + "\",\"" + PRIMARY_LANGUAGE_FIELD   + "\","
+			+ "            \"" + EMERG_RELATION_TO_STUD_FIELD + "\",\"" + PREF_CLASS_LOC_FIELD     + "\","
+			+ "            \"" + STUD_ADDR_SAME_FIELD      + "\",\"" + STUD_ADDR_IF_DIFF_FIELD      + "\",\"" + WORK_WITH_COMPUTER_FIELD + "\","
+			+ "            \"" + SCHOOL_COMPLETED_1_FIELD  + "\",\"" + SCHOOL_COMPLETED_2_FIELD     + "\",\"" + STUDENT_ETHNICITY_FIELD  + "\","
+			+ "            \"" + STUDENT_RACE_FIELD        + "\",\"" + TECH_ACCESS_FIELD            + "\",\"" + QUESTIONS_COMMENTS_FIELD + "\"],"
 
 			// Page limit max is 500
 			+ "\"page\":{\"limit\":500";
@@ -259,7 +251,7 @@ public class Pike13SalesforceImport {
 			+ "\"fields\":[\"person_id\",\"first_name\",\"last_name\",\"" + STAFF_SF_CLIENT_ID_FIELD + "\","
 			+ "            \"" + STAFF_CATEGORY_FIELD + "\",\"role\",\"" + STAFF_OCCUPATION_FIELD + "\","
 			+ "            \"" + STAFF_EMPLOYER_FIELD + "\",\"" + STAFF_START_INFO_FIELD + "\","
-			+ "            \"" + STAFF_GENDER_FIELD + "\",\"phone\",\"" + STAFF_HOME_PHONE_FIELD + "\",\"address\","
+			+ "            \"" + STAFF_GENDER_FIELD + "\",\"phone\",\"address\","
 			+ "            \"email\",\"" + STAFF_ALTERNATE_EMAIL_FIELD + "\",\"home_location_name\","
 			+ "            \"" + STAFF_GITHUB_USER_FIELD + "\",\"birthdate\",\"past_events\","
 			+ "            \"future_events\",\"" + STAFF_KEY_HOLDER_FIELD + "\",\"" + STAFF_LIVE_SCAN_DATE_FIELD + "\","
@@ -359,17 +351,17 @@ public class Pike13SalesforceImport {
 						pike13Conn.stripQuotes(personArray.get(CLIENT_HAS_SIGNED_WAIVER_IDX).toString()).equals("t") ? true : false,
 						pike13Conn.stripQuotes(personArray.get(CLIENT_HAS_MEMBERSHIP_IDX).toString()).equals("t") ? "Yes" : "No",
 						pike13Conn.stripQuotes(personArray.get(CLIENT_PASS_ON_FILE_IDX).toString()),
-						pike13Conn.stripQuotes(personArray.get(CLIENT_STOP_EMAIL_IDX).toString()).equals("t") ? true : false,
+						false, // CLIENT_STOP_EMAIL_IDX removed from Pike13
 						pike13Conn.stripQuotes(personArray.get(CLIENT_FINANCIAL_AID_IDX).toString()).equals("t") ? true : false,
 						pike13Conn.stripQuotes(personArray.get(CLIENT_FINANCIAL_AID_PERCENT_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_GRANT_INFO_IDX).toString()),
-						pike13Conn.stripQuotes(personArray.get(CLIENT_LEAVE_REASON_IDX).toString()),
+						null, // CLIENT_LEAVE_REASON_IDX removed from Pike13
 						pike13Conn.stripQuotes(personArray.get(CLIENT_HEAR_ABOUT_US_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_WHO_TO_THANK_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_EMERG_CONTACT_NAME_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_EMERG_CONTACT_PHONE_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_EMERG_CONTACT_EMAIL_IDX).toString()),
-						pike13Conn.stripQuotes(personArray.get(CLIENT_EXTRA_PHONE_IDX).toString()),
+						"", // CLIENT_EXTRA_PHONE_IDX removed from Pike13
 						pike13Conn.stripQuotes(personArray.get(CLIENT_ACCOUNT_MGR_NAMES_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_ACCOUNT_MGR_PHONES_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_ACCOUNT_MGR_EMAILS_IDX).toString()),
@@ -377,11 +369,11 @@ public class Pike13SalesforceImport {
 						pike13Conn.stripQuotes(personArray.get(CLIENT_CURRENT_LEVEL_IDX).toString()));
 				
 				model.addMoreFields (pike13Conn.stripQuotes(personArray.get(CLIENT_RELATIONSHIP_IDX).toString()),
-						pike13Conn.stripQuotes(personArray.get(CLIENT_PHONE_NUM_TYPE_IDX).toString()),
-						pike13Conn.stripQuotes(personArray.get(CLIENT_EXTRA_PHONE_TYPE_IDX).toString()),
+						"", // CLIENT_PHONE_NUM_TYPE_IDX removed from Pike13
+						"", // CLIENT_EXTRA_PHONE_TYPE_IDX removed from Pike13
 						pike13Conn.stripQuotes(personArray.get(CLIENT_PREF_CONTACT_METHOD_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_PRIMARY_LANGUAGE_IDX).toString()),
-						pike13Conn.stripQuotes(personArray.get(CLIENT_PREF_CONTACT_LANG_IDX).toString()),
+						null, // CLIENT_PREF_CONTACT_LANG_IDX removed from Pike13
 						pike13Conn.stripQuotes(personArray.get(CLIENT_EMERG_RELATION_TO_STUD_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_PREF_CLASS_LOC_IDX).toString()),
 						pike13Conn.stripQuotes(personArray.get(CLIENT_STUD_ADDR_SAME_IDX).toString()).equals("t") ? true : false,
@@ -507,7 +499,7 @@ public class Pike13SalesforceImport {
 					pike13Conn.stripQuotes(staffArray.get(TEACHER_GENDER_IDX).toString()),
 					pike13Conn.stripQuotes(staffArray.get(TEACHER_BIRTHDATE_IDX).toString()),
 					pike13Conn.stripQuotes(staffArray.get(TEACHER_PHONE_IDX).toString()),
-					pike13Conn.stripQuotes(staffArray.get(TEACHER_HOME_PHONE_IDX).toString()),
+					"", //pike13Conn.stripQuotes(staffArray.get(TEACHER_HOME_PHONE_IDX).toString()),
 					pike13Conn.stripQuotes(staffArray.get(TEACHER_ADDRESS_IDX).toString()),
 					pike13Conn.stripQuotes(staffArray.get(TEACHER_EMAIL_IDX).toString()),
 					pike13Conn.stripQuotes(staffArray.get(TEACHER_ALTERNATE_EMAIL_IDX).toString()),
